@@ -1,8 +1,9 @@
 # Readiness record
 
 The backend and Milo web/native pilot have passed the local checks below. Source is
-published on GitHub; the user selected a new Render project. Authenticated Render
-deployment and live-provider acceptance remain open; Railway is previous preparation.
+published on GitHub; the latest user request selects Railway. Authenticated Railway
+deployment and live-provider acceptance remain open. The supplied credential was
+rejected; the alternative Render preparation remains available.
 Runtime validation and external integration eligibility are separate from implemented code.
 
 The CTO handoff backend increment has passed synthetic functional/regression checks.
@@ -37,9 +38,9 @@ Current per-feature status and exact evidence are tracked in
 | Real Google/Meta/model integrations | Credentials and actual authorized operations are required; mock tests do not establish these |
 | Phone coexistence/personal pairing | Not implemented or validated |
 | 50,000 accounts / production launch | NOT_RUN; the larger local workloads failed availability. Architecture target and distributed runner do not certify capacity |
-| Milo browser/native acceptance | Current production build, strict workspace typechecks, 70 browser cases without retries and 34 proxy/readiness cases passed. Prior unchanged contracts/privacy/native graph: 20 shared-contract/seven Tools privacy/16 native helpers and all-platform Expo export passed; installed-device evidence absent |
-| Cloud setup configuration | Installer/start instructions saved for eight migrations, web/native, workers and Render checks; Render key and required domains declared. Saved draft still requires review/save/publication; fresh-task restoration remains unverified |
-| GitHub / Render | [Published repository](https://github.com/hemantsatishjadhav06-ai/whatsapp-history-ai-/tree/main); new [Actions](github-actions.md) and [Render Blueprint](render.md) are source configuration. No authenticated hosted deployment or URL exists |
+| Milo browser/native acceptance | Current production build, strict web TypeScript and 38 proxy/readiness cases passed. Previous source passed 70 browser cases without retries; unchanged contracts/privacy/native graph: 20 shared-contract/seven Tools privacy/16 native helpers and all-platform Expo export passed; installed-device evidence absent |
+| Cloud setup configuration | Installer/start instructions saved for eight migrations, web/native, workers and hosting checks; Railway/Render credential requirements and domains declared. Saved draft still requires review/save/publication; fresh-task restoration remains unverified |
+| GitHub / hosting | [Published repository](https://github.com/hemantsatishjadhav06-ai/whatsapp-history-ai-/tree/main); [Actions](github-actions.md), [Railway guide](railway.md) and alternative [Render Blueprint](render.md) are source configuration. No authenticated hosted deployment or URL exists |
 
 The core workflow must be able to fail when broken: authenticate, establish conversation
 permissions, import/receive content, generate a scoped proposal, owner-edit/review it,

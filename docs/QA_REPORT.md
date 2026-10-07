@@ -6,6 +6,37 @@ listed as actual local infrastructure. No real Google, model or WhatsApp account
 has been exercised. The current request enables Milo web/native and deployment acceptance;
 client results below are separate from backend and installed-device results.
 
+## 7 October Railway deployment follow-up
+
+The latest request selects Railway. Its official API is reachable through the
+supported network route. Both API hosts returned HTTP 200 with GraphQL
+`Project Token not found` for project-token authentication and `Not Authorized`
+for account-token authentication; CLI checks also rejected the credential.
+The supplied value was not committed or stored in repository configuration.
+No Railway resources were created, deployment attempted or live URL verified.
+
+Web readiness now reports validated Railway runtime commit metadata, checks the
+private API through `/readyz`, and starts with one pilot replica. API startup
+uses serialized migration locking; Jobs and Retention wait for the exact schema
+head. All 38 proxy/readiness tests, 76 startup/release-helper tests (including the
+16 existing schema-startup cases), strict
+web TypeScript, manifest JSON/shell checks and the production Web build passed.
+Actual standalone Web HTTP checks also verified liveness, the Milo page,
+private API readiness and synthetic Railway metadata; a separate unavailable
+private origin returned 503 without exposing its URL. Both owned processes were
+removed. These are local results; they do not validate a hosted release or user capacity.
+Railway's current documentation also prevents new services from opting into
+legacy Config as Code; deployment must apply the corresponding current service
+settings or Infrastructure as Code, as described in [the guide](railway.md).
+The four prepared non-secret service input objects were checked against live
+official API input-field names and types; no authenticated mutation was made.
+
+The previous exact-source [GitHub run 37617998643](https://github.com/hemantsatishjadhav06-ai/whatsapp-history-ai-/actions/runs/37617998643)
+passed for `f852b1af64ade873439415a94ee752fc49cdca72`: 747 PostgreSQL cases,
+734 SQLite cases with 13 PostgreSQL-only skips, 70 browser cases without retries,
+cold image builds, HTTP/worker smoke checks and security gates. Deployment was
+skipped. This Railway follow-up requires its own exact-source CI result.
+
 ## 7 October Render and fresh-owner increment
 
 These are the latest local-source results. The earlier hardening results below

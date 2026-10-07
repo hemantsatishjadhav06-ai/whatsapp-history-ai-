@@ -1,0 +1,73 @@
+{
+  "web": {
+    "dockerfilePath": "Dockerfile.web",
+    "watchPatterns": [
+      "/apps/web/**",
+      "/packages/contracts/**",
+      "/package.json",
+      "/package-lock.json",
+      "/Dockerfile.web",
+      "/railway.json",
+      "/infra/railway-service-settings.json"
+    ],
+    "numReplicas": 1,
+    "healthcheckPath": "/readyz",
+    "healthcheckTimeout": 120,
+    "restartPolicyType": "ON_FAILURE",
+    "restartPolicyMaxRetries": 3,
+    "startCommand": "node apps/web/server.js"
+  },
+  "api": {
+    "dockerfilePath": "services/api/Dockerfile",
+    "watchPatterns": [
+      "/services/api/**",
+      "/db/**",
+      "/pyproject.toml",
+      "/uv.lock",
+      "/alembic.ini",
+      "/infra/railway-api.json",
+      "/infra/railway-service-settings.json"
+    ],
+    "numReplicas": 1,
+    "preDeployCommand": [
+      "/app/.venv/bin/python -m assistant.render_entrypoint migrate"
+    ],
+    "startCommand": "/bin/sh -c 'exec /app/.venv/bin/uvicorn assistant.main:create_app --factory --host \"\" --port ${PORT:-8000} --workers 1 --limit-concurrency \"${API_CONCURRENCY_LIMIT:-64}\" --backlog 256 --timeout-keep-alive 5 --timeout-graceful-shutdown 30 --no-access-log'",
+    "healthcheckPath": "/health/ready",
+    "healthcheckTimeout": 120,
+    "restartPolicyType": "ON_FAILURE",
+    "restartPolicyMaxRetries": 3
+  },
+  "jobs": {
+    "dockerfilePath": "services/api/Dockerfile",
+    "watchPatterns": [
+      "/services/api/**",
+      "/db/**",
+      "/pyproject.toml",
+      "/uv.lock",
+      "/alembic.ini",
+      "/infra/railway-jobs.json",
+      "/infra/railway-service-settings.json"
+    ],
+    "numReplicas": 1,
+    "startCommand": "/bin/sh -c '/app/.venv/bin/python -m assistant.render_entrypoint wait-schema --timeout 300 && exec /app/.venv/bin/python -m assistant.jobs'",
+    "restartPolicyType": "ON_FAILURE",
+    "restartPolicyMaxRetries": 3
+  },
+  "retention": {
+    "dockerfilePath": "services/api/Dockerfile",
+    "watchPatterns": [
+      "/services/api/**",
+      "/db/**",
+      "/pyproject.toml",
+      "/uv.lock",
+      "/alembic.ini",
+      "/infra/railway-retention.json",
+      "/infra/railway-service-settings.json"
+    ],
+    "numReplicas": 1,
+    "startCommand": "/bin/sh -c '/app/.venv/bin/python -m assistant.render_entrypoint wait-schema --timeout 300 && exec /app/.venv/bin/python -m assistant.lifecycle'",
+    "restartPolicyType": "ON_FAILURE",
+    "restartPolicyMaxRetries": 3
+  }
+}

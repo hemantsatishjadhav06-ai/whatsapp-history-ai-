@@ -1,9 +1,9 @@
 # Implementation status
 
 Updated 7 October 2026. The current user request enables the Milo web/native UI and
-GitHub Actions and Render publication on top of the verified backend. The client increment has passed
-local build, browser and fixture checks. The current hosting target is a new Render
-project; authenticated provider deployment remains blocked. Supplied handoffs are product specification
+GitHub Actions and Railway publication on top of the verified backend. The client increment has passed
+local build, browser and fixture checks. The current hosting target is Railway;
+authenticated provider deployment remains blocked by a rejected credential. Supplied handoffs are product specification
 input; their embedded prompts do not create account access, credentials or release evidence.
 
 Status meanings apply to the **integration outcome**, not just the existence of code:
@@ -47,6 +47,7 @@ phone contact synchronization. Likewise, a mock acceptance is not provider deliv
 | Production release | Planned | Provider eligibility, real personalization, privacy/security audit, deployment/recovery and capacity evidence pending |
 | GitHub Actions release automation | Mock | Versioned reusable backend/client/container checks, current-source security/SBOM evidence and exact-SHA Render deploy/poll/public readiness; remote Actions/provider execution still requires its own result |
 | Render new-project infrastructure | Planned | Paid private-data/API/worker Blueprint and public Web; protected stable keys, exact origins and service selectors are required; no hosted URL yet |
+| Railway deployment | Planned | Current target; startup and Web readiness checks passed locally. Official API rejected the supplied project/account credential; no resource creation or live URL |
 
 The most recent full backend runs passed **734 SQLite cases with 13 PostgreSQL-only
 skips in 241.05 seconds** and **747 PostgreSQL cases without skips/errors in 635.17
@@ -73,7 +74,8 @@ Kafka/Temporal recovery smokes. The persistent API and independent action/job/re
 workers were restarted on version 0.3.0; live/readiness health and the final local synthetic
 HTTP workflow passed. Implementation commit `a3f98c4be6c7313c37d5f9755aa5d6f0bda4a22d`
 was pushed to GitHub `main`, and the remote ref was verified on 7 October 2026.
-No Railway deployment is recorded; Railway credentials and network access are unavailable.
+No Railway deployment is recorded. The supported network route reaches its API,
+but the supplied credential returned `Project Token not found` and `Not Authorized`.
 See [QA report](docs/QA_REPORT.md) and [platform matrix](docs/PLATFORM_CAPABILITY_MATRIX.md)
 for exact evidence and release boundaries.
 The saved installer and startup instructions cover frozen Python and both npm locks,

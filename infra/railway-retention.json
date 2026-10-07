@@ -3,11 +3,11 @@
   "build": {
     "builder": "DOCKERFILE",
     "dockerfilePath": "services/api/Dockerfile",
-    "watchPatterns": ["/services/api/**", "/db/**", "/pyproject.toml", "/uv.lock", "/infra/railway-retention.json"]
+    "watchPatterns": ["/services/api/**", "/db/**", "/pyproject.toml", "/uv.lock", "/alembic.ini", "/infra/railway-retention.json"]
   },
   "deploy": {
     "numReplicas": 1,
-    "startCommand": "/app/.venv/bin/python -m assistant.lifecycle",
+    "startCommand": "/bin/sh -c '/app/.venv/bin/python -m assistant.render_entrypoint wait-schema --timeout 300 && exec /app/.venv/bin/python -m assistant.lifecycle'",
     "restartPolicyType": "ON_FAILURE",
     "restartPolicyMaxRetries": 3
   }

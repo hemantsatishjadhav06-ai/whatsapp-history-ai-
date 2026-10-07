@@ -9,8 +9,8 @@ Sending and scheduling use current SQL authority and durable attempt ledgers.
 This implementation follows the supplied build guides, CTO handoff and Milo product/UI
 master specification as product requirements. Document-embedded engineer instructions are
 specification input; the user's actual request controls implementation scope. The current
-request enables the Milo web/native UI, GitHub Actions and a new Render project. The current
-increment passed 747 PostgreSQL backend cases, 70 desktop/mobile-web browser cases,
+request enables the Milo web/native UI, GitHub Actions and Railway deployment. The previous
+verified increment passed 747 PostgreSQL backend cases, 70 desktop/mobile-web browser cases,
 native helper/export checks and an encrypted 5,001-message restore. Exact build,
 dependency and capacity evidence is recorded in [QA](docs/QA_REPORT.md).
 Real account eligibility, phone coexistence, live model quality, and the 50,000-account
@@ -118,9 +118,15 @@ Further details and limitations are recorded in [capabilities](docs/capabilities
 [privacy](docs/privacy-retention.md), [deployment](docs/deployment.md),
 [runbooks](docs/runbooks.md), and [load test results](docs/load-test-results.md).
 
-## GitHub Actions and Render
+## GitHub Actions and hosting
 
-The current hosting target is a new Render project. [render.yaml](render.yaml)
+The current hosting target is Railway. The [Railway guide](docs/railway.md)
+covers Web, private API, Jobs, Retention, PostgreSQL and Redis, production settings,
+startup ordering and the current authentication blocker. New Railway services
+require current service settings or Infrastructure as Code; the legacy JSON
+manifests alone do not configure a new service.
+
+The alternative Render configuration remains available. [render.yaml](render.yaml)
 defines public Web, private API, Jobs, Retention, PostgreSQL and shared Redis.
 The [Render guide](docs/render.md) covers protected runtime values and assigned
 HTTPS origins. [Create the Render Blueprint](https://render.com/deploy?repo=https://github.com/hemantsatishjadhav06-ai/whatsapp-history-ai-)
@@ -136,7 +142,9 @@ the test gate. A green CI run alone does not establish a hosted application.
 Source is published on [GitHub main](https://github.com/hemantsatishjadhav06-ai/whatsapp-history-ai-/tree/main).
 The 7 October hardening adds bounded request/storage admission, concurrent SQL authority,
 authentication cleanup, private-result reconciliation and measured capacity reports.
-Render authentication is not configured, so no hosted application URL is available.
+Railway rejected the supplied credential as both a project and account token;
+a valid securely configured project token is required before deployment.
+No hosted application URL is available.
 The current deployment exceeded its limits in the larger local load stages; 50,000
 simultaneous users is unverified. Known native/build and container advisories remain
 documented in the [security review](docs/SECURITY_REVIEW.md).

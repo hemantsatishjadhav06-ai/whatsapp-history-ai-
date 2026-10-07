@@ -29,7 +29,7 @@ export async function GET() {
 }
 
 function output(ready: boolean) {
-  const sha = process.env.RENDER_GIT_COMMIT;
+  const sha = process.env.RAILWAY_GIT_COMMIT_SHA ?? process.env.RENDER_GIT_COMMIT;
   return Response.json({ status: ready ? 'ready' : 'unavailable', service: 'milo-web',
     release_commit: sha && /^[a-f0-9]{40}$/.test(sha) ? sha : null,
     dependency_status_max_age_seconds: 5,

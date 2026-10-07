@@ -7,7 +7,7 @@
   },
   "deploy": {
     "numReplicas": 1,
-    "preDeployCommand": "/app/.venv/bin/alembic upgrade head",
+    "preDeployCommand": "/app/.venv/bin/python -m assistant.render_entrypoint migrate",
     "startCommand": "/bin/sh -c 'exec /app/.venv/bin/uvicorn assistant.main:create_app --factory --host \"\" --port ${PORT:-8000} --workers 1 --limit-concurrency \"${API_CONCURRENCY_LIMIT:-64}\" --backlog 256 --timeout-keep-alive 5 --timeout-graceful-shutdown 30 --no-access-log'",
     "healthcheckPath": "/health/ready",
     "healthcheckTimeout": 120,

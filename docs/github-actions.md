@@ -1,6 +1,6 @@
 # GitHub validation and Render releases
 
-GitHub stores the application, runs its tests, builds the runtime images, and retains release evidence. Render hosts the public web service, private API, PostgreSQL, Redis-compatible Key Value service, and background workers. A successful GitHub validation run alone does not establish a deployed application or live URL.
+GitHub stores the application, runs its tests, builds the runtime images, and retains release evidence. Railway is the currently requested host; see [its deployment guide](railway.md) for the authentication blocker and service setup. The optional automated provider-release job below targets Render and is not a Railway deployment job. A successful GitHub validation run alone does not establish a deployed application or live URL.
 
 ## Workflows
 

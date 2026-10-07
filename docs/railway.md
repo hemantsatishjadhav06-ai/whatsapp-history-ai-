@@ -2,15 +2,42 @@
 
 The repository includes deployable web, API, Jobs and Retention containers, plus an optional Actions worker. A configured manifest and a successful local build do not mean a Railway deployment exists. Deployment is complete only after Railway reports healthy services and the public URL passes acceptance checks.
 
-Use one Railway project with PostgreSQL and Redis services plus these repository services. PostgreSQL stores durable owner data; Redis is required for shared production request limits and is checked by API readiness. Keep each service's source root at the repository root, select its configuration file in Railway service settings, and connect `hemantsatishjadhav06-ai/whatsapp-history-ai-` on the published branch.
+Use one Railway project with PostgreSQL and Redis services plus these repository services. PostgreSQL stores durable owner data; Redis is required for shared production request limits and is checked by API readiness. Keep each service's source root at the repository root and deploy the tested source from `hemantsatishjadhav06-ai/whatsapp-history-ai-`.
+
+On 7 October 2026, Railway's [official Config as Code guide](https://docs.railway.com/guides/config-as-code) states that new services cannot opt into legacy Config as Code, and existing JSON/TOML configurations continue only until 1 December 2026. The files below retain the tested startup specifications for existing services. For new services, apply the matching current service settings through the dashboard/API or Railway Infrastructure as Code; uploading these files alone does not apply them. Do not rely on the deprecated `railwayConfigFile` setting for new services.
 
 | Service | Config file | Runtime |
 | --- | --- | --- |
-| Web | `/railway.json` | Non-root Node 24, Next standalone app; health `/healthz` |
-| API | `/infra/railway-api.json` | Non-root Python API; Alembic pre-deploy migration; health `/health/ready` |
-| Jobs | `/infra/railway-jobs.json` | Required private SQL polling worker for authorized jobs and scheduled intents |
-| Retention | `/infra/railway-retention.json` | Required private worker for bounded application retention and expired authentication/session metadata cleanup |
+| Web | `/railway.json` | Non-root Node 24, Next standalone app; dependency health `/readyz`, liveness `/healthz` |
+| API | `/infra/railway-api.json` | Non-root Python API; serialized Alembic pre-deploy migration; health `/health/ready` |
+| Jobs | `/infra/railway-jobs.json` | Waits for the exact migration head, then runs the required private SQL worker for authorized jobs and scheduled intents |
+| Retention | `/infra/railway-retention.json` | Waits for the exact migration head, then runs the required private expiry and authentication/session cleanup worker |
 | Actions | `/infra/railway-actions.json` | Optional private action-admission worker; leave undeployed until the live adapter and planner gates are verified |
+
+For new services, [railway-service-settings.json](../infra/railway-service-settings.json)
+contains one non-secret `ServiceInstanceUpdateInput` per enabled role. Field names
+and types were checked against the live official GraphQL schema on 7 October;
+authenticated application remains unrun. Apply a selected role with
+[railway-service-update.graphql](../infra/railway-service-update.graphql), supplying
+the actual `serviceId`, `environmentId` and role object as `input` through the CLI's
+`--variables @PATH` option. Keep any temporary request under ignored `.local`.
+These files are explicit API inputs; they are not automatically applied by upload.
+
+Set the documented `RAILWAY_DOCKERFILE_PATH` service variable to `Dockerfile.web`
+for Web and `services/api/Dockerfile` for API, Jobs and Retention, matching each
+payload's `dockerfilePath`. Do not map legacy `builder: DOCKERFILE` to the GraphQL
+builder enum, which does not accept that value. Configure protected variables with
+`railway variable set KEY --stdin --skip-deploys` and explicit service/environment
+selectors before creating a deployment. The Web start command is
+`node apps/web/server.js`; all four services start at one replica.
+
+The official CLI's database templates create persistent volumes. Verify the
+resulting Postgres/Redis volume and private networking before adding any extra
+volume; never create a duplicate blindly. Current public templates use PostgreSQL
+18 and Redis 8.2, while recorded local acceptance used PostgreSQL 16 and Redis 7.4.
+Those new provider versions need their own runtime acceptance. PostgreSQL mounts
+`/var/lib/postgresql/data` with its `PGDATA` subdirectory; Redis mounts `/data`.
+Keep database routing private and publish only the Web domain.
 
 The web service receives `BACKEND_URL`, the private API origin including its port, and `PUBLIC_APP_ORIGIN`, its exact public HTTPS origin. The proxy uses that explicit origin for browser writes instead of trusting forwarded headers to choose an origin. Browser requests use the web service's same-origin `/api` proxy, so private backend routing and session cookies stay server-side. Next.js reads Railway's runtime `PORT`; the API manifest also expands `PORT`. Generate a Railway domain for Web. Give API a public domain only if a verified webhook or direct mobile client needs it, with HTTPS and the same production authentication requirements.
 
@@ -45,15 +72,17 @@ For authenticated CLI deployment, the official Railway CLI supports `RAILWAY_TOK
 
 After access is available, link or select the exact project/environment/service, upload the repository with `railway up --service <service> --environment <environment> --ci`, then inspect deployment status and generate the Web domain. `railway up --detach` only starts deployment; it does not establish that the site is healthy. For GitHub autodeploys, use `railway service source connect --repo hemantsatishjadhav06-ai/whatsapp-history-ai- --branch main --service <service>` after the repository has been published.
 
-Acceptance checks cover Web `/healthz`, API `/health/ready`, the public companion page, Google login configuration, server-side proxy/cookie behavior and read-only capability status. Test live provider operations only after their real credentials and account evidence are available. Keep development login and mock connectors unavailable on the public production API.
+Acceptance checks cover Web `/healthz` and `/readyz`, API `/health/ready`, the public companion page, Google login configuration, server-side proxy/cookie behavior and read-only capability status. `/readyz` exposes only coarse private API readiness and validated `RAILWAY_GIT_COMMIT_SHA` metadata (or Render metadata on Render); verify the actual provider deployment's source identity separately. Test live provider operations only after their real credentials and account evidence are available. Keep development login and mock connectors unavailable on the public production API.
 
 For local container acceptance, build from the repository root with `docker build -f Dockerfile.web -t milo-web:local .`, then run `uv run --frozen python scripts/web_container_smoke.py`. In an environment with a managed certificate authority, supply its existing trusted bundle with `--secret id=trusted_ca,src=/etc/ssl/certs/ca-certificates.crt`; certificate verification remains enabled. The smoke test starts and removes its own disposable web container and synthetic API, checks standalone assets, private backend requests, authenticated snapshots, nonce-cookie paths, CSRF controls and cross-site rejection, and makes no provider calls. Its temporary backend uses development authentication solely to seed the test owner; the production Railway API forbids that mode.
 
-The latest access check found no `RAILWAY_*` runtime binding or stored session. Railway CLI 5.63.3 is installed in the ignored `.local/railway-cli` directory and reports unauthorized. The saved environment draft already requires `RAILWAY_TOKEN` for `backboard.railway.app` and `backboard.railway.com`, and permits those API destinations. Its draft is not an authenticated runtime session. The API endpoint currently returns HTTP 403, and `railway.com` still receives a network-proxy CONNECT 403. Supply the existing token requirement securely in environment settings, apply it to this runtime, and recheck `railway whoami` before deployment. Keep the token out of chat and shared logs. No callable Railway connector is available in this task; the installed official CLI is the fallback. No Railway deployment or public URL is claimed.
+The latest access check used Railway CLI 5.63.3 and both official GraphQL API hosts. The ordinary sandbox route returned HTTP 403; the supported escalated network route succeeded with HTTP 200. With the supplied credential, project-token authentication returned `Project Token not found`; account-token authentication returned `Not Authorized`. CLI project status, account identity and project-list checks also rejected it. This establishes an authentication blocker after network access was resolved; it is not merely a CLI login prompt.
+
+The saved environment draft already requires `RAILWAY_TOKEN` for `backboard.railway.app` and `backboard.railway.com`, and permits those API destinations. Create a valid project token for the intended deployment environment and save it securely under that existing requirement; apply it to the runtime and recheck project status. A declared requirement or saved draft is not authenticated access. No callable Railway connector is available here; the official CLI/API are the fallback. No resources were created or deployment/public URL claimed. Rotate the credential posted in chat and keep replacements out of source and shared logs.
 
 ## Pilot replicas and admission limits
 
-The enabled pilot topology is two stateless Web replicas, one API replica with one Uvicorn process, one Jobs consumer and one Retention worker. The optional Actions manifest also specifies one replica, but it stays undeployed. Browser sessions, nonces, owner data and durable operation ledgers are in shared PostgreSQL; API and all database workers require the same externally managed encryption key. The local `.local` directory is not a production data volume. This release stores supported text/native text records in PostgreSQL and does not implement media storage.
+The prepared pilot topology is one stateless Web replica, one API replica with one Uvicorn process, one Jobs consumer and one Retention worker. The optional Actions manifest also specifies one replica, but it stays undeployed. Browser sessions, nonces, owner data and durable operation ledgers are in shared PostgreSQL; API and all database workers require the same externally managed encryption key. The local `.local` directory is not a production data volume. This release stores supported text/native text records in PostgreSQL and does not implement media storage.
 
 Keep API, Jobs, Retention and any enabled Actions worker at one replica while distributed control and job-claim races are being hardened and tested. Keep any future live gateway at one replica until its distributed lease and submission boundaries are verified. `submit_guard` is a process-local lock; adding replicas does not make that lock distributed. Separate database uniqueness and account fencing protect specific records, but are not evidence that every concurrent read-modify-write path is safe. Keep model calls and external social sends disabled during the pilot. Pause workers before a release, apply migrations once, verify the replacement API, then restart Jobs and Retention. Configure the platform's termination grace to exceed the API's 30-second graceful-shutdown timeout and verify that behavior before relying on drain during live submissions.
 
