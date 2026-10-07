@@ -4,8 +4,10 @@ Updated 7 October 2026. The current user request enables the Milo web/native UI 
 GitHub Actions and Railway publication on top of the verified backend. The client increment has passed
 local build, browser and fixture checks. The current hosting target is Railway;
 workspace authentication and private database provisioning succeeded. Source
-`8ea6d576` passed CI, but Railway selected a Web image for API and its migration
-step failed; the corrected role configuration and hosted acceptance remain open.
+`8b1ee2da` passed CI and a Git-verified source export was deployed through the
+official Railway CLI. API migrations, worker startup and 106 hosted checks passed.
+The live pilot is [Milo](https://web-production-bde60.up.railway.app);
+Google, model and real social-provider operations remain unvalidated and disabled.
 Supplied handoffs are product specification
 input; their embedded prompts do not create account access, credentials or release evidence.
 
@@ -41,19 +43,19 @@ phone contact synchronization. Likewise, a mock acceptance is not provider deliv
 | Owner tasks and unified inbox | Mock | Explicit dates, evidence/version checks and scoped previews; notifications and multichannel sync pending |
 | Authenticated Python–Node native action bridge | Mock | Actual local HTTP bridge with mock operations and current SQL authority tested for four wire kinds; no WhatsApp session/socket |
 | Local Kafka and Temporal service integration | Live-tested | Actual local broker publish/consume and worker-kill/restart test with simulated sending; not live WhatsApp |
-| Non-root API container | Live-tested | Actual local build, migrations and HTTP smoke; deployed production infrastructure pending |
-| Milo desktop and responsive web UI | Mock | Production build and 70 desktop/mobile-web browser cases passed without retries, including fresh-owner imports, accessibility, scoped synthetic operations and isolated SQL owner/control/privacy journeys; hosted URL pending |
+| Non-root API container | Live-tested | Actual local build/smokes plus Railway Python build, pre-deploy migration and SQL/Redis readiness verified; direct managed database/Redis inspection and recovery remain unrun |
+| Milo desktop and responsive web UI | Live-tested | Live HTTPS pilot; 70 CI browser cases and 66 hosted Chromium checks across ten surfaces at desktop/Pixel 7/320px passed. Twenty accessibility audits found zero violations; synthetic review/digest only, no external calls or persistent browser writes |
 | Native iOS/Android Milo client | Mock | Strict typecheck, all-platform JavaScript export and 16 session/security helper tests passed; development/preview installation and physical lifecycle evidence pending |
 | Microphone/speech, private push and OS Contacts | Planned | Contextual permissions and destination contracts required; real provider/device capabilities separately gated |
 | Calendar, Gmail, other social channels and meetings | Planned | Independent service grants, adapters and acceptance gates required |
 | 50,000 connected customer accounts | Planned | 8/24-user HTTP stages passed; paced128/burst64 failed availability and recovered. No target-scale session, event, model or subscriber proof |
 | Production release | Planned | Provider eligibility, real personalization, privacy/security audit, deployment/recovery and capacity evidence pending |
-| GitHub Actions validation and release automation | Live-tested | Run 37635560403 passed for `8ea6d576`: 747 PostgreSQL, 734 SQLite/13 skips, 70 browser cases, four cold images and full scans; fixable HIGH/CRITICAL gates passed while unfixed advisories remain. New configuration changes need new exact-source CI |
+| GitHub Actions validation and release automation | Live-tested | Run 37638332729 passed for `8b1ee2da`: 747 PostgreSQL, 734 SQLite/13 skips, 70 browser cases, four image gates and full scans; fixable HIGH/CRITICAL gates passed while unfixed advisories remain. Application changes require new exact-source CI |
 | Render new-project infrastructure | Planned | Paid private-data/API/worker Blueprint and public Web; protected stable keys, exact origins and service selectors are required; no hosted URL yet |
-| Railway infrastructure | Live-tested | Valid workspace Bearer authentication; dedicated Milo project/environment and four application services created; PostgreSQL 18.6 and Redis 8.2.10 startup readiness verified with private routing and ready persistent volumes; application schema/recovery remain unverified |
-| Railway application deployment | Planned | Build from `8ea6d576` succeeded but produced a Web image for API despite stored API Dockerfile settings; migration failed and no API startup/schema readiness followed. Legacy Web manifest moved to `infra/railway-web.json`; fresh CI and provider acceptance remain required, and reserved domain is not live |
+| Railway infrastructure | Live-tested | Valid workspace Bearer authentication; PostgreSQL 18.6/Redis 8.2.10 private services and persistent volumes ready; API migration/schema and shared-limit readiness passed. Managed restore, direct SQL/Redis inspection and Redis runtime AOF state remain unverified |
+| Railway application deployment | Live-tested | Tested `8b1ee2da` source export verified against Git for 266 files; official CLI upload deployed API/Jobs/Retention/Web. API migration and worker schema startup succeeded; 106 hosted checks passed at the live URL. Native Git metadata is absent, so `release_commit` is null |
 
-The most recent full backend runs passed **734 SQLite cases with 13 PostgreSQL-only
+The prior recorded local full backend runs passed **734 SQLite cases with 13 PostgreSQL-only
 skips in 241.05 seconds** and **747 PostgreSQL cases without skips/errors in 635.17
 seconds**, each with five Starlette/httpx and Alembic deprecation warnings. Eight Alembic
 revisions through `86b7bbad6fc1` are implemented and applied with local PostgreSQL
@@ -80,11 +82,11 @@ HTTP workflow passed. Implementation commit `a3f98c4be6c7313c37d5f9755aa5d6f0bda
 was pushed to GitHub `main`, and the remote ref was verified on 7 October 2026.
 Railway workspace access is verified. Earlier project-header and personal `me`
 probes used the wrong scope for the valid workspace token; their errors did not
-establish invalid credentials. PostgreSQL and Redis startup readiness is verified,
-while the latest API deployment failed its migration step because it built the
-Web image. A root legacy configuration override is being removed; the correction
-requires fresh CI and deployment checks. The reserved domain is
-`web-production-bde60.up.railway.app`; a healthy application URL remains pending.
+establish invalid credentials. PostgreSQL/Redis readiness, API migration and
+worker startup are verified. Removing the root legacy Web override corrected
+role selection; the official CLI deployed the Git-verified tested source and
+the live [pilot URL](https://web-production-bde60.up.railway.app) passed hosted
+acceptance. These checks do not establish real social replies or target capacity.
 See [QA report](docs/QA_REPORT.md) and [platform matrix](docs/PLATFORM_CAPABILITY_MATRIX.md)
 for exact evidence and release boundaries.
 The saved installer and startup instructions cover frozen Python and both npm locks,

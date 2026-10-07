@@ -1,0 +1,286 @@
+{
+  "report_date": "2026-10-07",
+  "release_status": "live_synthetic_pilot",
+  "public_origin": "https://web-production-bde60.up.railway.app",
+  "source_provenance": {
+    "tested_and_exported_source_commit": "8b1ee2da798aab53464e45842fbb455ffedaa98b",
+    "upload_method": "official Railway CLI v5.63.3 up from a clean Git export",
+    "tracked_files_verified_against_git": 266,
+    "all_export_file_hashes_match_git": true,
+    "export_manifest_sha256": "04d4190943cc3904e1a307e38a232a59820471a3d306e8cd7a4d72d70277bde5",
+    "git_export_archive_sha256": "af57a10eb92ec83e5ca90093bbac9306fd6c0eee040dfd970ecbf29a70f40dbd",
+    "git_export_archive_role": "Source export and separately failed direct PAX upload; not the accepted CLI tar payload checksum",
+    "accepted_cli_upload_payload_sha256": null,
+    "native_provider_git_commit_metadata": null,
+    "public_readyz_release_commit": null,
+    "limits": [
+      "Exported input content was verified locally; native provider Git metadata is absent.",
+      "Railway rebuilt the images; deployed bytes were not compared with independently tested CI image IDs.",
+      "The later documentation-only evidence commit does not change deployed application source."
+    ]
+  },
+  "github_actions": {
+    "run_id": 37638332729,
+    "run_url": "https://github.com/hemantsatishjadhav06-ai/whatsapp-history-ai-/actions/runs/37638332729",
+    "conclusion": "success",
+    "postgres": {
+      "passed": 747,
+      "skipped": 0,
+      "warnings": 5,
+      "junit_seconds": 331.398
+    },
+    "sqlite": {
+      "passed": 734,
+      "skipped": 13,
+      "warnings": 5,
+      "seconds": 141.87
+    },
+    "browser": {
+      "passed": 70,
+      "retries": 0,
+      "seconds": 43.5
+    },
+    "artifact_ids": {
+      "postgres": 11490858664,
+      "sqlite": 11489729978,
+      "browser": 11489814945,
+      "container": 11490153658
+    },
+    "distinct_container_builds_and_http_smokes": 4,
+    "runtime_probe": {
+      "mode": "disposable_manifest_runtime_configuration",
+      "built_image": "relationship-assistant-api:railway",
+      "built_image_id": "sha256:77d267e7e0a2cb782073136ab36e9c3d8169a44da4d20d0014f53a4974084982",
+      "non_root_uid": 10001,
+      "configured_port_honored": true,
+      "ipv4_readiness": true,
+      "ipv6_http": true,
+      "configured_admission_limit": 64,
+      "admission_probe_connections": 72,
+      "overload_status": 503,
+      "overload_rejections": 10,
+      "admission_recovered": true,
+      "shutdown_exit_code": 0,
+      "shutdown_seconds": 0.511,
+      "external_provider_calls": 0,
+      "capacity_50000_users": "NOT_MEASURED"
+    },
+    "postgres_startup": {
+      "passed": true,
+      "synthetic_only": true,
+      "expected_heads": [
+        "86b7bbad6fc1"
+      ],
+      "expected_revision_count": 8,
+      "two_separate_migrators_observed_waiting_on_same_lock": true,
+      "each_revision_applied_once": true,
+      "actual_heads": [
+        "86b7bbad6fc1"
+      ],
+      "repeated_migration_idempotent": true,
+      "schema_tables": 38,
+      "business_rows": 0,
+      "disposable_database_removed": true
+    },
+    "images": {
+      "api": {
+        "ci_image_id": "sha256:33fd1fb91d01961cd896e94b7d7b117797386c8225be3069c71ad82ce76e6869",
+        "findings": {
+          "CRITICAL": 2,
+          "HIGH": 53,
+          "LOW": 101,
+          "MEDIUM": 108,
+          "UNKNOWN": 1
+        },
+        "finding_rows": 265,
+        "available_fix_high_critical_gate_rows": 0
+      },
+      "web": {
+        "ci_image_id": "sha256:b703caba4258cb2b888d931d3ed99e30e1b8248e0179a06b32322a2c15112252",
+        "findings": {
+          "CRITICAL": 1,
+          "HIGH": 50,
+          "LOW": 81,
+          "MEDIUM": 103,
+          "UNKNOWN": 1
+        },
+        "finding_rows": 236,
+        "available_fix_high_critical_gate_rows": 0
+      },
+      "railway-api": {
+        "ci_image_id": "sha256:77d267e7e0a2cb782073136ab36e9c3d8169a44da4d20d0014f53a4974084982",
+        "findings": {
+          "CRITICAL": 2,
+          "HIGH": 53,
+          "LOW": 101,
+          "MEDIUM": 108,
+          "UNKNOWN": 1
+        },
+        "finding_rows": 265,
+        "available_fix_high_critical_gate_rows": 0
+      },
+      "railway-web": {
+        "ci_image_id": "sha256:9614d591eb5cf9ffbc09d817ee9f5b4e949063ff72c08ace1ab4d37bab071169",
+        "findings": {
+          "CRITICAL": 1,
+          "HIGH": 50,
+          "LOW": 81,
+          "MEDIUM": 103,
+          "UNKNOWN": 1
+        },
+        "finding_rows": 236,
+        "available_fix_high_critical_gate_rows": 0
+      }
+    },
+    "security_gate_scope": "Available-fix HIGH/CRITICAL only; unfixed HIGH/CRITICAL findings remain. This is not zero-vulnerability certification."
+  },
+  "railway": {
+    "observed_at": "2026-10-07T15:20:08.267517+00:00",
+    "project_id": "7fe11891-3f09-471b-91ed-864ea3a0e675",
+    "environment_id": "2ebd5d64-7b47-4092-ab0b-129177ce6ada",
+    "services": [
+      {
+        "name": "Web",
+        "service_id": "2e685ac8-490f-4570-b2e7-ba43b1c2a309",
+        "deployment_id": "1a3cf7ba-dcb3-4da3-b247-ac9bb49ab992",
+        "status": "SUCCESS",
+        "running_instances": 1,
+        "replicas": 1,
+        "deployment_stopped": false
+      },
+      {
+        "name": "API",
+        "service_id": "4221b740-712c-4f06-99e9-9f0b8de88b2f",
+        "deployment_id": "b2254cbf-6b70-427d-a7c4-c236d34647ac",
+        "status": "SUCCESS",
+        "running_instances": 1,
+        "replicas": 1,
+        "deployment_stopped": false
+      },
+      {
+        "name": "Retention",
+        "service_id": "bc2c5bde-f8a0-4860-aeb0-2b71b0a5dcb3",
+        "deployment_id": "fb9139d5-f5d6-4f44-acbb-6a4243e96d60",
+        "status": "SUCCESS",
+        "running_instances": 1,
+        "replicas": 1,
+        "deployment_stopped": false
+      },
+      {
+        "name": "Postgres",
+        "service_id": "db9f942c-01c3-4375-b59b-92549034f562",
+        "deployment_id": "543de66a-8ea4-4cda-ac32-ce61155e31f8",
+        "status": "SUCCESS",
+        "running_instances": 1,
+        "replicas": 1,
+        "deployment_stopped": false
+      },
+      {
+        "name": "Jobs",
+        "service_id": "b79b197e-d38f-420f-88c2-4fdf8e631a30",
+        "deployment_id": "d2f5548e-3591-43a3-9d44-44abb2b7fbda",
+        "status": "SUCCESS",
+        "running_instances": 1,
+        "replicas": 1,
+        "deployment_stopped": false
+      },
+      {
+        "name": "Redis",
+        "service_id": "a1b4d6d2-e9f2-464a-95f5-6454650e10a7",
+        "deployment_id": "32f9d8d9-b5fe-4bbc-b65a-95ba672f69d3",
+        "status": "SUCCESS",
+        "running_instances": 1,
+        "replicas": 1,
+        "deployment_stopped": false
+      }
+    ],
+    "volumes": [
+      {
+        "service_id": "a1b4d6d2-e9f2-464a-95f5-6454650e10a7",
+        "volume_id": "8a6da23c-4a77-4b99-8e49-27a2350adf35",
+        "mount_path": "/data",
+        "state": "READY",
+        "pending_deletion": false
+      },
+      {
+        "service_id": "db9f942c-01c3-4375-b59b-92549034f562",
+        "volume_id": "8e865763-2994-4136-86f9-b47a62011ecb",
+        "mount_path": "/var/lib/postgresql/data",
+        "state": "READY",
+        "pending_deletion": false
+      }
+    ],
+    "observed_database_version": "PostgreSQL 18.6",
+    "observed_redis_version": "8.2.10",
+    "database_release_gate": {
+      "release_migration_file_count": 8,
+      "expected_release_head": "86b7bbad6fc1",
+      "head_file": [
+        "86b7bbad6fc1_bounded_auth_expiry_indexes.py"
+      ],
+      "remote_direct_sql_verified": false,
+      "remote_evidence": "API migrate predeploy completed; Jobs and Retention configured wait-schema against installed release heads and both emitted Database release startup confirmed before persistent RUNNING instances."
+    },
+    "redis_start_command_flags": {
+      "appendonly_yes_in_start_command": true,
+      "appendfsync_everysec_in_start_command": true,
+      "noeviction_in_start_command": true,
+      "memory_256mb_in_start_command": true,
+      "data_directory_in_start_command": false
+    },
+    "redis_runtime_info_verified": false,
+    "production_configuration": {
+      "development_auth_enabled": false,
+      "secure_sessions_enabled": true,
+      "google_signin_configured": false,
+      "model_provider": "disabled",
+      "external_sends_enabled": false,
+      "private_web_backend_configured": true,
+      "shared_encryption_and_internal_keys_present_and_consistent": true
+    },
+    "temporary_workspace_ssh_key": {
+      "user_authorized": true,
+      "remote_connection_result": "ssh.railway.com port 22 connection refused",
+      "direct_remote_probe_executed": false,
+      "provider_key_removed": true,
+      "local_key_files_deleted": true
+    },
+    "storage_limits": [
+      "READY is provider volume state, not a database restore or persistence-failure test.",
+      "Private API database/Redis readiness passed; no direct remote SQL or Redis INFO inspection was performed.",
+      "Live backup restore, point-in-time recovery and forced storage failure were not tested."
+    ]
+  },
+  "hosted_acceptance": {
+    "checked_at": "2026-10-07T15:17:13.267Z",
+    "passed": true,
+    "http_checks": 40,
+    "chromium_checks": 66,
+    "total_checks": 106,
+    "failures": [],
+    "coverage": {
+      "desktop_and_mobile_rendered_surfaces": 20,
+      "desktop_and_mobile_wcag_surface_audits": 20,
+      "320px_surfaces": 10,
+      "persistent_browser_writes": 0,
+      "unexpected_http_failures": 0,
+      "uncaught_browser_errors": 0
+    },
+    "expected_unauthenticated_me_console_messages": {
+      "desktop": 13,
+      "mobile": 23
+    },
+    "accessibility_scope": "20 automated WCAG 2A/AA, 2.1AA and 2.2AA surface audits with zero reported violations; not accessibility certification.",
+    "reply_flow_scope": "Synthetic exact-message review and assistant digest; no real model/provider operation or external reply.",
+    "customer_writes": 0
+  },
+  "unfinished_release_gates": [
+    "Google login credentials/provider setup and authenticated live customer acceptance",
+    "Real AI model configuration and evaluated reply quality",
+    "Personal WhatsApp pairing, history sync, phone coexistence and live external sends",
+    "Other social platforms, Contacts/Calendar/Gmail adapters and general-action planner",
+    "Voice/push and installed-device/store validation",
+    "50,000 simultaneous users and distributed production capacity acceptance",
+    "Residual dependency/container vulnerability review and live storage recovery validation"
+  ]
+}

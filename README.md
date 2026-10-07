@@ -1,5 +1,9 @@
 # Milo relationship assistant
 
+Live pilot: [Open Milo](https://web-production-bde60.up.railway.app).
+Hosted checks passed; Google sign-in, model generation and external sending remain
+disabled, and personal WhatsApp pairing is unavailable.
+
 A WhatsApp-first communication assistant with Milo web and native clients. It imports authorized chat exports,
 builds inspectable writing-style previews for each conversation, keeps owner-reviewed
 memories with evidence, and supports scoped communication controls. Owner-invoked drafts
@@ -122,7 +126,7 @@ Further details and limitations are recorded in [capabilities](docs/capabilities
 
 The current hosting target is Railway. The [Railway guide](docs/railway.md)
 covers Web, private API, Jobs, Retention, PostgreSQL and Redis, production settings,
-startup ordering and the current build blocker. New Railway services
+startup ordering and the verified hosted pilot. New Railway services
 require current service settings or Infrastructure as Code; the legacy JSON
 manifests alone do not configure a new service.
 
@@ -145,19 +149,22 @@ The 7 October hardening adds bounded request/storage admission, concurrent SQL a
 authentication cleanup, private-result reconciliation and measured capacity reports.
 Railway workspace authentication succeeded with the securely configured credential.
 A dedicated Milo project/environment and Web, API, Jobs and Retention services
-were created. PostgreSQL 18.6 and Redis 8.2.10 reported ready with private routing
-and persistent volumes. [CI run 37635560403](https://github.com/hemantsatishjadhav06-ai/whatsapp-history-ai-/actions/runs/37635560403)
-passed for `8ea6d576`: 747 PostgreSQL cases, 734 SQLite cases with 13 skips,
-70 browser cases, four cold image builds and security gates. The subsequent
-Railway API build succeeded but produced the Web image despite the configured
-API Dockerfile; its migration command failed before application startup.
+were created. PostgreSQL 18.6 and Redis 8.2.10 are ready with private routing
+and persistent volumes. [CI run 37638332729](https://github.com/hemantsatishjadhav06-ai/whatsapp-history-ai-/actions/runs/37638332729)
+passed for `8b1ee2da`: 747 PostgreSQL cases, 734 SQLite cases with 13 skips,
+70 browser cases, four image gates and security scans. The official Railway CLI
+deployed a clean Git-verified export to all four application services. API
+migrations and worker schema startup succeeded; public readiness confirms SQL
+and shared Redis availability. All 106 hosted checks passed: 40 HTTP checks and
+66 Chromium checks across desktop, Pixel 7 and 320px layouts. Twenty accessibility
+audits found zero violations in the tested surfaces; this is not WCAG certification.
 The legacy Web manifest is now `infra/railway-web.json`, outside the repository
 root, to prevent default Web build settings from overriding another role.
 New services use explicit service settings and the mount-free
-`Dockerfile.web.railway` / `services/api/Dockerfile.railway` paths. This correction
-requires a new exact-source CI result and hosted acceptance; autodeploy stays off.
-The reserved domain `web-production-bde60.up.railway.app` is not a verified live
-application URL yet.
+`Dockerfile.web.railway` / `services/api/Dockerfile.railway` paths; autodeploy stays
+off. [Hosted release evidence](docs/benchmarks/railway-hosted-release-2026-10-07.json)
+records the tested source and acceptance boundaries. Provider Git metadata is
+absent for CLI uploads, so public `release_commit: null` is expected.
 The larger local load stages exceeded the measured pilot capacity; 50,000
 simultaneous users is unverified. Known native/build and container advisories remain
 documented in the [security review](docs/SECURITY_REVIEW.md).

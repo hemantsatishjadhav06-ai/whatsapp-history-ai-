@@ -9,27 +9,40 @@ Milo project/environment and Web, API, Jobs and Retention services were created.
 PostgreSQL 18.6 and Redis 8.2.10 deployments reported success with startup
 readiness verified from filtered logs, private routing and
 ready persistent volumes at `/var/lib/postgresql/data` and `/data` respectively.
-The Web domain `web-production-bde60.up.railway.app` is reserved; application
-readiness and a usable live URL have not been verified.
+The live pilot is [Milo](https://web-production-bde60.up.railway.app).
+API Python build/pre-deploy migrations, Jobs/Retention schema startup and public
+SQL/Redis dependency readiness passed; Retention reported zero-item sweeps.
+At 15:20 UTC, all six services reported successful deployments and running
+instances, with both persistent volumes ready.
+All 106 hosted checks passed: 40 HTTP and 66 Chromium checks across ten surfaces
+on desktop, Pixel 7 and 320px layouts. Twenty accessibility audits found zero
+violations on tested surfaces; this is not WCAG certification. Browser review
+and digest checks were synthetic, without external calls or persistent writes.
 
 The initial `72df83c` API build failed on unsupported Docker bind/secret mounts.
 The mount-free `Dockerfile.web.railway` and `services/api/Dockerfile.railway`
-passed [CI run 37635560403](https://github.com/hemantsatishjadhav06-ai/whatsapp-history-ai-/actions/runs/37635560403)
-for `8ea6d57633ef993241fe2af0b5f036d9d3f22d33`: 747 PostgreSQL cases,
-734 SQLite cases with 13 skips, 70 browser cases, four cold image builds and full
+passed [CI run 37638332729](https://github.com/hemantsatishjadhav06-ai/whatsapp-history-ai-/actions/runs/37638332729)
+for deployed application source `8b1ee2da798aab53464e45842fbb455ffedaa98b`:
+747 PostgreSQL cases, 734 SQLite cases with 13 skips, 70 browser cases, four image gates and full
 scans. Fixable HIGH/CRITICAL gates passed while unfixed image advisories remain;
 [QA](QA_REPORT.md) records the scan counts and boundaries.
 
-Railway's subsequent API build succeeded but produced the Web image despite the
-stored API Dockerfile setting and variable. Its migration command failed, so no
-API startup or application schema readiness is verified. Explicit legacy role
+An earlier API build produced the Web image despite the stored API Dockerfile
+setting and variable, then failed its migration command. Explicit legacy role
 configuration was rejected as deprecated. The legacy Web manifest has moved
 from the repository root to `infra/railway-web.json`; new services use current
-explicit service settings and Dockerfile variables. This correction requires
-fresh exact-source CI and provider readiness checks. Keep source autodeploy off.
-Successful database provisioning does not establish application migrations,
-storage recovery, live replies or capacity. Redis AOF configuration and recovery
-remain unverified.
+explicit service settings and Dockerfile variables. The correction passed CI and
+the official CLI deployed all four application services from a clean export with
+266 file hashes verified against Git. Provider Git-source/direct Git archive
+attempts failed; the CLI's actual upload-byte checksum was not measured.
+Native Git metadata is absent, so public `release_commit: null` is expected.
+[Hosted release evidence](benchmarks/railway-hosted-release-2026-10-07.json) records
+the source and acceptance scope. Keep source autodeploy off.
+
+Google sign-in remains unconfigured, model generation and external sends are
+disabled, and personal WhatsApp pairing is unavailable. Live replies, installed
+device integration, direct SQL/Redis inspection, Redis runtime AOF state,
+managed recovery and 50,000-user capacity remain unverified.
 
 ## Service configuration
 
@@ -134,7 +147,7 @@ Keep GitHub source autodeploy disabled until an exact-source test-gated release
 path is configured. Source connection can trigger deployment; repository
 publication alone does not verify a healthy release.
 
-Acceptance checks cover Web `/healthz` and `/readyz`, API `/health/ready`, the public companion page, Google login configuration, server-side proxy/cookie behavior and read-only capability status. `/readyz` exposes only coarse private API readiness and validated `RAILWAY_GIT_COMMIT_SHA` metadata (or Render metadata on Render); verify the actual provider deployment's source identity separately. Test live provider operations only after their real credentials and account evidence are available. Keep development login and mock connectors unavailable on the public production API.
+Acceptance checks cover Web `/healthz` and `/readyz`, API `/health/ready`, the public companion page, Google login configuration, server-side proxy/cookie behavior and read-only capability status. `/readyz` exposes only coarse private API readiness and validated `RAILWAY_GIT_COMMIT_SHA` metadata when present (or Render metadata on Render); CLI uploads have no native Git metadata, so this pilot returns `release_commit: null`. Verify source identity through the recorded Git-verified export and actual deployment evidence. Test live provider operations only after their real credentials and account evidence are available. Keep development login and mock connectors unavailable on the public production API.
 
 For local container acceptance, build from the repository root with `docker build -f Dockerfile.web -t milo-web:local .`, then run `uv run --frozen python scripts/web_container_smoke.py`. In an environment with a managed certificate authority, supply its existing trusted bundle with `--secret id=trusted_ca,src=/etc/ssl/certs/ca-certificates.crt`; certificate verification remains enabled. The smoke test starts and removes its own disposable web container and synthetic API, checks standalone assets, private backend requests, authenticated snapshots, nonce-cookie paths, CSRF controls and cross-site rejection, and makes no provider calls. Its temporary backend uses development authentication solely to seed the test owner; the production Railway API forbids that mode.
 
@@ -150,9 +163,10 @@ store; certificate verification must remain enabled in both environments.
 The successful access/provisioning used the official API and CLI 5.63.3; no
 callable Railway connector was available. The ordinary sandbox network route
 returned HTTP 403, while the supported route reached the API with HTTP 200 and
-verified workspace-scoped access. The active blocker is now consistent role
-selection in provider builds, successful migration and hosted application
-acceptance, rather than credentials.
+verified workspace-scoped access. Build-role selection and hosted startup were
+resolved by removing the root legacy Web override and using the official CLI
+with explicit selectors. The live pilot is verified; external integration,
+managed recovery and target-capacity gates remain open.
 
 ## Pilot replicas and admission limits
 

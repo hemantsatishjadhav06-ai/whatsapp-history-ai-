@@ -2,11 +2,45 @@
 
 Updated 7 October 2026; runs retain their recorded dates below. Tests use synthetic content
 and identities unless explicitly
-listed as actual local infrastructure. No real Google, model or WhatsApp account journey
+listed as actual local or hosted infrastructure. No real Google, model or WhatsApp account journey
 has been exercised. The current request enables Milo web/native and deployment acceptance;
 client results below are separate from backend and installed-device results.
 
 ## 7 October Railway deployment follow-up
+
+The live pilot is [Milo](https://web-production-bde60.up.railway.app). All
+**106 hosted checks passed: 40 HTTP and 66 Chromium checks** across ten surfaces
+on desktop, Pixel 7 and 320px layouts. Twenty accessibility audits reported zero
+violations on the tested surfaces; this is not WCAG certification. Browser
+review/digest checks used synthetic content and made no external provider calls
+or persistent browser writes.
+
+[GitHub run 37638332729](https://github.com/hemantsatishjadhav06-ai/whatsapp-history-ai-/actions/runs/37638332729)
+passed for exact application source
+`8b1ee2da798aab53464e45842fbb455ffedaa98b`: 747 PostgreSQL cases, 734 SQLite
+cases with 13 PostgreSQL-only skips, 70 browser cases, four image gates,
+HTTP/worker smokes and full security scans.
+
+The successful deployment used official Railway CLI 5.63.3 from the clean
+`/tmp/milo-source-8b1ee2` export; all 266 exported files had SHA-256 identities
+verified against Git before upload. API, Jobs, Retention and Web deployments
+succeeded. The actual API Python build and pre-deploy migrations were confirmed;
+both workers reached the exact schema head, and Retention reported zero-item
+sweeps. Public health and dependency readiness returned HTTP 200 with private
+SQL and shared Redis readiness. Empty-worker startup is not populated-workload
+or live-delivery acceptance.
+At 15:20 UTC, all six services reported successful deployments and running
+instances, and both persistent volumes were ready.
+
+Provider Git-source operations returned generic processing errors, and the
+direct Git PAX archive upload failed snapshot creation. Those attempts were not
+accepted release artifacts. The
+successful official CLI generated its own upload archive. Its upload-byte
+checksum was not measured and must not be equated with the failed Git archive's
+hash. Native provider Git metadata is absent, so public `release_commit: null`
+is expected; source provenance rests on the verified export, rather than a
+fabricated provider commit field. [Hosted release evidence](benchmarks/railway-hosted-release-2026-10-07.json)
+records the accepted source and check boundaries.
 
 The latest request selects Railway. Its official API is reachable through the
 supported network route, and the securely configured workspace token succeeded
@@ -20,11 +54,18 @@ Actual provider provisioning created a dedicated Milo project/environment and
 Web, API, Jobs and Retention services. PostgreSQL 18.6 and Redis 8.2.10 deployments
 reported success, with startup readiness verified from filtered provider logs,
 private routing and ready persistent volumes mounted at
-`/var/lib/postgresql/data` and `/data`. These results verify infrastructure
-provisioning; they do not establish application schema, backup recovery or live
-reply behavior. Redis AOF configuration and recovery remain unverified.
-The reserved Web domain `web-production-bde60.up.railway.app`
-has not passed hosted acceptance.
+`/var/lib/postgresql/data` and `/data`. API migration and readiness evidence is
+recorded above; managed backup recovery and direct SQL/Redis inspection remain
+unverified. Redis startup settings specify AOF, every-second fsync, no eviction
+and a 256 MB memory limit; runtime AOF state and recovery remain unverified.
+A temporary SSH key was registered with
+user authorization, then removed after `ssh.railway.com:22` refused the connection;
+no direct database/Redis configuration result was obtained.
+
+Hosted configuration reports Google sign-in unconfigured, model generation
+disabled, external sends disabled and personal WhatsApp pairing unavailable.
+Live provider replies, installed-device outcomes and 50,000-user capacity remain
+unvalidated; the earlier larger local load stages failed availability.
 
 The initial API deployment from exact source `72df83c1cc05e4b3c707c1bf7747b3f90c369af7`
 failed during `BUILD_IMAGE`, before process startup or Alembic migrations.
@@ -32,9 +73,11 @@ Railway staff confirmed the original bind/secret Docker build mounts are
 unsupported. The mount-free `Dockerfile.web.railway` and
 `services/api/Dockerfile.railway` subsequently passed cold builds and acceptance
 checks in [GitHub run 37635560403](https://github.com/hemantsatishjadhav06-ai/whatsapp-history-ai-/actions/runs/37635560403)
-for exact source `8ea6d57633ef993241fe2af0b5f036d9d3f22d33`. That run passed
+for earlier source `8ea6d57633ef993241fe2af0b5f036d9d3f22d33`. That run passed
 747 PostgreSQL cases, 734 SQLite cases with 13 PostgreSQL-only skips, 70 browser
 cases, all four cold image builds, HTTP/worker smokes and full security scans.
+
+The latest `8b1ee2da` CI run reports these Railway image findings:
 
 | Railway image scan | Reported findings | Critical | High | Fixable HIGH/CRITICAL gate |
 | --- | --- | --- | --- | --- |
@@ -45,19 +88,18 @@ Unfixed image advisories remain. A passed fixable-finding gate does not mean
 the image is free of vulnerabilities; scan results apply to their recorded
 artifacts and vulnerability database snapshot.
 
-The subsequent Railway API build reported success, but its image contained the
+That earlier Railway API build reported success, but its image contained the
 Web runtime despite the stored API Dockerfile path and service variable. Its
 pre-deploy migration command failed, and no API process startup or application
 schema readiness was established. Railway also rejected explicit legacy
 `railwayConfigFile` role assignment as deprecated and referred to
-`.railway/railway.ts`. The legacy root Web manifest is being moved to
+`.railway/railway.ts`. The legacy root Web manifest was moved to
 `infra/railway-web.json` to prevent default Web settings from overriding another
 role. New services use explicit current service inputs and
-`RAILWAY_DOCKERFILE_PATH` values. This correction requires fresh exact-source CI,
-provider builds, successful migrations, worker startup and public Web/private API
-readiness; source autodeploy stays off.
+`RAILWAY_DOCKERFILE_PATH` values. The correction passed the newer `8b1ee2da`
+CI run and official CLI deployment recorded above; source autodeploy stays off.
 
-Web readiness now reports validated Railway runtime commit metadata, checks the
+Web readiness validates any available Railway runtime commit metadata, checks the
 private API through `/readyz`, and starts with one pilot replica. API startup
 uses serialized migration locking; Jobs and Retention wait for the exact schema
 head. All 38 proxy/readiness tests, 76 startup/release-helper tests (including the
@@ -81,12 +123,12 @@ passed for `f852b1af64ade873439415a94ee752fc49cdca72`: 747 PostgreSQL cases,
 cold image builds, HTTP/worker smoke checks and security gates. Deployment was
 skipped. Source `72df83c1cc05e4b3c707c1bf7747b3f90c369af7` subsequently passed
 GitHub validation, but its Railway API build failed as recorded above. The newer
-`8ea6d576` run and provider outcome are recorded above; the root configuration
-move needs a new exact-source CI result before another deployment.
+`8ea6d576` run and its failed provider outcome are historical; `8b1ee2da` is the
+tested application source for the successful hosted pilot recorded above.
 
 ## 7 October Render and fresh-owner increment
 
-These are the latest local-source results. The earlier hardening results below
+These are recorded local-source results for this earlier increment. The hardening results below
 remain evidence for their recorded source and workload; capacity and restore
 tests were not repeated for this increment. Every identity, history file, model
 response and outbound transport in these checks is synthetic. Real Google,
