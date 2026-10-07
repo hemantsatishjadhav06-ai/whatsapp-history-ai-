@@ -1,0 +1,58 @@
+name: Milo clients
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  clients:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run generate --workspace=@milo/contracts
+      - run: git diff --exit-code -- packages/contracts/generated
+      - run: npm run typecheck
+      - run: npm run test:clients
+      - run: npm run test:proxy
+      - run: npm test --workspace=@milo/mobile
+      - run: npm run build
+      - run: npm run mobile:export
+      - run: npx playwright install --with-deps chromium
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: '0.12.19'
+      - run: uv python install 3.12 && uv sync --frozen --group dev
+      - name: Start disposable browser API fixture
+        run: |
+          mkdir -p .local
+          uv run --frozen python scripts/client_fixture.py > .local/client-fixture.log 2>&1 &
+          python - <<'PY'
+          import time, urllib.request
+          for attempt in range(40):
+              try:
+                  urllib.request.urlopen('http://127.0.0.1:8001/health/ready', timeout=1)
+                  break
+              except OSError:
+                  time.sleep(0.5)
+          else:
+              raise RuntimeError('Browser fixture did not become ready')
+          PY
+      - run: npm run test:web
+        env:
+          BACKEND_URL: http://127.0.0.1:8001
+          MILO_API_TEST_URL: http://127.0.0.1:8001
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: browser-failure-evidence
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7

@@ -1,0 +1,26 @@
+FROM node:24.19.0-bookworm-slim@sha256:a9f5f7c91a432850b2a8a7797adf5eadb6c733ceed61167806cee7ea7fbc29df AS dependencies
+WORKDIR /app
+ENV NEXT_TELEMETRY_DISABLED=1
+COPY package.json package-lock.json ./
+COPY apps/web/package.json apps/web/package.json
+COPY apps/mobile/package.json apps/mobile/package.json
+COPY packages/contracts/package.json packages/contracts/package.json
+RUN --mount=type=secret,id=trusted_ca,target=/run/secrets/trusted_ca \
+    if [ -s /run/secrets/trusted_ca ]; then export npm_config_cafile=/run/secrets/trusted_ca; fi; \
+    npm ci --workspace=@milo/web --workspace=@milo/contracts --include-workspace-root --ignore-scripts --no-audit --no-fund
+
+FROM dependencies AS build
+COPY apps/web apps/web
+COPY packages/contracts packages/contracts
+RUN npm run build --workspace=@milo/web
+
+FROM node:24.19.0-bookworm-slim@sha256:a9f5f7c91a432850b2a8a7797adf5eadb6c733ceed61167806cee7ea7fbc29df AS runtime
+WORKDIR /app
+ENV NODE_ENV=production NEXT_TELEMETRY_DISABLED=1 HOSTNAME=0.0.0.0 PORT=3000
+RUN groupadd --gid 10001 milo && useradd --uid 10001 --gid 10001 --no-create-home milo
+COPY --from=build --chown=10001:10001 /app/apps/web/.next/standalone ./
+COPY --from=build --chown=10001:10001 /app/apps/web/.next/static ./apps/web/.next/static
+COPY --from=build --chown=10001:10001 /app/apps/web/public ./apps/web/public
+USER 10001:10001
+EXPOSE 3000
+CMD ["node", "apps/web/server.js"]

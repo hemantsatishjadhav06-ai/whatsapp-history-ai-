@@ -1,0 +1,42 @@
+name: Backend
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.12.19"
+          enable-cache: true
+      - run: uv python install 3.12
+      - run: uv sync --frozen --group dev
+      - run: uv run --frozen ruff check services tests scripts
+      - run: uv run --frozen pytest -q
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: services/connector-gateway/package-lock.json
+      - run: npm ci --prefix services/connector-gateway --ignore-scripts
+      - run: npm --prefix services/connector-gateway run check
+      - name: Verify shared API contracts and authenticated mock bridge
+        run: |
+          uv run --frozen python scripts/export_contracts.py
+          git diff --exit-code -- packages/contracts
+          uv run --frozen python scripts/bridge_smoke.py
+      - name: Verify repeatable migrations and model alignment
+        env:
+          DATABASE_URL: sqlite:///.local/ci-migrations.db
+          ENVIRONMENT: test
+        run: |
+          mkdir -p .local
+          uv run --frozen alembic upgrade head
+          uv run --frozen alembic upgrade head
+          uv run --frozen alembic check

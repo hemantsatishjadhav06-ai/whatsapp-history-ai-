@@ -1,0 +1,382 @@
+{
+  "$defs": {
+    "EventContent": {
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "text",
+          "default": "text",
+          "title": "Type",
+          "type": "string"
+        },
+        "text": {
+          "default": "",
+          "maxLength": 20000,
+          "title": "Text",
+          "type": "string"
+        }
+      },
+      "title": "EventContent",
+      "type": "object"
+    },
+    "NativeKey": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "maxLength": 180,
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "remoteJid": {
+          "maxLength": 160,
+          "minLength": 1,
+          "title": "Remotejid",
+          "type": "string"
+        },
+        "fromMe": {
+          "title": "Fromme",
+          "type": "boolean"
+        },
+        "participant": {
+          "anyOf": [
+            {
+              "maxLength": 160,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Participant"
+        }
+      },
+      "required": [
+        "id",
+        "remoteJid",
+        "fromMe"
+      ],
+      "title": "NativeKey",
+      "type": "object"
+    },
+    "NativeOriginal": {
+      "additionalProperties": false,
+      "properties": {
+        "provider_record_ref": {
+          "maxLength": 180,
+          "minLength": 1,
+          "title": "Provider Record Ref",
+          "type": "string"
+        },
+        "account_id": {
+          "maxLength": 120,
+          "minLength": 1,
+          "title": "Account Id",
+          "type": "string"
+        },
+        "key": {
+          "$ref": "#/$defs/NativeKey"
+        },
+        "payload": {
+          "additionalProperties": true,
+          "title": "Payload",
+          "type": "object"
+        },
+        "view_once": {
+          "default": false,
+          "title": "View Once",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "provider_record_ref",
+        "account_id",
+        "key",
+        "payload"
+      ],
+      "title": "NativeOriginal",
+      "type": "object"
+    },
+    "ReactionContent": {
+      "additionalProperties": false,
+      "properties": {
+        "target_provider_message_id": {
+          "maxLength": 180,
+          "minLength": 1,
+          "title": "Target Provider Message Id",
+          "type": "string"
+        },
+        "emoji": {
+          "default": "",
+          "maxLength": 32,
+          "title": "Emoji",
+          "type": "string"
+        },
+        "action": {
+          "default": "add",
+          "enum": [
+            "add",
+            "remove"
+          ],
+          "title": "Action",
+          "type": "string"
+        }
+      },
+      "required": [
+        "target_provider_message_id"
+      ],
+      "title": "ReactionContent",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": 1,
+      "default": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "event_id": {
+      "maxLength": 200,
+      "minLength": 1,
+      "title": "Event Id",
+      "type": "string"
+    },
+    "workspace_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Workspace Id"
+    },
+    "connector_id": {
+      "title": "Connector Id",
+      "type": "string"
+    },
+    "conversation_id": {
+      "title": "Conversation Id",
+      "type": "string"
+    },
+    "provider": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Provider"
+    },
+    "account_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Account Id"
+    },
+    "provider_message_id": {
+      "maxLength": 180,
+      "minLength": 1,
+      "title": "Provider Message Id",
+      "type": "string"
+    },
+    "sender_id": {
+      "maxLength": 160,
+      "minLength": 1,
+      "title": "Sender Id",
+      "type": "string"
+    },
+    "direction": {
+      "enum": [
+        "inbound",
+        "outbound"
+      ],
+      "title": "Direction",
+      "type": "string"
+    },
+    "origin": {
+      "enum": [
+        "live",
+        "history",
+        "replay",
+        "unknown"
+      ],
+      "title": "Origin",
+      "type": "string"
+    },
+    "event_type": {
+      "default": "message.created",
+      "enum": [
+        "message.created",
+        "message.edited",
+        "message.deleted",
+        "reaction.added",
+        "reaction.removed"
+      ],
+      "title": "Event Type",
+      "type": "string"
+    },
+    "author_kind": {
+      "anyOf": [
+        {
+          "enum": [
+            "contact_human",
+            "human_owner",
+            "assistant",
+            "other_authorized_operator",
+            "unknown_owner_outgoing"
+          ],
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Author Kind"
+    },
+    "provider_timestamp": {
+      "format": "date-time",
+      "title": "Provider Timestamp",
+      "type": "string"
+    },
+    "received_at": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Received At"
+    },
+    "content": {
+      "$ref": "#/$defs/EventContent"
+    },
+    "reply_to": {
+      "anyOf": [
+        {
+          "maxLength": 180,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Reply To"
+    },
+    "source_revision": {
+      "default": 1,
+      "minimum": 1,
+      "title": "Source Revision",
+      "type": "integer"
+    },
+    "sender_identity": {
+      "additionalProperties": true,
+      "title": "Sender Identity",
+      "type": "object"
+    },
+    "participant_identity": {
+      "additionalProperties": true,
+      "title": "Participant Identity",
+      "type": "object"
+    },
+    "provider_record_ref": {
+      "anyOf": [
+        {
+          "maxLength": 180,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Provider Record Ref"
+    },
+    "native_record": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/NativeOriginal"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "reaction": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ReactionContent"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "expires_at": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Expires At"
+    },
+    "deleted_at": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Deleted At"
+    },
+    "owner_addressed": {
+      "default": false,
+      "title": "Owner Addressed",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "event_id",
+    "connector_id",
+    "conversation_id",
+    "provider_message_id",
+    "sender_id",
+    "direction",
+    "origin",
+    "provider_timestamp"
+  ],
+  "title": "CanonicalEvent",
+  "type": "object"
+}

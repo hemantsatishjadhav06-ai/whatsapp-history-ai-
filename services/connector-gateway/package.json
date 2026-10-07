@@ -1,0 +1,20 @@
+{
+  "name": "@relationship-assistant/connector-contract-prototype",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "description": "Connector contract and isolated test simulation; no live WhatsApp transport",
+  "engines": {
+    "node": ">=24 <25"
+  },
+  "scripts": {
+    "bridge": "node src/start.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "node --test tests/*.test.ts",
+    "check": "npm run typecheck && npm test"
+  },
+  "devDependencies": {
+    "@types/node": "24.19.1",
+    "typescript": "7.0.2"
+  }
+}

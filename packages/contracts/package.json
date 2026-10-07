@@ -1,0 +1,15 @@
+{
+  "name": "@milo/contracts",
+  "version": "0.3.0",
+  "private": true,
+  "type": "module",
+  "main": "index.ts",
+  "types": "index.ts",
+  "exports": {".": "./index.ts", "./demo": "./demo.ts", "./generated": "./generated/api.ts"},
+  "scripts": {
+    "generate": "openapi-typescript openapi.json -o generated/api.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "tsx --test tests/*.test.ts"
+  },
+  "devDependencies": {"openapi-typescript": "7.13.0", "tsx": "4.21.0", "typescript": "5.9.3", "@types/node": "24.10.1"}
+}

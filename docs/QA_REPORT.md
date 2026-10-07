@@ -1,0 +1,178 @@
+# QA report
+
+Updated 7 October 2026; runs retain their recorded dates below. Tests use synthetic content
+and identities unless explicitly
+listed as actual local infrastructure. No real Google, model or WhatsApp account journey
+has been exercised. The current request enables Milo web/native and deployment acceptance;
+client results below are separate from backend and installed-device results.
+
+## Prior backend baseline
+
+These results predate the new CTO handoff increment and do not verify its new code.
+
+| Check | Recorded result | Scope |
+| --- | --- | --- |
+| Python suite, SQLite fixture mode | 278 passed | Synthetic API, policy, parser, auth, privacy, tasks, automation and workers |
+| Python suite, PostgreSQL fixture mode | 278 passed | Dedicated disposable test database; parser/unit-only tests remain local |
+| Node typecheck and contract tests | 18 passed | Isolated connector simulation; no provider socket |
+| Alembic migrations | Four revisions applied/repeated and schema check passed | SQLite/PostgreSQL; populated private-context upgrade tested |
+| Running local API HTTP smoke | Passed | PostgreSQL API; synthetic import/style/draft/approval/mock-send/tasks/pause/delete |
+| Docker container smoke | Passed | Built non-root image, SQLite migrations and loopback API acceptance |
+| Kafka integration smoke | Passed | Actual local broker publish/consume and SQL acknowledgment; metadata only |
+| Temporal recovery smoke | Passed | Actual local worker killed before due and restarted after due; one mock send attempt using disposable SQLite |
+| Load smoke | 100/100 successful | ASGI/SQLite, concurrency four; see [load report](LOAD_TEST_REPORT.md) |
+
+## CTO handoff increment
+
+| Final check | Recorded result | Scope |
+| --- | --- | --- |
+| Python suite, SQLite fixture mode | 495 passed in 167.43 seconds | Entire current backend suite; one Starlette/httpx compatibility deprecation warning |
+| Python suite, PostgreSQL fixture mode | 494 passed in 411.95 seconds | Full run before the final audit-paging regression was added; one compatibility deprecation warning |
+| Final PostgreSQL retention suite | Seven cases passed in 6.89 seconds | Includes the final bounded audit-deletion regression; overlaps six cases from the full run |
+| Distinct PostgreSQL cases covered | 495 | Full run plus focused retention run; not one 495-test command |
+| Node typecheck and tests | 33 passed | Legacy contract plus authenticated native-action mock gateway |
+| Python–Node–SQL bridge smoke | Four operations, four durable attempts passed | Actual local HTTP; text, quote, reaction, forward, duplicate suppression and forged-recipient rejection; zero WhatsApp provider calls |
+| Alembic/bootstrap | Five revisions, schema alignment and frozen bootstrap repeat passed | SQLite/PostgreSQL development checks; existing data/secret configuration preserved |
+| Ruff and whitespace checks | Passed | Backend, tests, scripts and migrations; no source committed/pushed |
+| Running local API/demo | Passed | PostgreSQL loopback HTTP and disposable synthetic walkthrough |
+| Rebuilt non-root container | Passed | Latest image, migrations and container HTTP walkthrough, including final audit-paging fix |
+| New worker entry points | All three `--once` runs passed | Action planner, authorized jobs and application retention process startup |
+| Latest load smoke | 100/100 passed | Concurrency four during concurrent tests/build; detailed limits in [load report](LOAD_TEST_REPORT.md) |
+| Updated Kafka/Temporal integration rerun | Passed | One actual broker publish/consume with SQL acknowledgment and no private body; Temporal worker killed before due/restarted after due produced exactly one accepted mock send attempt |
+| Runtime at this prior increment | Running, initial worker logs clear | API version 0.2.0 plus persistent actions/jobs/retention workers; built-in mock transport, no persistent Node gateway or provider session |
+
+Mock acceptance now covers six-operation policy, authentic records, selected-chat grants,
+forwarding routes, reaction attribution/meaning, local contacts, authorized jobs, bridge
+authority, scoped commands, model/action budgets and pause/expiry behavior. No provider
+account or real model-quality gate is closed by those results.
+
+Critical acceptance cases:
+
+- Wrong owner/account/chat/recipient/source/route is blocked before retrieval and submission.
+- History/backfill/replay does not initiate automatic communication.
+- A logical turn produces at most one reply/quote/reaction, including replanning and restart;
+  separately granted forwards deduplicate for each exact destination.
+- Native targets are authentic, scoped, unchanged, undeleted, unexpired and available.
+- Source/destination takeover or route revocation invalidates a pending forward.
+- Reaction frequency does not override unsafe meaning; fresh human reactions handle their
+  targets, while assistant echoes do not become human evidence.
+- Contact destinations and exact identities remain distinct; unsupported external writes
+  cannot be reported as local-save success.
+- Global pause acknowledges committed state, prevents new external submission and preserves
+  schedules; resume rechecks expiry/current authority and does not replay canceled actions.
+- Accepted-but-unacknowledged sends remain uncertain and do not permit blind retries.
+- Prompt content/model references cannot grant access or forge recipients, routes or jobs.
+- Forget/delete blocks active retrieval and pending action evidence; replay cannot resurrect it.
+
+Run the final checks from the repository root with `make test`, `make lint`,
+`make gateway-check`, `make demo` and Alembic upgrade/schema checks. PostgreSQL fixture
+tests must use a dedicated disposable `TEST_DATABASE_URL`; tests drop fixture tables.
+Do not point them at the development or production application database. Provider
+credentials, conversation content and token values must stay out of test reports.
+
+## Handoff acceptance map
+
+| Handoff cases | Repository evidence boundary |
+| --- | --- |
+| AC01, AC02, AC26, AC27 | Auth/scope/ref-substitution negatives; new command/route/job negatives in final increment |
+| AC03 | Planned: actual eligible account and primary-phone journey required |
+| AC04, AC05 | Import coverage, provisional style, history/replay exclusion; new native backfill cases included |
+| AC06, AC07 | Scoped human-owner provenance and statistics tested; held-out voice preference remains unmeasured |
+| AC08, AC32 | Suppression, deletion and replay negatives; actual backup restore remains Planned |
+| AC09–AC12, AC17–AC21, AC34 | Native/action/contact synthetic suites passed; actual provider/device operations unverified |
+| AC13–AC16 | Revision/epoch/pause/lease and submission-boundary race tests; real phone observation lag remains unmeasured |
+| AC22, AC23 | Uncertain-result ledger and local recovery tests; real provider reconciliation/distributed actor handoff unverified |
+| AC24, AC25 | Job timezone/DST, bounded recurrence, holds/expiry/quotas and model-failure synthetic suites passed |
+| AC28, AC29 | Milo frontend now enabled; browser, configured speech and installed-device acceptance require separate results |
+| AC30 | Deterministic Business opt-in/window and unavailable-route blocks; live policy/eligibility pending |
+| AC31, AC33 | Capacity/fairness targets remain Planned; small smoke is not target-scale evidence |
+
+New feature tests are in `tests/test_native.py`, `tests/test_actions.py`, `tests/test_jobs.py`,
+`tests/test_people.py`, `tests/test_companion.py`, `tests/test_lifecycle.py` and gateway
+`tests/action-bridge.test.ts`, alongside the prior regression suite. Schema/HTTP bridge
+contract evidence must include the latest source, not only independently tested adapters.
+
+## Release gates still open
+
+Real owner sign-in, eligible account pairing/coexistence, native provider operations,
+actual phone-contact destinations, held-out personalization, distributed crash/lease
+reconciliation, restore/privacy lifecycle, production isolation audit and staged capacity
+must have separate evidence. A passing mock suite does not close those gates.
+
+## Milo client and publication increment
+
+The current request adds interactive Next.js web and Expo/React Native clients. The
+canonical M01–M36 inventory, all 60 TEST cases and 31 UX cases are mapped in
+[TEST_PLAN.md](TEST_PLAN.md) and [MOBILE_PARITY_REPORT.md](MOBILE_PARITY_REPORT.md).
+Required cases are not automatically passed by a successful build or a rendered button.
+
+| New check | Current result | Evidence boundary |
+| --- | --- | --- |
+| Client workspace frozen install/typechecking | PASS | Locked install and strict typechecking across workspaces; Node 24.19.0/npm 11.9.0 |
+| Shared contract tests | MOCK_ONLY: 20 passed | Final 7 October rerun; `.local/milo-contract-tests.log` |
+| Web proxy tests | MOCK_ONLY: 10 passed | Configured origin, unsafe methods, internal-route denial, bounded streaming ingress, nonce cookie and authorized lookup; `.local/milo-proxy-tests.log` |
+| Native helper tests | MOCK_ONLY: 16 passed, zero failures/skips | Runtime session/storage/client helpers, including same-workspace private-result reconciliation, stale-owner/read generations, ordered secrets, safe origins/paths and no mutation retry; `/tmp/milo-native-unit.log`; not installed OS capability |
+| Next.js production build | PASS | Final production build; no live integration or hosted URL inferred |
+| Desktop/mobile-web browser acceptance and accessibility | PASS: 62 passed, zero failures/skips in 1.3 minutes | 31 desktop and 31 mobile cases; seven axe-audited surfaces per project, 320px checks, synthetic operations, SQL onboarding/pause/logout, and delayed revoke/forget private-result regressions; `.local/milo-browser.log` |
+| Focused native/session/UI API regression | MOCK_ONLY: 108 passed in 42.61s | SQLite fixture run on 6 October 2026 at 14:48:01 UTC; one known Starlette/httpx warning; Google verification mocked |
+| Expo JavaScript exports | PASS | Final all-platform export after private-result fix; `/tmp/milo-native-export.log`, strict native check `/tmp/milo-native-typecheck.log`; distinct from signed development/preview installation |
+| Non-root standalone web container | PASS | Exact image `sha256:ffd052cd0a0448bcbc653f69000217ff6663e4aef7be8741bbde98630c9dcdaa`; 38 input files matched; assets, private proxy, snapshot, nonce path, CSRF/origin and route denial passed; `.local/web-container-smoke.json`; zero provider calls |
+| Selected web production dependency audit | PASS: zero vulnerabilities | Frozen-lock `npm audit --omit=dev --workspace=@milo/web --workspace=@milo/contracts --include-workspace-root --json`; `.local/web-production-dependency-audit.json`; separate from full native/workspace graph |
+| Full workspace dependency audit | FAIL/open: 36 findings, 21 high and 15 moderate | `.local/milo-npm-audit.json`; native/Expo/Metro/Jest-related build chains remain under review; selected web audit does not clear this graph |
+| Installed iOS/Android daily loop and lifecycle | NOT_RUN | OS/device/build and physical permission evidence required |
+| Real Google OAuth/pairing/model/speech/push/contact writes | BLOCKED_EXTERNAL | Registered accounts/provider/signing configuration absent |
+| GitHub publication | NOT_RUN | Commit and actual remote result required |
+| Railway build/health/final HTTPS browser smoke | NOT_RUN | Actual access and final URL evidence required |
+
+| New full backend run | Recorded result | Artifact / boundary |
+| --- | --- | --- |
+| SQLite | 533 passed in 228.91s; one known compatibility warning | `.local/milo-backend-sqlite.log`; disposable synthetic fixtures |
+| PostgreSQL | 533 passed in 589.73s; one known compatibility warning | `.local/milo-backend-postgres.log`; dedicated disposable fixture database |
+| Alembic | Seven revisions through `05439876fc2e` applied; alignment passed | New native identity and rotating refresh revisions; no live provider evidence |
+| Saved installer reproduction | PASS | Final `bash scripts/dev-bootstrap.sh`: frozen Python/root npm/gateway npm locks, PostgreSQL/Redis health and seven migrations; no existing secret configuration overwritten |
+| Final non-root API image | PASS | Version 0.3.0, UID/GID 10001, image `sha256:c599ad2e403d19b132aaabd0a219a12a434766965f2aa693681b9ff6095005b0`, 45 unchanged build inputs; migrations/readiness and HTTP import/dedup/style/approval/idempotent mock dispatch/Pause passed; `.local/api-v03-container-smoke.json`; zero external calls |
+| Refreshed persistent local API/workers | PASS | API OpenAPI version 0.3.0, both health checks, independent action/job/retention workers restarted; synthetic HTTP workflow and cleanup passed in `.local/milo-http-smoke-final.log` |
+| Contextual Catch me up follow-up | MOCK_ONLY: 20 SQLite cases in 7.49s and 20 PostgreSQL cases in 21.05s | Exact conversation filtering after the full 533-case runs; separate commands, not a new full-suite total |
+| Final privacy regression bundle | MOCK_ONLY: 77 SQLite cases in 19.61s and 77 PostgreSQL cases in 59.59s | 7 October 2026; one known warning each; catchup, draft deep resolution and derived-evidence suppression; `.local/ui-privacy-focused-sqlite.log` and `.local/ui-privacy-focused-postgres.log` |
+
+Read-only audit identified delayed private-snapshot resurrection across logout/session
+switch, asynchronous native secure deletion/save ordering, fresh-owner zero-workspace
+handling, discarded conversation cursors and small-text contrast. Fixes were included in
+the final local checks above. The 62-case browser run supersedes the initial 42-case run
+with nine failures; accessible names, lilac text contrast and a duplicated Pause test
+locator were corrected. Installed-device and complete large-inbox behavior remain separate
+gates. Recovery limitations are described in
+[RELIABILITY_AND_RECONCILIATION.md](RELIABILITY_AND_RECONCILIATION.md).
+
+Two synthetic Home screenshots were visually reviewed against the supplied PDF:
+`.local/milo-home-desktop.png` and `.local/milo-home-mobile.png`. They demonstrate the
+implemented warm/lilac hierarchy and desktop/mobile-web navigation, not native installation,
+WCAG certification, provider connection or delivery. Final screenshots should follow the
+latest successful browser run.
+
+The native unit, strict TypeScript and final all-platform export completed on 7 October
+2026 at 07:34:38, 07:34:50 and 07:35:08 UTC respectively. Artifact sizes/hashes, exact
+runtime and the unrun installed-device matrix are in
+[native device evidence](../apps/mobile/NATIVE_DEVICE_TEST_REPORT.md). Native implementation,
+storage, OS permissions and release steps are linked from
+[native README](../apps/mobile/README.md).
+
+The 108-case focused command was
+`UV_CACHE_DIR=/workspace/.cache/uv uv run pytest -q tests/test_mobile_auth.py tests/test_assistantui.py tests/test_auth.py tests/test_migrations.py tests/test_intelligence.py tests/test_lifecycle.py`.
+Python 3.12.14 ran from the uncommitted working tree; no commit existed at the time.
+The redacted result is `.local/ui-auth-focused-tests.log` (ignored local artifact).
+`TEST_DATABASE_URL` was unset, so fixture databases were disposable SQLite. Seven local
+PostgreSQL Alembic revisions through `05439876fc2e` applied and schema alignment passed;
+both new full 533-case SQLite/PostgreSQL runs subsequently passed. The earlier
+106-case run predates the final two protected-resolver cases and is superseded by 108.
+
+The 20-case catchup command was `UV_CACHE_DIR=/workspace/.cache/uv uv run pytest -q tests/test_companion.py` for SQLite and `.venv/bin/pytest -q tests/test_companion.py`
+with `TEST_DATABASE_URL` selecting the dedicated disposable `assistant_test` database for
+PostgreSQL. The earlier output was recorded in tool transcripts without a persistent log.
+The later bundle ran `pytest -q tests/test_assistantui.py tests/test_intelligence.py tests/test_companion.py`, with the default disposable SQLite fixture and then the dedicated
+PostgreSQL fixture selected through `TEST_DATABASE_URL`. Both 77-case runs provide ignored
+artifacts. The current suite collects 540 cases, but no full 540-case run was performed;
+the recorded evidence remains full 533-case runs plus focused 77-case follow-ups. The
+final 62-case browser run includes the four added desktop/mobile revocation and forgetting
+regressions. The final 16 native helper cases include private-result reconciliation and
+supersede the earlier 11-case run.

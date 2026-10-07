@@ -1,0 +1,20 @@
+{
+  "name": "milo-workspace",
+  "version": "0.3.0",
+  "private": true,
+  "workspaces": ["apps/*", "packages/*"],
+  "scripts": {
+    "dev": "npm run dev --workspace=@milo/web",
+    "build": "npm run build --workspace=@milo/web",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test:web": "playwright test",
+    "test:clients": "npm test --workspace=@milo/contracts",
+    "test:proxy": "node --import tsx --test tests/web_proxy.test.ts",
+    "mobile:export": "npm run export --workspace=@milo/mobile"
+  },
+  "engines": {"node": ">=22"},
+  "devDependencies": {
+    "@axe-core/playwright": "4.13.0",
+    "@playwright/test": "1.63.0"
+  }
+}
