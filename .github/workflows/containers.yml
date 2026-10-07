@@ -18,11 +18,20 @@ defaults:
 jobs:
   configuration:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           persist-credentials: false
+      - uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6
+        with:
+          version: '0.12.19'
+          enable-cache: false
+      - name: Validate Render Blueprint against the official HTTPS schema
+        run: |
+          uv python install 3.12.14
+          uv tool run --python 3.12.14 --from jsonschema==4.26.0 --with PyYAML==6.0.3 \
+            python scripts/render_schema_check.py
       - name: Check workflow expressions and shell scripts
         run: |
           tool_dir=$(mktemp -d)

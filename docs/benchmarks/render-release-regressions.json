@@ -28,7 +28,7 @@
     "default_branch_test": "PASS no trusted_ca secret with managed proxy root in test-only system store",
     "github_first_run_detected": "Node slim missing system trust; supplied local build secret had masked portability defect",
     "public_trust_only_proxy_test": "FAIL_CLOSED on managed private issuer as expected",
-    "remote_public_CA_cold_build": "Must be verified on subsequent exact-SHA GitHub run",
+    "remote_public_CA_cold_build": "PASS GitHub run37616800533; no custom CA build secret",
     "source": "same digest-pinned official Python image public trust bundle copied before HTTPS APT; managed ca-certificates installed with signed metadata"
   },
   "container_acceptance": {
@@ -316,6 +316,39 @@
   "known_findings": "OPEN; full exact-image OS/Cargo findings and native/build advisory baseline retained",
   "live_personal_whatsapp_sync": "NOT_IMPLEMENTED",
   "model_calls": 0,
+  "official_blueprint_schema": {
+    "blueprint_bytes": 5869,
+    "blueprint_sha256": "8a56467defa851933adec46ce259d9768ca950b66e3b2c0eb6b69739c62edb46",
+    "checked_at_utc": "2026-10-07T11:59:17.662740+00:00",
+    "checker_versions": {
+      "PyYAML": "6.0.3",
+      "jsonschema": "4.26.0"
+    },
+    "error_count": 0,
+    "errors": [],
+    "fetch_deadline_seconds": 10,
+    "provider_resource_creation": "NOT_RUN",
+    "provider_workspace_semantic_validation": "NOT_RUN",
+    "public_live_acceptance": "NOT_RUN",
+    "resource_counts": {
+      "databases": 1,
+      "envVarGroups": 1,
+      "service_types": {
+        "pserv": 1,
+        "redis": 1,
+        "web": 1,
+        "worker": 2
+      },
+      "services": 5
+    },
+    "schema_bytes": 45739,
+    "schema_draft": "https://json-schema.org/draft/2020-12/schema",
+    "schema_read_mode": "official_https",
+    "schema_sha256": "a0d4e8a3eb119a1b63657741757e3c25c091b3ce463c4be8c90e8026678d8163",
+    "schema_size_limit_bytes": 262144,
+    "schema_source": "https://render.com/schema/render.yaml.json",
+    "status": "PASS"
+  },
   "overlapping_focused_checks": {
     "business_owner_binding_new_cases": 22,
     "business_suite_passed": 121,
@@ -359,7 +392,7 @@
     "waiter_exit_code": 0
   },
   "production_web_build": "PASS",
-  "recorded_utc": "2026-10-07T11:48:50.206133+00:00",
+  "recorded_utc": "2026-10-07T12:00:44.735907+00:00",
   "references": [
     "../QA_REPORT.md",
     "../render-container-validation.md",
@@ -369,7 +402,34 @@
     "../LOAD_TEST_REPORT.md"
   ],
   "remote_github_actions": {
-    "corrective_run": "Track actual Actions results for the commit containing this CA bootstrap fix; no inferred pass",
+    "ca_corrective_run": {
+      "all_validation_jobs": "SUCCESS",
+      "available_high_critical_gate_findings": 0,
+      "browser": {
+        "passed": 70,
+        "retries": 0,
+        "seconds": 48.9
+      },
+      "deployment": "SKIPPED",
+      "full_scan_rows": {
+        "api": 265,
+        "web": 236
+      },
+      "id": 37616800533,
+      "overall": "success",
+      "postgres": {
+        "passed": 747,
+        "seconds": 330.89
+      },
+      "source_commit": "a703e9b8903c0110e9534b30a2070bd9cb40eb6f",
+      "sqlite": {
+        "passed": 734,
+        "seconds": 163.67,
+        "skipped": 13
+      },
+      "url": "https://github.com/hemantsatishjadhav06-ai/whatsapp-history-ai-/actions/runs/37616800533"
+    },
+    "corrective_run": "CA correction verified in run37616800533; subsequent Blueprint/schema-checker changes require a new exact-SHA validation run.",
     "first_run": {
       "browser": {
         "passed": 70,

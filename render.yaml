@@ -132,8 +132,8 @@ databases:
     databaseName: milo
     user: milo
     region: singapore
-    plan: basic_1gb
-    postgresVersion: "16"
+    plan: basic-1gb
+    postgresMajorVersion: "16"
     diskSizeGB: 10
     ipAllowList: []
 

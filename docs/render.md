@@ -10,7 +10,7 @@ The user selected a new Render project. Existing services and data should not be
 | Private API | `milo-api` | `standard`, one instance | Non-root Python, one Uvicorn process; runtime `PORT=10000` |
 | Jobs | `milo-jobs` | `starter`, one instance | Authorized SQL jobs and scheduled intents; no public listener |
 | Retention | `milo-retention` | `starter`, one instance | Bounded retention and expired authentication metadata cleanup |
-| PostgreSQL | `milo-postgres` | `basic_1gb`, 10 GiB storage | PostgreSQL 16, durable encrypted owner data |
+| PostgreSQL | `milo-postgres` | `basic-1gb`, 10 GiB storage | PostgreSQL 16, durable encrypted owner data |
 | Key Value | `milo-limits` | `starter` | Shared Redis-compatible atomic rate limits, `noeviction` |
 
 All resources use `singapore`; this is a deployment location, not verification of model-provider processing location or any legal requirement. PostgreSQL and Key Value have empty external IP allow lists. Supported text records are stored in PostgreSQL; this release does not implement social-media attachment/object storage. The repository's Actions worker, Temporal worker and Kafka relay are not provisioned by this pilot blueprint. General production action delivery remains disabled until the actual adapter and planner are implemented and tested.
@@ -79,7 +79,19 @@ The local [load report](LOAD_TEST_REPORT.md) passed the smaller 8/24 concurrency
 
 ## Verification and access status
 
-On 2026-10-07, Render documentation/schema and API requests from this task received HTTP 403. No callable Render connector or authenticated Render token was available. Therefore Render-side Blueprint schema/semantic validation, resource creation, deployment polling and public live acceptance could not be completed in this runtime. Local YAML/runtime-contract checks are reported separately from provider validation. No billable Render resources were created by these checks.
+Initial Render documentation/schema and API requests on 2026-10-07 received HTTP 403. The official public Blueprint JSON Schema later became reachable and was retrieved from `https://render.com/schema/render.yaml.json`. Local validation against that schema corrected the PostgreSQL plan to `basic-1gb` and the version property to string-valued `postgresMajorVersion: "16"`; the REST API's underscore plan spelling is not the Blueprint plan spelling.
+
+The final blueprint passed Draft 2020-12 JSON Schema validation using `jsonschema` 4.26.0 with format checking and PyYAML 6.0.3. The retrieved official schema is 45,739 bytes with SHA-256 `a0d4e8a3eb119a1b63657741757e3c25c091b3ce463c4be8c90e8026678d8163`. It validated five services (one public Web, one private API, two workers and one Redis-compatible Key Value), one PostgreSQL database and one shared environment group. See [the schema-validation record](benchmarks/render-blueprint-schema-validation.json) for the schema/source/blueprint hashes and actual outcome.
+
+Reproduce the public-schema check with isolated tooling, without changing application dependencies:
+
+```bash
+uv tool run --python 3.12.14 --from jsonschema==4.26.0 --with PyYAML==6.0.3 python scripts/render_schema_check.py
+```
+
+The [checker](../scripts/render_schema_check.py) fetches only the official HTTPS schema, enforces a 256 KiB schema limit and a hard ten-second deadline, and validates the safely loaded YAML with the full Draft 2020-12 validator. `--schema <trusted-schema.json>` supports offline confirmation; `--blueprint <file.yaml>` selects a local input. Its evidence includes hashes, counts and schema-constraint paths, without printing rejected values or credentials. Invalid input exits nonzero. The corrected file passed through both the HTTPS and offline paths; temporary files containing the former underscore plan or former PostgreSQL version key were rejected through the same CLI.
+
+No callable Render connector or authenticated Render token was available. Authenticated workspace semantic/conflict validation, resource creation, deployment polling and public live acceptance remain unperformed. Public-schema validation checks the configuration shape; it does not establish account plan availability, region eligibility, protected secret configuration, successful provisioning or a live URL. No billable Render resources were created by these checks.
 
 Authoritative source checks used Render's public [CLI repository](https://github.com/render-oss/cli/tree/5772e84f9b8ba99ba1b3890d73423a70ca68daf8). Its generated REST types confirm exact `commitId` deployment selection, service metadata and deployment status values. Its [Blueprint validation implementation](https://github.com/render-oss/cli/blob/5772e84f9b8ba99ba1b3890d73423a70ca68daf8/cmd/blueprintvalidate.go) sends an authenticated multipart `POST /v1/blueprints/validate` with a file and workspace ID; it is not offline schema validation. Render's official [Celery blueprint](https://github.com/render-examples/celery/blob/main/render.yaml) and [Sidekiq blueprint](https://github.com/render-examples/sidekiq/blob/main/render.yaml) demonstrate private Redis-compatible service references, `connectionString`, `noeviction`, workers and empty external IP allow lists.
 

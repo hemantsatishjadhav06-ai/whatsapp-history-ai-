@@ -1,0 +1,33 @@
+{
+  "blueprint_bytes": 5869,
+  "blueprint_sha256": "8a56467defa851933adec46ce259d9768ca950b66e3b2c0eb6b69739c62edb46",
+  "checked_at_utc": "2026-10-07T11:59:09.867779+00:00",
+  "checker_versions": {
+    "PyYAML": "6.0.3",
+    "jsonschema": "4.26.0"
+  },
+  "error_count": 0,
+  "errors": [],
+  "fetch_deadline_seconds": 10,
+  "provider_resource_creation": "NOT_RUN",
+  "provider_workspace_semantic_validation": "NOT_RUN",
+  "public_live_acceptance": "NOT_RUN",
+  "resource_counts": {
+    "databases": 1,
+    "envVarGroups": 1,
+    "service_types": {
+      "pserv": 1,
+      "redis": 1,
+      "web": 1,
+      "worker": 2
+    },
+    "services": 5
+  },
+  "schema_bytes": 45739,
+  "schema_draft": "https://json-schema.org/draft/2020-12/schema",
+  "schema_read_mode": "official_https",
+  "schema_sha256": "a0d4e8a3eb119a1b63657741757e3c25c091b3ce463c4be8c90e8026678d8163",
+  "schema_size_limit_bytes": 262144,
+  "schema_source": "https://render.com/schema/render.yaml.json",
+  "status": "PASS"
+}
