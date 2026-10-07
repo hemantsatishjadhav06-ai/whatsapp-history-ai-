@@ -1,19 +1,32 @@
 name: Milo clients
 on:
   push:
+    branches-ignore: [main]
   pull_request:
+  workflow_call:
 
 permissions:
   contents: read
 
+concurrency:
+  group: clients-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+defaults:
+  run:
+    shell: bash
+
 jobs:
   clients:
     runs-on: ubuntu-latest
+    timeout-minutes: 35
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
-          node-version: '24'
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '24.19.0'
           cache: npm
       - run: npm ci --ignore-scripts
       - run: npm run generate --workspace=@milo/contracts
@@ -26,14 +39,17 @@ jobs:
       - run: npm run build
       - run: npm run mobile:export
       - run: npx playwright install --with-deps chromium
-      - uses: astral-sh/setup-uv@v6
+      - uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6
         with:
           version: '0.12.19'
-      - run: uv python install 3.12 && uv sync --frozen --group dev
+          # A cache post-hook failed the previous run after every app test passed.
+          enable-cache: false
+      - run: uv python install 3.12.14 && uv sync --frozen --group dev
       - name: Start disposable browser API fixture
         run: |
           mkdir -p .local
-          uv run --frozen python scripts/client_fixture.py > .local/client-fixture.log 2>&1 &
+          setsid .venv/bin/python scripts/client_fixture.py > .local/client-fixture.log 2>&1 &
+          echo "$!" > .local/client-fixture.pid
           python - <<'PY'
           import time, urllib.request
           for attempt in range(40):
@@ -45,15 +61,34 @@ jobs:
           else:
               raise RuntimeError('Browser fixture did not become ready')
           PY
-      - run: npm run test:web
+      - run: npm run test:web -- --retries=0
         env:
           BACKEND_URL: http://127.0.0.1:8001
           MILO_API_TEST_URL: http://127.0.0.1:8001
-      - uses: actions/upload-artifact@v4
-        if: failure()
+      - name: Stop disposable browser fixture
+        if: always()
+        run: |
+          python - <<'PY'
+          import os, signal
+          from pathlib import Path
+          pid_file = Path('.local/client-fixture.pid')
+          if pid_file.exists():
+              pid = int(pid_file.read_text())
+              try:
+                  arguments = Path(f'/proc/{pid}/cmdline').read_bytes().split(b'\0')
+                  if b'scripts/client_fixture.py' not in arguments or os.getpgid(pid) != pid:
+                      raise RuntimeError('Refusing to terminate an unrelated process')
+                  os.killpg(pid, signal.SIGTERM)
+              except (FileNotFoundError, ProcessLookupError):
+                  pass
+          PY
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
         with:
-          name: browser-failure-evidence
+          name: browser-evidence-${{ github.sha }}
           path: |
             playwright-report/
             test-results/
+            .local/client-fixture.log
+          if-no-files-found: ignore
           retention-days: 7

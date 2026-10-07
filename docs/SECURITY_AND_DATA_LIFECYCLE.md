@@ -12,6 +12,11 @@ draft, send and share permissions are independent and expire. Internal transport
 requires service authentication; Meta webhooks require raw-body HMAC verification.
 Public/model inputs cannot assign trusted account ownership or alter forwarding grants.
 
+The single deployment-configured Business Cloud number is bound to an exact verified
+Google subject. A blank operator binding denies Cloud creation/verification, outbound
+submission and signed webhook routing, including old connector rows. Application
+identity or knowledge of the number ID cannot claim those provider credentials.
+
 Application session values are hashed at rest, cookies are HttpOnly and production requires
 Secure cookies. Login binds a single-use nonce; unsafe authenticated requests require CSRF
 and configured origin checks. Production settings reject development login, SQLite,
@@ -146,10 +151,10 @@ Tools modals and delayed object/evidence reads also bind to the authorized conte
 unchanged polling preserves edits, while Forget or revoked scope removes stale private detail.
 
 The earlier backend privacy bundle passed 77 cases on each SQLite and PostgreSQL after the
-533-case baseline runs; the current full suites passed 636 SQLite cases with 13
-PostgreSQL-only skips and 649 PostgreSQL cases without skips. Derived-evidence reads filter forgotten/suppressed examples before the
+533-case baseline runs; the current full suites passed 734 SQLite cases with 13
+PostgreSQL-only skips and 747 PostgreSQL cases without skips. Derived-evidence reads filter forgotten/suppressed examples before the
 page limit while leaving raw source history distinct; protected draft resolution requires
-current owner/read scope. The current 64-case browser run includes private-result response
+current owner/read scope. The current 70-case browser run includes fresh-owner export permissions, private-result response
 fences and derived-evidence revocation/forgetting regressions. The final 16 native helper
 cases and all-platform export include result reconciliation: earlier private text is never
 retagged against a changed snapshot; a current scoped object must be re-read or the result discarded.

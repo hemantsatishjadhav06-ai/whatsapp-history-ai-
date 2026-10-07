@@ -6,15 +6,59 @@ listed as actual local infrastructure. No real Google, model or WhatsApp account
 has been exercised. The current request enables Milo web/native and deployment acceptance;
 client results below are separate from backend and installed-device results.
 
-## 7 October security, storage and capacity increment
+## 7 October Render and fresh-owner increment
 
-This section supersedes the older results below for the current hardening. All
+These are the latest local-source results. The earlier hardening results below
+remain evidence for their recorded source and workload; capacity and restore
+tests were not repeated for this increment. Every identity, history file, model
+response and outbound transport in these checks is synthetic. Real Google,
+WhatsApp and model calls were zero.
+
+| Check | Result | Evidence and boundary |
+| --- | --- | --- |
+| Complete SQLite backend | 734 passed, 13 PostgreSQL-only skips; 241.05s | `.local/render-full-sqlite.log`; five deprecation warnings |
+| Complete PostgreSQL backend | 747 passed, no skips/errors; 635.17s | `.local/render-full-postgres.log`; isolated database removed; five deprecation warnings |
+| Business operator binding | 22 new regressions; focused 121-case suite passed | Create/verify, current outbound authority and both signed-ingress resolution phases reject an unbound owner, including old rows; overlaps full backend suite |
+| Render release and startup helpers | 76 cases passed | Exact-SHA preflight, deployment ordering, lost acknowledgments, response/time bounds, checkpoint metadata, isolated SQLite migrations and schema waiting; provider responses simulated; overlaps full backend suite |
+| Actual PostgreSQL startup | PASS | Two separate migrators blocked on the exact lock, eight revisions applied once, pre-schema waiter completed at exact head, repeat applied zero revisions and disposable database removed; [startup evidence](render-startup-smoke.md) |
+| Browser proxy and readiness | 34 cases passed | Nine new health tests included; invalid origins, redirects, timeout/error, concurrent probe sharing, bounded health cache and content/credential privacy |
+| Fresh-owner export onboarding | Six focused browser executions passed; 26.2s | Contact/group setup, read/retain and optional draft/learn choices, owner/date/timezone preview, import and partial-permission retry; send/share remain false; overlaps full browser run |
+| Full desktop/mobile-web acceptance | 70 passed, no retries or skips; 2.3m | `.local/render-browser-final.log`; real SQL fixture and final production Next build, all existing privacy/owner/control cases included |
+| Workspace TypeScript and web build | PASS | Final strict workspace check and production web build; native graph/export remains the prior unchanged-source result below |
+| Fresh production API image | PASS, MOCK_ONLY transport | `bec67b6124de221ae3b978e37fe934f0412248e1503af500257e06142d3958b2`; UID10001, installed module/source proof, actual HTTP import/style/approval/deduplication/Pause, network-disabled startup and both Render workers |
+| Fresh production web image | PASS, MOCK_ONLY identity/provider | `01974256d6f58e5ddbba67030433186faeaff0b54a73affd9fb5773930c68a5c`; actual HTTP assets/auth/proxy, `/readyz` and synthetic commit exposure; removal of only its temporary backend schema changed readiness to 503 |
+| Exact-image vulnerability scans | OPEN findings retained | API 264 OS rows including two critical plus one medium vendored Rust finding; Web 222 OS rows including one critical. Python/Node runtime package findings zero; no available Debian12 fixed versions in these scans. [Container evidence](render-container-validation.md) |
+| GitHub workflows | Local actionlint/Ruff checks PASS | Full reusable tests, image audits/SBOMs and exact-source Render release configured; remote run outcomes are recorded separately |
+| Render deployment and live URL | NOT_RUN | API is reachable but protected Render authentication and provisioned service IDs are absent; Blueprint provider validation and hosted readiness are unverified |
+| Live replies and 50,000 simultaneous users | NOT_VALIDATED | Personal WhatsApp syncing and production general-action transport remain unimplemented; larger prior load stages failed availability |
+
+The new UI tests exposed and fixed disappearing fresh-owner setup, stale import
+previews and a completion notice lost during navigation. Test-only CSRF calls
+were corrected to use the browser's current rotated token before the six-case
+pass. Failed runs were retained separately. The first startup-smoke observer
+missed a rapidly rolled-back query; it was replaced by a constant missing-schema
+marker, then the actual separate-process check passed with full cleanup.
+
+The first API-container check exceeded its original 7.5-second readiness window.
+That harness removed the failed container before retaining its logs, so its
+cause is unproven. Subsequent bounded checks completed the full HTTP journey;
+an instrumented run observed readiness at 4.061s with no runtime error. The
+tracked harness now uses a 30-second monotonic startup deadline and exact 200.
+This result does not measure production throughput.
+
+A [redacted current regression summary](benchmarks/render-release-regressions.json)
+records source hashes and local evidence. GitHub builds and Render builds are
+separate artifacts; the same source SHA alone does not prove identical images.
+
+## Prior 7 October security, storage and capacity increment
+
+This section records the earlier published hardening. All
 content, identities and transport replies were synthetic. Provider and model
 calls were zero; actual PostgreSQL, Redis, HTTP and container execution are
 identified separately.
 
 A [redacted regression summary](benchmarks/hardening-regressions.json) preserves
-the current counts and boundaries in Git. Raw local logs are ignored; separate
+its recorded counts and boundaries in Git. Raw local logs are ignored; separate
 focused runs overlap the full suites and must not be added to their totals.
 
 | Check | Current result | Scope and artifact |

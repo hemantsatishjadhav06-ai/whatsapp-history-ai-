@@ -9,8 +9,8 @@ Sending and scheduling use current SQL authority and durable attempt ledgers.
 This implementation follows the supplied build guides, CTO handoff and Milo product/UI
 master specification as product requirements. Document-embedded engineer instructions are
 specification input; the user's actual request controls implementation scope. The current
-request enables the Milo web/native UI and GitHub/Railway publication. The current
-hardening passed 649 PostgreSQL backend cases, 64 desktop/mobile-web browser cases,
+request enables the Milo web/native UI, GitHub Actions and a new Render project. The current
+increment passed 747 PostgreSQL backend cases, 70 desktop/mobile-web browser cases,
 native helper/export checks and an encrypted 5,001-message restore. Exact build,
 dependency and capacity evidence is recorded in [QA](docs/QA_REPORT.md).
 Real account eligibility, phone coexistence, live model quality, and the 50,000-account
@@ -118,10 +118,25 @@ Further details and limitations are recorded in [capabilities](docs/capabilities
 [privacy](docs/privacy-retention.md), [deployment](docs/deployment.md),
 [runbooks](docs/runbooks.md), and [load test results](docs/load-test-results.md).
 
+## GitHub Actions and Render
+
+The current hosting target is a new Render project. [render.yaml](render.yaml)
+defines public Web, private API, Jobs, Retention, PostgreSQL and shared Redis.
+The [Render guide](docs/render.md) covers protected runtime values and assigned
+HTTPS origins. [Create the Render Blueprint](https://render.com/deploy?repo=https://github.com/hemantsatishjadhav06-ai/whatsapp-history-ai-)
+only after reviewing those values and the paid pilot resource plan.
+
+GitHub Actions validate backend/PostgreSQL/Redis, clients/browser/native exports,
+built containers, dependencies and SBOMs. The release workflow deploys the tested
+current `main` commit after all gates pass, and verifies public/private readiness.
+Configure the protected Render secret and actual service IDs as described in the
+[Actions guide](docs/github-actions.md); provider autodeploy remains off to preserve
+the test gate. A green CI run alone does not establish a hosted application.
+
 Source is published on [GitHub main](https://github.com/hemantsatishjadhav06-ai/whatsapp-history-ai-/tree/main).
 The 7 October hardening adds bounded request/storage admission, concurrent SQL authority,
 authentication cleanup, private-result reconciliation and measured capacity reports.
-Railway authentication/network access remains blocked, so no hosted application URL is available.
+Render authentication is not configured, so no hosted application URL is available.
 The current deployment exceeded its limits in the larger local load stages; 50,000
 simultaneous users is unverified. Known native/build and container advisories remain
 documented in the [security review](docs/SECURITY_REVIEW.md).

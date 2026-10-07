@@ -64,10 +64,12 @@ def run(image):
                     raise RuntimeError("Disposable backend did not start")
                 time.sleep(0.02)
             public_origin = "https://milo-synthetic.example.test"
+            synthetic_commit = "b" * 40
             docker("run", "--rm", "--detach", "--name", name, "--publish", "127.0.0.1::3000",
                    "--add-host", "host.docker.internal:host-gateway",
                    "--env", f"BACKEND_URL=http://host.docker.internal:{api_port}",
-                   "--env", f"PUBLIC_APP_ORIGIN={public_origin}", image)
+                   "--env", f"PUBLIC_APP_ORIGIN={public_origin}",
+                   "--env", f"RENDER_GIT_COMMIT={synthetic_commit}", image)
             port = docker("port", name, "3000/tcp").rsplit(":", 1)[1]
             origin = f"http://127.0.0.1:{port}"
             settings.allowed_origins = origin + "," + public_origin
@@ -85,6 +87,9 @@ def run(image):
                     time.sleep(0.05)
                 assert docker("inspect", "--format", "{{.Config.User}}", name) == "10001:10001"
                 image_id = docker("inspect", "--format", "{{.Image}}", name)
+                readiness = checked(web.get("/readyz"))
+                assert readiness["status"] == "ready" and readiness["release_commit"] == synthetic_commit
+                assert "host.docker.internal" not in json.dumps(readiness)
                 page = web.get("/")
                 assert page.status_code == 200
                 assert "Milo" in page.text
@@ -120,17 +125,33 @@ def run(image):
                 forwarded = {"X-CSRF-Token": token, "Origin": public_origin, "Sec-Fetch-Site": "same-origin",
                              "Host": "milo-synthetic.example.test", "X-Forwarded-Host": "milo-synthetic.example.test",
                              "X-Forwarded-Proto": "https"}
-                # Forwarded TLS/Host simulates Railway ingress; explicitly transfer
+                # Forwarded TLS/Host simulates reverse-proxy ingress; explicitly transfer
                 # the test session because httpx's cookie domain is still loopback.
                 forwarded["Cookie"] = f"{SESSION_COOKIE}={cookie}"
                 resumed = checked(web.post("/api/resume-all", params={"workspace_id": workspace["id"]}, headers=forwarded))
                 assert resumed["paused"] is False
+                # This schema belongs only to this disposable synthetic backend.
+                # Verify that web readiness fails when its dependency loses schema.
+                Base.metadata.drop_all(app.state.engine)
+                deadline = time.monotonic() + 10
+                while True:
+                    unavailable = web.get("/readyz")
+                    if unavailable.status_code == 503:
+                        break
+                    if time.monotonic() >= deadline:
+                        raise RuntimeError("Web readiness retained an unavailable dependency")
+                    time.sleep(0.1)
+                assert unavailable.json()["status"] == "unavailable"
+                assert unavailable.headers["cache-control"] == "no-store"
+                assert "host.docker.internal" not in unavailable.text
                 return {"built_image": image, "built_image_id": image_id,
                         "non_root": True, "standalone_assets": True,
                         "real_private_backend_proxy": True, "nonce_cookie_path": "/api/auth",
                         "authenticated_snapshot": True, "csrf_protected_controls": True,
                         "cross_site_blocked": True, "forwarded_https_origin": True,
-                        "browser_dev_and_internal_routes_blocked": True, "external_provider_calls": 0}
+                        "browser_dev_and_internal_routes_blocked": True,
+                        "private_dependency_readiness": True, "synthetic_release_commit_exposure": True,
+                        "missing_dependency_schema_rejected": True, "external_provider_calls": 0}
         finally:
             subprocess.run(["docker", "rm", "--force", name], capture_output=True)
             server.should_exit = True

@@ -17,6 +17,7 @@ from sqlalchemy import select
 from .access import audit
 from .db import aware, now
 from .models import Connector, Conversation, Draft, Permission, SendAttempt
+from .provider_authority import whatsapp_workspace_authorized
 
 router = APIRouter(prefix="/webhooks", tags=["webhooks"])
 MAX_WEBHOOK_BYTES = 1_000_000
@@ -242,7 +243,8 @@ async def receive_whatsapp(request: Request):
                 Connector.account_id == account_id,
                 Connector.status == "connected",
             ))
-            if connector is None:
+            if connector is None or not whatsapp_workspace_authorized(
+                    db, request.app.state.settings, connector.workspace_id):
                 ignored += 1
             else:
                 resolved.append((connector.id, connector.workspace_id, account_id, value))
@@ -263,7 +265,8 @@ async def receive_whatsapp(request: Request):
                     Connector.account_id == account_id,
                     Connector.status == "connected",
                 ))
-                if connector is None:
+                if connector is None or not whatsapp_workspace_authorized(
+                        db, request.app.state.settings, connector.workspace_id):
                     ignored += 1
                     continue
                 for message in _list(value.get("messages", [])):

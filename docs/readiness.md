@@ -1,7 +1,8 @@
 # Readiness record
 
 The backend and Milo web/native pilot have passed the local checks below. Source is
-published on GitHub; authenticated Railway deployment and live-provider acceptance remain open.
+published on GitHub; the user selected a new Render project. Authenticated Render
+deployment and live-provider acceptance remain open; Railway is previous preparation.
 Runtime validation and external integration eligibility are separate from implemented code.
 
 The CTO handoff backend increment has passed synthetic functional/regression checks.
@@ -17,7 +18,7 @@ Current per-feature status and exact evidence are tracked in
 | TypeScript connector boundary | Typecheck and 33 contract/mock-adapter/gateway tests passed; no live pairing/transport |
 | Measured HTTP load | 1,280 real API/proxy checks at 8/24 users passed. Larger paced128/burst64 stages returned explicit overload failures and recovered; see the full load report |
 | Synthetic draft-to-send demo | Passed import/reimport, owner style, live event, draft/edit, exact-hash approval, mock send, repeated same attempt and pause |
-| Backend suite | Current full runs: 636 SQLite passed with 13 PostgreSQL-only skips (280.69s); 649 PostgreSQL passed without skips/errors (494.95s). One known compatibility warning per run. Prior evidence and failed-then-corrected runs are in QA |
+| Backend suite | Current full runs: 734 SQLite passed with 13 PostgreSQL-only skips (241.05s); 747 PostgreSQL passed without skips/errors (635.17s). Five compatibility/deprecation warnings per run. Prior evidence and corrected failures are in QA |
 | Startup and Alembic migrations | Eight revisions through `86b7bbad6fc1`; local PostgreSQL migration/alignment and restore repeats passed. Native rotating-refresh upgrade does not invent credentials for existing sessions |
 | Running PostgreSQL API | Version 0.3.0 confirmed in OpenAPI after restart; live/readiness health and final synthetic HTTP workflow passed, including scoped import/style/draft/approval/mock dispatch/pause and content cleanup |
 | Bounded automation | 20 tests passed for explicit business-hours grants, verified facts/templates, history/stale exclusion, limits, expiry, takeover/revocation, uncertainty and restart recovery; simulated sends only |
@@ -36,9 +37,9 @@ Current per-feature status and exact evidence are tracked in
 | Real Google/Meta/model integrations | Credentials and actual authorized operations are required; mock tests do not establish these |
 | Phone coexistence/personal pairing | Not implemented or validated |
 | 50,000 accounts / production launch | NOT_RUN; the larger local workloads failed availability. Architecture target and distributed runner do not certify capacity |
-| Milo browser/native acceptance | Current production build, strict workspace typechecks, 64 browser cases, 20 shared-contract/25 proxy/seven Tools privacy/16 native helper cases and all-platform Expo export passed; installed-device evidence absent |
-| Cloud setup configuration | Installer/start instructions saved for eight migrations, web/native, workers and hardening checks; Railway token and required domains declared. Draft publication, runtime Railway access and new-task restoration remain unverified |
-| GitHub | [Published repository](https://github.com/hemantsatishjadhav06-ai/whatsapp-history-ai-/tree/main); the current hardening accompanies this record. No hosted Railway application URL exists |
+| Milo browser/native acceptance | Current production build, strict workspace typechecks, 70 browser cases without retries and 34 proxy/readiness cases passed. Prior unchanged contracts/privacy/native graph: 20 shared-contract/seven Tools privacy/16 native helpers and all-platform Expo export passed; installed-device evidence absent |
+| Cloud setup configuration | Installer/start instructions saved for eight migrations, web/native, workers and Render checks; Render key and required domains declared. Saved draft still requires review/save/publication; fresh-task restoration remains unverified |
+| GitHub / Render | [Published repository](https://github.com/hemantsatishjadhav06-ai/whatsapp-history-ai-/tree/main); new [Actions](github-actions.md) and [Render Blueprint](render.md) are source configuration. No authenticated hosted deployment or URL exists |
 
 The core workflow must be able to fail when broken: authenticate, establish conversation
 permissions, import/receive content, generate a scoped proposal, owner-edit/review it,

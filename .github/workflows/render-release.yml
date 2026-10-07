@@ -1,0 +1,118 @@
+name: Tested release
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      deploy:
+        description: Deploy the tested current main commit to configured Render services
+        type: boolean
+        required: true
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  backend:
+    uses: ./.github/workflows/backend.yml
+  clients:
+    uses: ./.github/workflows/clients.yml
+  containers:
+    uses: ./.github/workflows/containers.yml
+  deploy:
+    needs: [backend, clients, containers]
+    if: >-
+      github.ref == 'refs/heads/main' &&
+      ((github.event_name == 'push' && vars.RENDER_AUTO_DEPLOY == 'true') ||
+       (github.event_name == 'workflow_dispatch' && inputs.deploy))
+    runs-on: ubuntu-latest
+    timeout-minutes: 135
+    environment: production
+    concurrency:
+      group: render-production
+      cancel-in-progress: false
+    defaults:
+      run:
+        shell: bash
+    env:
+      RENDER_SERVICE_ID_API: ${{ vars.RENDER_SERVICE_ID_API }}
+      RENDER_SERVICE_ID_WEB: ${{ vars.RENDER_SERVICE_ID_WEB }}
+      RENDER_SERVICE_ID_JOBS: ${{ vars.RENDER_SERVICE_ID_JOBS }}
+      RENDER_SERVICE_ID_RETENTION: ${{ vars.RENDER_SERVICE_ID_RETENTION }}
+      COMMIT_SHA: ${{ github.sha }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6
+        with:
+          version: '0.12.19'
+          enable-cache: true
+      - run: uv python install 3.12.14 && uv sync --frozen --group dev
+      - name: Refuse a stale or unconfigured production deployment
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+        run: |
+          python - <<'PY'
+          import os
+          required = ['RENDER_API_KEY', 'RENDER_SERVICE_ID_API', 'RENDER_SERVICE_ID_WEB',
+                      'RENDER_SERVICE_ID_JOBS', 'RENDER_SERVICE_ID_RETENTION']
+          missing = [name for name in required if not os.environ.get(name)]
+          if missing:
+              raise SystemExit('Render deployment is not configured: ' + ', '.join(missing))
+          PY
+          actual_head=$(git rev-parse HEAD)
+          latest_main=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq '.object.sha')
+          [[ "$actual_head" == "$COMMIT_SHA" && "$latest_main" == "$COMMIT_SHA" ]] || {
+            echo 'Refusing to replace production with a stale or different commit.' >&2
+            exit 1
+          }
+      - name: Deploy the tested SHA and verify the live public service
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+        run: |
+          mkdir -p .local/ci-evidence
+          uv run --frozen python scripts/render_release.py --commit "$COMMIT_SHA" \
+            --output .local/ci-evidence/render-release.json | tee .local/ci-evidence/render-release.log
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: render-release-${{ github.sha }}
+          path: .local/ci-evidence/render-release*
+          if-no-files-found: ignore
+          retention-days: 14
+  evidence:
+    if: always()
+    needs: [backend, clients, containers, deploy]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      RELEASE_SHA: ${{ github.sha }}
+      BACKEND_RESULT: ${{ needs.backend.result }}
+      CLIENT_RESULT: ${{ needs.clients.result }}
+      CONTAINER_RESULT: ${{ needs.containers.result }}
+      DEPLOY_RESULT: ${{ needs.deploy.result }}
+    steps:
+      - name: Record validation and deployment as separate outcomes
+        run: |
+          python - <<'PY'
+          import os
+          lines = ['### Release results', '', f"Commit: `{os.environ['RELEASE_SHA']}`", '',
+                   '| Stage | Actual result |', '| --- | --- |']
+          for label, key in [('Backend and PostgreSQL', 'BACKEND_RESULT'), ('Clients and browsers', 'CLIENT_RESULT'),
+                             ('Containers and security', 'CONTAINER_RESULT'), ('Render deployment', 'DEPLOY_RESULT')]:
+              lines.append(f"| {label} | {os.environ[key]} |")
+          if os.environ['DEPLOY_RESULT'] == 'skipped':
+              lines += ['', 'Render deployment was not attempted. A green validation run does not establish a live URL.']
+          lines += ['', 'Capacity of 50,000 simultaneous users and live personal WhatsApp integration are not certified by this workflow.']
+          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as summary:
+              summary.write('\n'.join(lines) + '\n')
+          PY

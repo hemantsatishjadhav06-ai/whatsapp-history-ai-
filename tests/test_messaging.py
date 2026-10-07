@@ -379,13 +379,56 @@ def configure_cloud(app, chat):
     settings.enable_external_sends = True
     settings.whatsapp_phone_number_id = "business-phone-id"
     settings.whatsapp_access_token = "test-provider-placeholder"
+    settings.whatsapp_authorized_owner_subject = "business-test-owner"
     with app.state.session_factory() as db:
+        from assistant.models import User, Workspace
+        workspace = db.get(Workspace, chat["workspace"]["id"])
+        db.get(User, workspace.owner_id).subject = "google:business-test-owner"
         connector = db.get(Connector, chat["connector"]["id"])
         connector.provider = "whatsapp_cloud"
         connector.account_id = settings.whatsapp_phone_number_id
         conversation = db.get(Conversation, chat["conversation"]["id"])
         conversation.last_inbound_at = now() - timedelta(minutes=1)
         db.commit()
+
+
+@pytest.mark.parametrize("binding", ["", "different-owner"])
+def test_business_owner_binding_revocation_blocks_previously_approved_draft_without_network(
+        app, owner_client, chat, monkeypatch, binding):
+    configure_cloud(app, chat)
+    draft = make_draft(app, chat)
+    approve(owner_client, draft)
+    app.state.settings.whatsapp_authorized_owner_subject = binding
+    def forbidden(**_):
+        raise AssertionError("Revoked Business owner cannot start provider networking")
+    monkeypatch.setattr("assistant.messaging.httpx.AsyncClient", forbidden)
+    response = owner_client.post(f"/drafts/{draft[0]}/dispatch")
+    assert response.status_code == 403
+    with app.state.session_factory() as db:
+        assert db.scalar(select(func.count()).select_from(SendAttempt)) == 0
+        assert db.get(Draft, draft[0]).status == "approved"
+
+
+def test_business_owner_binding_is_rechecked_after_network_client_setup(app, owner_client, chat, monkeypatch):
+    configure_cloud(app, chat)
+    draft = make_draft(app, chat)
+    approve(owner_client, draft)
+    class RevokingClient:
+        async def __aenter__(self):
+            app.state.settings.whatsapp_authorized_owner_subject = ""
+            return self
+        async def __aexit__(self, *_):
+            return None
+        async def post(self, *_, **__):
+            raise AssertionError("Latest Business owner denial must prevent submission")
+    monkeypatch.setattr("assistant.messaging.httpx.AsyncClient", lambda **_: RevokingClient())
+    response = owner_client.post(f"/drafts/{draft[0]}/dispatch")
+    assert response.status_code == 200, response.text
+    assert response.json()["status"] == "blocked"
+    with app.state.session_factory() as db:
+        attempt = db.scalar(select(SendAttempt))
+        assert attempt.status == "blocked"
+        assert db.get(Draft, draft[0]).status == "cancelled"
 
 
 @pytest.mark.parametrize("constraint", ["disabled", "optout", "no_optin", "window_expired", "group"])

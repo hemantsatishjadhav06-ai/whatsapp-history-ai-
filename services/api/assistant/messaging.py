@@ -463,6 +463,8 @@ def _validate_current(db: Session, draft: Draft, settings, approved: bool = True
     if connector.capabilities.get("send_text") != "supported":
         raise HTTPException(403, "Connector does not support sending")
     if connector.provider == "whatsapp_cloud":
+        from .provider_authority import require_whatsapp_workspace
+        require_whatsapp_workspace(db, settings, workspace.id)
         if not settings.enable_external_sends:
             raise HTTPException(403, "External sending is disabled")
         if (not settings.whatsapp_access_token or not settings.whatsapp_phone_number_id

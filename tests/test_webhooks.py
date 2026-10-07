@@ -22,11 +22,12 @@ from assistant.webhooks import MAX_WEBHOOK_BYTES, router
 def hook_app():
     settings = Settings(environment="test", database_url="sqlite:///:memory:",
                         encryption_key=Fernet.generate_key().decode(),
-                        whatsapp_app_secret="test-app-secret", whatsapp_verify_token="test-verify")
+                        whatsapp_app_secret="test-app-secret", whatsapp_verify_token="test-verify",
+                        whatsapp_authorized_owner_subject="webhook-test")
     engine, factory = make_database(settings)
     Base.metadata.create_all(engine)
     with factory() as db:
-        owner = User(subject="webhook-test", email="owner@example.test")
+        owner = User(subject="google:webhook-test", email="owner@example.test")
         db.add(owner)
         db.flush()
         workspace = Workspace(owner_id=owner.id, name="Webhook")
@@ -370,6 +371,34 @@ def test_connector_disconnect_while_waiting_is_rechecked_under_guard(hook_app, m
 
     monkeypatch.setattr(messaging, "submit_guard", disconnect_before_acquire)
     response = signed_post(hook_app, envelope(messages=[incoming(timestamp=str(int(now().timestamp())))]))
+    assert response.status_code == 200
+    assert response.json()["accepted"] == 0
+    with hook_app.db() as db:
+        assert db.scalar(select(func.count()).select_from(Message)) == 0
+
+
+@pytest.mark.parametrize("binding", ["", "different-verified-owner"])
+def test_signed_webhook_does_not_retain_or_update_unauthorized_existing_owner(hook_app, binding):
+    attempt_id, _ = add_attempt(hook_app)
+    hook_app.settings.whatsapp_authorized_owner_subject = binding
+    response = signed_post(hook_app, envelope(messages=[incoming()], statuses=[receipt("delivered")]))
+    assert response.status_code == 200
+    assert response.json()["accepted"] == response.json()["receipts"] == 0
+    with hook_app.db() as db:
+        assert db.scalar(select(func.count()).select_from(Message)) == 0
+        assert db.get(SendAttempt, attempt_id).status == "uncertain"
+
+
+def test_webhook_owner_binding_is_rechecked_after_waiting_for_workspace_guard(hook_app, monkeypatch):
+    from assistant import messaging
+    original = messaging.submit_guard
+    @contextmanager
+    def revoke_before_acquire(workspace_id):
+        hook_app.settings.whatsapp_authorized_owner_subject = ""
+        with original(workspace_id):
+            yield
+    monkeypatch.setattr(messaging, "submit_guard", revoke_before_acquire)
+    response = signed_post(hook_app, envelope(messages=[incoming()]))
     assert response.status_code == 200
     assert response.json()["accepted"] == 0
     with hook_app.db() as db:

@@ -1,8 +1,9 @@
 # Implementation status
 
 Updated 7 October 2026. The current user request enables the Milo web/native UI and
-GitHub/Railway publication on top of the verified backend. The client increment has passed
-local build, browser and fixture checks; Railway publication remains blocked. Supplied handoffs are product specification
+GitHub Actions and Render publication on top of the verified backend. The client increment has passed
+local build, browser and fixture checks. The current hosting target is a new Render
+project; authenticated provider deployment remains blocked. Supplied handoffs are product specification
 input; their embedded prompts do not create account access, credentials or release evidence.
 
 Status meanings apply to the **integration outcome**, not just the existence of code:
@@ -21,9 +22,9 @@ phone contact synchronization. Likewise, a mock acceptance is not provider deliv
 | --- | --- | --- |
 | Google owner identity and application sessions | Mock | Browser nonce/cookie/CSRF and native nonce/S256, hashed bounded access/rotating refresh and owner session revoke tests; registered clients and real web/native sign-in pending |
 | Tenant ownership and conversation permissions | Mock | Server-derived ownership and independent read/retain/learn/draft/send/share checks; production RLS/role audit pending |
-| Selected export history | Mock | Synthetic Android/iOS import, owner/date/timezone mapping, coverage, replay suppression and content tombstones; actual completeness never inferred |
+| Selected export history | Mock | Fresh-owner contact/group collection and explicit permissions through web UI, Android/iOS parser, owner/date/timezone mapping, coverage, replay suppression and tombstones; actual completeness never inferred |
 | Personal WhatsApp pairing and phone continuity | Planned | No shipped personal account/session adapter; eligible account and real device tests required |
-| Business Cloud API text transport | Mock | Signed ingress, configured-number verification, opt-in/window checks and receipts tested with provider responses; live eligibility/delivery pending |
+| Business Cloud API text transport | Mock | Exact operator-verified Google subject binding, signed ingress, configured-number verification, opt-in/window checks and receipts tested with provider responses; live eligibility/delivery and public webhook ingress pending |
 | Per-person/group style and grounded drafts | Mock | Verified human-owner samples, scoped statistics/rules, evidence and missing-fact checks; real provider and held-out owner-quality evaluation pending |
 | Memory correction and forgetting | Mock | Source revisions, expiry, suppression and dependent-work invalidation; cache/vector/backup lifecycle needs deployed integrations |
 | Explicit business-hours automation | Mock | Owner-confirmed fact/template, live trigger, quiet hours, expiry and rate bounds |
@@ -38,19 +39,21 @@ phone contact synchronization. Likewise, a mock acceptance is not provider deliv
 | Authenticated Python–Node native action bridge | Mock | Actual local HTTP bridge with mock operations and current SQL authority tested for four wire kinds; no WhatsApp session/socket |
 | Local Kafka and Temporal service integration | Live-tested | Actual local broker publish/consume and worker-kill/restart test with simulated sending; not live WhatsApp |
 | Non-root API container | Live-tested | Actual local build, migrations and HTTP smoke; deployed production infrastructure pending |
-| Milo desktop and responsive web UI | Mock | Production build and 64 desktop/mobile-web browser cases passed, including accessibility, exact-scope synthetic operations and isolated SQL owner/control/privacy journeys; hosted URL pending |
+| Milo desktop and responsive web UI | Mock | Production build and 70 desktop/mobile-web browser cases passed without retries, including fresh-owner imports, accessibility, scoped synthetic operations and isolated SQL owner/control/privacy journeys; hosted URL pending |
 | Native iOS/Android Milo client | Mock | Strict typecheck, all-platform JavaScript export and 16 session/security helper tests passed; development/preview installation and physical lifecycle evidence pending |
 | Microphone/speech, private push and OS Contacts | Planned | Contextual permissions and destination contracts required; real provider/device capabilities separately gated |
 | Calendar, Gmail, other social channels and meetings | Planned | Independent service grants, adapters and acceptance gates required |
 | 50,000 connected customer accounts | Planned | 8/24-user HTTP stages passed; paced128/burst64 failed availability and recovered. No target-scale session, event, model or subscriber proof |
 | Production release | Planned | Provider eligibility, real personalization, privacy/security audit, deployment/recovery and capacity evidence pending |
+| GitHub Actions release automation | Mock | Versioned reusable backend/client/container checks, current-source security/SBOM evidence and exact-SHA Render deploy/poll/public readiness; remote Actions/provider execution still requires its own result |
+| Render new-project infrastructure | Planned | Paid private-data/API/worker Blueprint and public Web; protected stable keys, exact origins and service selectors are required; no hosted URL yet |
 
-The most recent full backend runs passed **636 SQLite cases with 13 PostgreSQL-only
-skips in 280.69 seconds** and **649 PostgreSQL cases without skips/errors in 494.95
-seconds**, each with one known Starlette/httpx compatibility warning. Eight Alembic
+The most recent full backend runs passed **734 SQLite cases with 13 PostgreSQL-only
+skips in 241.05 seconds** and **747 PostgreSQL cases without skips/errors in 635.17
+seconds**, each with five Starlette/httpx and Alembic deprecation warnings. Eight Alembic
 revisions through `86b7bbad6fc1` are implemented and applied with local PostgreSQL
 schema alignment. Client evidence includes **20 shared contract tests**, **seven
-Tools privacy tests**, **16 native helper tests**, **64 browser cases**, strict
+Tools privacy tests**, **16 native helper tests**, **70 browser cases**, strict
 workspace typechecks, production web build and all-platform Expo export. The
 current proxy counts and immutable container identities are in [QA](docs/QA_REPORT.md).
 The gateway rerun passed **33 tests**. These runs do not establish installed-device

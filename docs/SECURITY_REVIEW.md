@@ -28,6 +28,13 @@ vulnerability has been found, or that a 50,000-account service is production-rea
 | SR12 Medium: stale private Tools details | Same-owner snapshots could remove a memory or source while an open modal retained its old row/detail, including a delayed GET response | Modal rows, private results and outstanding GETs are fenced to the authorized snapshot version and re-resolved after a change. Seven focused regressions passed. A real SQL/browser regression verifies that unchanged polling preserves an edit, Forget closes the memory, and a late source response cannot reopen it while raw permitted history remains |
 | SR13 Medium: oversized ordinary browser-proxy bodies | The browser proxy used its import-sized cap for ordinary JSON before backend authentication | The proxy now limits ordinary JSON to 64 KiB; only exact import and import-preview routes admit up to 12 MiB. The final 25-case proxy bundle includes rejection versus the explicit import exception. Provider ingress still needs deployed evidence |
 | SR14 High: web buffering before API admission | Concurrent slow uploads could allocate web-process buffers before reaching API request limits | The proxy admits before body reading/upstream work: 32 process slots, 28 ordinary/four controls, two imports inside the ordinary budget. A lease lasts through response consumption, cancellation or deadline. Held-request, import, control-reserve, error/abort/deadline cleanup and recovery regressions passed in the 25-case bundle. Limits are per web process; the final guard was not capacity-rebenchmarked |
+| SR15 High: shared Business credential claim | An authenticated first owner could attempt to claim a deployment-wide configured Business number; old unauthorized connector rows could also reach outbound or signed-ingress paths | Exact verified Google subject binding now precedes Cloud create/verify and protects outbound final authority plus both signed webhook resolution phases. Blank binding denies Cloud access; mock/export paths remain separate. Twenty-two new cases and the 121-case focused core/messaging/webhook/automation suite passed with simulated provider responses. See [operator binding](business-owner-binding.md) |
+
+The later Render increment also adds coarse Web readiness with a three-second
+private API probe, shared concurrent requests and a maximum five-second metadata
+cache. Nine focused regressions check errors, redirects, origin validation,
+credential privacy, cache sharing and release SHA formatting. This is health
+metadata, never an owner permission or provider-delivery result.
 
 ## Verified request-boundary run
 
@@ -40,11 +47,14 @@ requests and production configuration guards. Their temporary fixture databases 
 even when a broader invocation sets `TEST_DATABASE_URL`. They test memory limiter behavior;
 they do not run Redis Lua, real OAuth, a physical device or a deployed HTTP edge.
 
-The later assembled request/certificate/integration bundle passed **43 cases in
+The earlier assembled request/certificate/integration bundle passed **43 cases in
 6.73 seconds**, including malformed Content-Length on liveness. Liveness avoids
-SQL/Redis admission but still rejects malformed framing. The final full SQLite
+SQL/Redis admission but still rejects malformed framing. That full SQLite
 run passed **636 cases with 13 PostgreSQL-only skips in 280.69 seconds**. See QA
-for the **649-case PostgreSQL pass in 494.95 seconds** and current-image results.
+for its **649-case PostgreSQL pass in 494.95 seconds**. The subsequent Render/operator-binding
+increment passed **734 SQLite cases with 13 skips** and **747 PostgreSQL cases**,
+plus 70 desktop/mobile-web browser cases without retries. Current exact-image
+results and all remaining findings are in [Render container evidence](render-container-validation.md).
 
 The [real Redis smoke](request-limits-smoke.md) separately passed with two
 independent limiter clients. Concurrent shared source, actor, nonce and global

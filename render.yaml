@@ -1,0 +1,176 @@
+# yaml-language-server: $schema=https://render.com/schema/render.yaml.json
+# Paid pilot infrastructure; this file does not assert a deployed URL or 50k capacity.
+# Keep Blueprint auto-sync disabled in Render. Exact tested commits are released by
+# .github/workflows/render-release.yml rather than independent service autodeploys.
+services:
+  - type: web
+    name: milo-web
+    runtime: docker
+    repo: https://github.com/hemantsatishjadhav06-ai/whatsapp-history-ai-
+    branch: main
+    region: singapore
+    plan: standard
+    numInstances: 1
+    autoDeployTrigger: "off"
+    dockerfilePath: ./Dockerfile.web
+    dockerContext: .
+    dockerCommand: >-
+      /bin/sh -c 'export BACKEND_URL="http://${BACKEND_HOSTPORT:?Private API address missing}"; exec node apps/web/server.js'
+    healthCheckPath: /readyz
+    envVars:
+      - key: PORT
+        value: "10000"
+      - key: NODE_ENV
+        value: production
+      - key: NEXT_TELEMETRY_DISABLED
+        value: "1"
+      - key: BACKEND_HOSTPORT
+        fromService:
+          type: pserv
+          name: milo-api
+          property: hostport
+      # Enter the actual assigned/custom HTTPS origin during provisioning.
+      # Render does not interpolate schemes into a fromService hostport value.
+      - key: PUBLIC_APP_ORIGIN
+        sync: false
+      - key: TRUST_PROXY_HOPS
+        value: "0"
+      # Optional: match backend TRUSTED_PROXY_KEY only after ingress verification.
+      # BACKEND_PROXY_KEY is intentionally absent until that verification.
+
+  - type: pserv
+    name: milo-api
+    runtime: docker
+    repo: https://github.com/hemantsatishjadhav06-ai/whatsapp-history-ai-
+    branch: main
+    region: singapore
+    plan: standard
+    numInstances: 1
+    autoDeployTrigger: "off"
+    dockerfilePath: ./services/api/Dockerfile
+    dockerContext: .
+    preDeployCommand: /app/.venv/bin/python -m assistant.render_entrypoint migrate
+    dockerCommand: >-
+      /bin/sh -c 'exec /app/.venv/bin/uvicorn assistant.main:create_app --factory --host 0.0.0.0 --port "${PORT:-10000}" --workers 1 --limit-concurrency 64 --backlog 256 --timeout-keep-alive 5 --timeout-graceful-shutdown 30 --no-access-log'
+    # Render private services use a port health check. Web /readyz probes the
+    # API's HTTP /health/ready over the private network before accepting traffic.
+    envVars:
+      - fromGroup: milo-backend-production
+      - key: PORT
+        value: "10000"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: milo-postgres
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: milo-limits
+          property: connectionString
+
+  - type: worker
+    name: milo-jobs
+    runtime: docker
+    repo: https://github.com/hemantsatishjadhav06-ai/whatsapp-history-ai-
+    branch: main
+    region: singapore
+    plan: starter
+    numInstances: 1
+    autoDeployTrigger: "off"
+    dockerfilePath: ./services/api/Dockerfile
+    dockerContext: .
+    dockerCommand: >-
+      /bin/sh -c '/app/.venv/bin/python -m assistant.render_entrypoint wait-schema && exec /app/.venv/bin/python -m assistant.jobs'
+    envVars:
+      - fromGroup: milo-backend-production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: milo-postgres
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: milo-limits
+          property: connectionString
+
+  - type: worker
+    name: milo-retention
+    runtime: docker
+    repo: https://github.com/hemantsatishjadhav06-ai/whatsapp-history-ai-
+    branch: main
+    region: singapore
+    plan: starter
+    numInstances: 1
+    autoDeployTrigger: "off"
+    dockerfilePath: ./services/api/Dockerfile
+    dockerContext: .
+    dockerCommand: >-
+      /bin/sh -c '/app/.venv/bin/python -m assistant.render_entrypoint wait-schema && exec /app/.venv/bin/python -m assistant.lifecycle'
+    envVars:
+      - fromGroup: milo-backend-production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: milo-postgres
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: milo-limits
+          property: connectionString
+
+  # Render Key Value is Redis-compatible. The redis Blueprint type/reference is
+  # also used by Render's official worker examples. No public IPs are allowed.
+  - type: redis
+    name: milo-limits
+    region: singapore
+    plan: starter
+    ipAllowList: []
+    maxmemoryPolicy: noeviction
+
+databases:
+  - name: milo-postgres
+    databaseName: milo
+    user: milo
+    region: singapore
+    plan: basic_1gb
+    postgresVersion: "16"
+    diskSizeGB: 10
+    ipAllowList: []
+
+envVarGroups:
+  - name: milo-backend-production
+    # Persistent ENCRYPTION_KEY, INTERNAL_SERVICE_TOKEN and exact ALLOWED_ORIGINS
+    # must be added securely to this group in Render before usable deployment.
+    # Google IDs are supplied here when configured. Secrets are omitted from Git;
+    # sync:false is deliberately not used inside an environment group.
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: ALLOW_DEV_AUTH
+        value: "false"
+      - key: SESSION_SECURE
+        value: "true"
+      - key: ENABLE_EXTERNAL_SENDS
+        value: "false"
+      - key: MODEL_PROVIDER
+        value: disabled
+      - key: REQUEST_LIMITS_MODE
+        value: redis
+      - key: REQUEST_RATE_NAMESPACE
+        value: milo-render-production-v1
+      - key: REQUEST_MAX_INFLIGHT
+        value: "32"
+      - key: REQUEST_CONTROL_RESERVE
+        value: "4"
+      - key: REQUEST_THREAD_TOKENS
+        value: "48"
+      - key: DB_POOL_SIZE
+        value: "5"
+      - key: DB_MAX_OVERFLOW
+        value: "5"
+      - key: DB_POOL_TIMEOUT_SECONDS
+        value: "3"
+      - key: DB_POOL_RECYCLE_SECONDS
+        value: "1800"
+      - key: DB_STATEMENT_TIMEOUT_MS
+        value: "15000"

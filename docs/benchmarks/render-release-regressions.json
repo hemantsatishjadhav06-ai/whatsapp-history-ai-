@@ -1,0 +1,327 @@
+{
+  "actionlint": "1.7.7 PASS",
+  "backend": {
+    "postgres": {
+      "disposable_database_removed": true,
+      "passed": 747,
+      "pytest_seconds": 635.17,
+      "skipped": 0,
+      "warnings": 5
+    },
+    "sqlite": {
+      "passed": 734,
+      "seconds": 241.05,
+      "skipped_postgres_only": 13,
+      "warnings": 5
+    }
+  },
+  "base_commit": "8afbdd601fc4c6b0adb63e56e5a134bdb9461eff",
+  "browser": {
+    "display_duration": "2.3m",
+    "passed": 70,
+    "retries": 0,
+    "scope": "desktop and mobile-web; final Next production build and real disposable SQL API",
+    "skipped": 0
+  },
+  "capacity_50000": "NOT_VALIDATED; earlier larger local load stages failed availability; no rebenchmark in this increment",
+  "container_acceptance": {
+    "api": "PASS actual local HTTP; mock import/style/approval/deduplicated send/Pause; final tracked30s readiness harness",
+    "runtime_uid": 10001,
+    "web": "PASS actual local HTTP; assets/auth/proxy/readyz; owned schema removal returns503",
+    "workers": "PASS network none; migration gate then jobs/lifecycle --once"
+  },
+  "exact_image_scan_summary": {
+    "api": {
+      "image": {
+        "id": "sha256:bec67b6124de221ae3b978e37fe934f0412248e1503af500257e06142d3958b2",
+        "image": "relationship-assistant-api:render-20261007",
+        "size_bytes": 334468280,
+        "user": "10001:10001"
+      },
+      "os": {
+        "Family": "debian",
+        "Name": "12.15"
+      },
+      "results": [
+        {
+          "available_fixed_versions": 0,
+          "material_findings": [
+            {
+              "FixedVersion": null,
+              "InstalledVersion": "3.40.1-2+deb12u2",
+              "PkgName": "libsqlite3-0",
+              "Severity": "CRITICAL",
+              "Status": "affected",
+              "VulnerabilityID": "CVE-2025-7458"
+            },
+            {
+              "FixedVersion": null,
+              "InstalledVersion": "1:1.2.13.dfsg-1",
+              "PkgName": "zlib1g",
+              "Severity": "CRITICAL",
+              "Status": "will_not_fix",
+              "VulnerabilityID": "CVE-2023-45853"
+            }
+          ],
+          "severity": {
+            "CRITICAL": 2,
+            "HIGH": 53,
+            "LOW": 101,
+            "MEDIUM": 107,
+            "UNKNOWN": 1
+          },
+          "total": 264,
+          "type": "debian"
+        },
+        {
+          "available_fixed_versions": 0,
+          "material_findings": [],
+          "severity": {},
+          "total": 0,
+          "type": "python-pkg"
+        },
+        {
+          "available_fixed_versions": 1,
+          "material_findings": [
+            {
+              "FixedVersion": "0.23.45",
+              "InstalledVersion": "0.23.42",
+              "PkgName": "rustls",
+              "Severity": "MEDIUM",
+              "Status": "fixed",
+              "VulnerabilityID": "GHSA-2mjx-qc3c-rqvc"
+            }
+          ],
+          "severity": {
+            "MEDIUM": 1
+          },
+          "total": 1,
+          "type": "cargo"
+        }
+      ]
+    },
+    "database": {
+      "DownloadedAt": "2026-10-07T09:10:31.202877388Z",
+      "NextUpdate": "2026-10-08T07:38:55.515026457Z",
+      "UpdatedAt": "2026-10-07T07:38:55.515026687Z",
+      "Version": 2
+    },
+    "web": {
+      "image": {
+        "id": "sha256:01974256d6f58e5ddbba67030433186faeaff0b54a73affd9fb5773930c68a5c",
+        "image": "milo-web:render-20261007",
+        "size_bytes": 298000256,
+        "user": "10001:10001"
+      },
+      "os": {
+        "Family": "debian",
+        "Name": "12.15"
+      },
+      "results": [
+        {
+          "available_fixed_versions": 0,
+          "material_findings": [
+            {
+              "FixedVersion": null,
+              "InstalledVersion": "1:1.2.13.dfsg-1",
+              "PkgName": "zlib1g",
+              "Severity": "CRITICAL",
+              "Status": "will_not_fix",
+              "VulnerabilityID": "CVE-2023-45853"
+            }
+          ],
+          "severity": {
+            "CRITICAL": 1,
+            "HIGH": 48,
+            "LOW": 77,
+            "MEDIUM": 95,
+            "UNKNOWN": 1
+          },
+          "total": 222,
+          "type": "debian"
+        },
+        {
+          "available_fixed_versions": 0,
+          "material_findings": [],
+          "severity": {},
+          "total": 0,
+          "type": "node-pkg"
+        }
+      ]
+    }
+  },
+  "external_provider_calls": 0,
+  "general_production_action_transport": "BLOCKED; mock-only adapter",
+  "image_source_proofs": {
+    "api": {
+      "base_commit": "8afbdd601fc4c6b0adb63e56e5a134bdb9461eff",
+      "input_count": 51,
+      "inputs": {
+        "alembic.ini": "070daac2b8b7a2eac73a750c9d20f2a3033335ab602348d1c8627f106009d647",
+        "db/migrations/env.py": "2ec5e1b3a18e41a81e7049f7d336b954429105043e408fde262207576743bc74",
+        "db/migrations/script.py.mako": "bebf1e4b7644243b9651d99b0c085ee1297a3d089c400fd8d8cc87b6f920e3f3",
+        "db/migrations/versions/05439876fc2e_bounded_rotating_native_refresh_sessions.py": "b0cfc80c67e18d8706ba713620efb898e3a6173218f340d3abc7143c034ebd68",
+        "db/migrations/versions/05968846b410_bounded_verified_fact_automation.py": "d9b545a8c654f7b206d637556be131510163821da7d364201ccf940c294704ae",
+        "db/migrations/versions/2c71848ffaec_native_actions_contacts_jobs_and_.py": "eddc3af79f6156190d710c9694df752a7676afeb82c6bbe3e82e7b5bbb7e806b",
+        "db/migrations/versions/62a08d908c78_bound_draft_context_to_memory_expiry.py": "1a749bf959d7f905a5a9d867594c209a9978c378149cf65783a64ee82609d424",
+        "db/migrations/versions/776b8a3e1f52_native_google_proof_challenges_and_.py": "39fe736bfbe3b41fa52c1b59d6d1a00da217cd0f06a03147fb55b54537e883ab",
+        "db/migrations/versions/86b7bbad6fc1_bounded_auth_expiry_indexes.py": "6222d62ba35df65c3d7248921ce199e2822ecebb7ef7c18273e771d7a95338b9",
+        "db/migrations/versions/95f566068880_encrypted_owner_context_and_durable_.py": "091c0b12514eb4e38c55b10756fc1e035becf7c8d748aa42f72292c63786db6d",
+        "db/migrations/versions/bdb23cd7706f_initial_tenant_scoped_assistant_schema.py": "7b128a1f00676bff0eb8c92c35e0297a13a995138d2fb0ce98a8db96a10b285b",
+        "pyproject.toml": "e340d874662146e810977ed520db55673c145f29619327ee3ef096db2d0b9a12",
+        "services/api/Dockerfile": "fea4cef18d83eebcfa52b3aa8711e3e25ce39a29358c95c83f96b05c9059506b",
+        "services/api/assistant/__init__.py": "42b1a10adf21ed8c5c206dab7c44919c9849f28d2581ad223bf61bef530813c4",
+        "services/api/assistant/access.py": "7c79d7311f04f82aca5561af134b9308e104e90893ceb67ed6d38303f247417b",
+        "services/api/assistant/action_models.py": "60014b1a1eda63f5771ac22ac1c3abf2609ec12c0bd7499e0f9f4c296c68d4a9",
+        "services/api/assistant/actions.py": "dd98697d8f58805836d792b2d7a2a73b5975d8853e1fe0989ce9f16346e3514e",
+        "services/api/assistant/assistantui.py": "0ffb0c702cf33e65218a7b66201f268986636a00130b3d5db7ae15c6e8095652",
+        "services/api/assistant/auth.py": "193b8d3ae010d7d067240220bfba9c3f3b23822eed4091f1fbb024f021fd4615",
+        "services/api/assistant/auth_lifecycle.py": "f94e403b2a281a4ff03382e2c1476c336df4dca8eb97d712c49e0d7a8e014a89",
+        "services/api/assistant/automation.py": "9d3244b34a561b1bd0d3fea83718c82f2f4a6ff0eebfc602e87890e679a91c56",
+        "services/api/assistant/bridge.py": "08a4824f5864241cec11ff8cc25c8ff9791b4bf886b6bc23f14eef2055075d4f",
+        "services/api/assistant/companion.py": "d53a938008b0b52381414b5de85d62a6be493ed083c3c0829bce202f6b505335",
+        "services/api/assistant/config.py": "c69ce4e1ec2a071b390a04d9b67b8b549904eeaa06d67dcd273f379077adda54",
+        "services/api/assistant/core.py": "3e4b8900287f3d4747d3dc0356af7f23c5b5e65a37a4269c799f5e90ad596bb6",
+        "services/api/assistant/db.py": "cc2bb0f2a9d34dd4b655b426b7c14146b3f46fd4d90cff4b9bc54f051c71e75f",
+        "services/api/assistant/google_certificates.py": "9ee4155e3c6361f4b30ecb1a41ac5b53f5ee7b4988fcf344c43ce364fd7f3fe0",
+        "services/api/assistant/importer.py": "58ad648573107304cb288069690c61bc1e9e627298fa1a0f1afd8703470e3e97",
+        "services/api/assistant/intelligence.py": "e328edfc36719423c3eb8edab97f8e50c2165026535b8db37cc58d13167a4cdc",
+        "services/api/assistant/jobs.py": "fbde7753f2d52beffdb442495d0267a5020ac1d577b8f61ef7bc3e986d3e7343",
+        "services/api/assistant/jobs_models.py": "11c7a6065c50e2d1c9f0d538443bfe744f578489b16dc0225da1fc9092933dd2",
+        "services/api/assistant/lifecycle.py": "fa86f47dceffb0c6e1bafc878df156ff758e6893b6f0ed24e924a0e3a1772021",
+        "services/api/assistant/lifecycle_models.py": "a9b1e7e7b70efad40c9d7a77536d6582c7ceb5333f181334847b58ef4e2a424b",
+        "services/api/assistant/main.py": "0eb79707696555e3032d6f6c17df827088303ef5118d6470d838ac796368496b",
+        "services/api/assistant/messaging.py": "fd01ca9ab164118834513ce0440a1b6734123ab43542ce09b69c096b71d118f9",
+        "services/api/assistant/mobile_auth.py": "3e7a66748de9bb09e72c30abdfe36b9aab373fcbfdd2d4450cc9bf8799b07255",
+        "services/api/assistant/mobile_models.py": "2599d9ea1d77f466a8b8062afd4a1577929103cc5d1c64d29b4a2aadd03f3df3",
+        "services/api/assistant/models.py": "019fdfc167bcf2784a13cc130b44793500f3c2534f9b7e1ca0be8a1c62b7cff3",
+        "services/api/assistant/native.py": "4777cb157d0d131c593e9a4d75edc61eb42d66df3e5d3307b7f49133ce2d678a",
+        "services/api/assistant/native_models.py": "764afb6a4a30137707e5838c65c571a3c352da411bdd3498b2031bfaba80f210",
+        "services/api/assistant/people.py": "9f87b0a1ce03c621daad578e8f91e960a2175c659473e2d096cd8f7fe843a5ed",
+        "services/api/assistant/people_models.py": "55dc13c31617ed40f9e6e58b9fe9d6dc24aaa12ee25f8d5a8efd008e4d1a7315",
+        "services/api/assistant/provider_authority.py": "d39bfe695ddc15c38879e73829dd384c8a755d3f7b625ad9e6528fc30e7c1734",
+        "services/api/assistant/relay.py": "3721bed475b56e9adcf076dc8e386537e94ca459844a1c3a2c930602a4222522",
+        "services/api/assistant/render_entrypoint.py": "956849a6792ffda66ed14495b0126990a258dea57f2ad78d6a93dcf13bb77a67",
+        "services/api/assistant/request_security.py": "107afe8245ad5add5c7c0bf9062d171ffdf39b9d8926dc29059cd684a8459c91",
+        "services/api/assistant/storage_authority.py": "44063f57d2c15df9a2cba662b1cfb733ea611911b051c8e3d87388ab92b7fd47",
+        "services/api/assistant/tasks.py": "12c70f7ef03ddfdec7c6337c0ef8f6de17b3d05f974e66ef96ea7571a3a285a2",
+        "services/api/assistant/webhooks.py": "f0f5040c4a84b0025a62c6594a2430243575fda7a7c00b7dcd5e41fd75c5f695",
+        "services/api/assistant/workflows.py": "f6684befebb011b7b3955b5561bbd3e09054c768b5b52540565457856ea6a23a",
+        "uv.lock": "bdf2dfd2c25213832964053a1ccb0f5fe754785ad54213c0e594ac64a299147c"
+      },
+      "scope": "api",
+      "source_tree_sha256": "be96e4320abae2e32451f900917eb21e0d8f5fc20a6c9524f8e39c89b636674c"
+    },
+    "web": {
+      "base_commit": "8afbdd601fc4c6b0adb63e56e5a134bdb9461eff",
+      "input_count": 42,
+      "inputs": {
+        "Dockerfile.web": "9d149d06093ed413cf86cf9cf35a7f81e54b9afc926449c458dcca69b3dc9a83",
+        "apps/mobile/package.json": "7f3f640e8733b04fcc14b5b5c49caaaa9f244dbca1c24b3ebf564903fcffc4e5",
+        "apps/web/app/[[...path]]/page.tsx": "d7c07cbccf87e8ce96b063c893f40903f0f1875019d0e1a6c27a5e99d990b637",
+        "apps/web/app/api/[...path]/route.ts": "94ab3efe5760733fdf562a489a5582488a0365eecf4731e0fcc60388f06c56c8",
+        "apps/web/app/globals.css": "f7caf1ae9e046c14e4517a7f0a8f2376aac7b3b3684e097e5ef636cc878ab7fd",
+        "apps/web/app/healthz/route.ts": "c83ffabdf69f95223823e68d6f8e74230fe5ff53e81a2e50859f3cecbd537269",
+        "apps/web/app/layout.tsx": "08b0d4459640c1710a79b4309f2863ad531b392b7bb8167ef24c03baa0f28223",
+        "apps/web/app/readyz/route.ts": "e22998e4de7c0724784c52fa428ed8bedd0e7d3768df4b237a4e536192d8ba00",
+        "apps/web/components/app.tsx": "e4029f0e89b8557e8740b48d795f1b6fd794500bbb3ffc7e56647975b47bf56b",
+        "apps/web/components/assistant.tsx": "bbfe1841de1fe16146e02d9d6f6359b0f8fc780dcd87a352350479cedcd73363",
+        "apps/web/components/auth.tsx": "08b59d2e075311aefb661f2840eed7ad44e598d8b93d5bd6291526af12257eef",
+        "apps/web/components/history-setup.tsx": "31899862aa54bb76288a26d3e593c301af8592cba4688980327a5cceed109507",
+        "apps/web/components/home.tsx": "c3c37b5094266affd5f79a6d4c78457e195c47358ec6ccb503cf5b16eed59088",
+        "apps/web/components/icons.tsx": "aa7bcc1c21ebd4831465492669044de8c8010bae3cc2e60274f85353c89bed66",
+        "apps/web/components/inbox.tsx": "e860a192687abd4b9a4c5c20e0cb85f9c2ebbd1606f7cfadfc09128a32c39c6a",
+        "apps/web/components/tools.module.css": "6d2f72fea9f8720c35706a58236bdddd33961296a8116c3362faec6c54814533",
+        "apps/web/components/tools.tsx": "38e8a3d0e0f3a8bde80fd45ded25a2aae48a07a4feff53d83d8d7f3da04afb72",
+        "apps/web/lib/history-confirmation.ts": "bdd3e0fb3f6ed7a5ec17c1ae17fe4bc074ab20930181b6156739df8cb405ee0c",
+        "apps/web/lib/proxy-admission.ts": "71b4643a04679ebbe92fdb757f2e6ef6ce20a0d700ddd5a0065c7546c88cb9d1",
+        "apps/web/lib/proxy-body.ts": "1cdedc871dca003765f8c91786190f3fd342c766318441804922aabf2f68ef37",
+        "apps/web/lib/state.tsx": "6498ba62eb827322b6e66b9e176c7d241a7157af75e2c35b428508f0e81c6dda",
+        "apps/web/lib/tool-privacy.ts": "a6c075b75f3da910e3dbd735a18a477abec475103a43249e1dd9ce5c3ee7e969",
+        "apps/web/lib/types.ts": "05aa607ffc8537c6b69dba99bb2d80ad074b2344a3ef46a027780a94e4eeae84",
+        "apps/web/next-env.d.ts": "1862ac4bbbc5192d4bf562161df66ea547ed3e67173100656ab606ae9797db2b",
+        "apps/web/next.config.ts": "06a318474f77197d7ef0a5cace686ec9e6c8e813955c0674e68af345cea5f11d",
+        "apps/web/package.json": "3bc26fe68989079851291803700b889db018e5886cee6fae4d06001078e16c93",
+        "apps/web/public/milo.svg": "30ce954461668effa8a63e5550753b8bb8e0fe2e2d371d67624dde3257cbd255",
+        "apps/web/tsconfig.json": "0f6225320db3d34bf2bdbc884b4217d1ca3f32c10bde0dc569f3f531a7321b19",
+        "package-lock.json": "5b0c619a9ee93813779e30a4863a692dccbe295e077fad37fcbf0c2c0ade2e26",
+        "package.json": "96cd276604992cb29828dacd080e2c8d019480fcf7dc45167f1be2cbcef1c918",
+        "packages/contracts/canonical-event.schema.json": "63003a88dd49a6f3294c0f8a98017e8572eb74105c78f95f3777674686914f26",
+        "packages/contracts/demo.ts": "7729333dac7f72e82eb8267d9e3a7afba0b97a35b82e1b2b108d0c5e382febc7",
+        "packages/contracts/domain.ts": "1a1eb9d1a58c14166bab0a2381af8770b471fd9956659d5338140ec4bfd8f919",
+        "packages/contracts/format.ts": "7a4076d0724d25ee45724542d69ddea82746e72992bc8c6124d098999b9a6d63",
+        "packages/contracts/generated/api.ts": "4491f8a7b45257e9186be3a1905b7667ae98772c0b4585eb6bf67118eb01c07b",
+        "packages/contracts/index.ts": "b444d0d1880d32c41bcaf51b73dced3ab8b75d79da3a0e045830d509d83d5c95",
+        "packages/contracts/openapi.json": "fb2d640f1f71b2591d0fb932418d387bc96e0dfc32d6ed8f9b5918c05c30228e",
+        "packages/contracts/package.json": "f6ed7290e0d00dd28f584e792db4cc79c01a143a22785e710b73f2a2416db684",
+        "packages/contracts/sdk.ts": "b4db4697973535668c9e3470b80d8bd16eceb2a1d8ee7f4be921c79bc104ee03",
+        "packages/contracts/tests/demo.test.ts": "3ffddd591e6591f508a49a5fbda6e07c2470fc14bcc829c3af5accd90406b74e",
+        "packages/contracts/tokens.ts": "4b5d1f720ad032f90ae18497e5cb86a1d2f5a21353ba3656f15ae8cd8c0dbaea",
+        "packages/contracts/tsconfig.json": "96e1c49bca4a6ab2b3665a19b8f8abd39f1053129169f2be2da6bfbb5dbad97f"
+      },
+      "scope": "web",
+      "source_tree_sha256": "970f39706f7e5cee181c0553a571ea2281399e7843a826cfc0a1bb524f3da626"
+    }
+  },
+  "known_findings": "OPEN; full exact-image OS/Cargo findings and native/build advisory baseline retained",
+  "live_personal_whatsapp_sync": "NOT_IMPLEMENTED",
+  "model_calls": 0,
+  "overlapping_focused_checks": {
+    "business_owner_binding_new_cases": 22,
+    "business_suite_passed": 121,
+    "history_onboarding_passed": 6,
+    "history_onboarding_seconds": 26.2,
+    "proxy_and_readiness_passed": 34,
+    "render_release_and_entrypoint_passed": 76
+  },
+  "postgres_startup": {
+    "actual_heads": [
+      "86b7bbad6fc1"
+    ],
+    "business_rows": 0,
+    "database_bytes": 9884131,
+    "disposable_database_removed": true,
+    "each_revision_applied_once": true,
+    "elapsed_seconds": 11.316,
+    "expected_heads": [
+      "86b7bbad6fc1"
+    ],
+    "expected_revision_count": 8,
+    "finished_at": "2026-10-07T11:31:06.901547+00:00",
+    "migration_exit_codes": [
+      0,
+      0
+    ],
+    "owned_processes_stopped": true,
+    "passed": true,
+    "repeated_migration_exit_code": 0,
+    "repeated_migration_idempotent": true,
+    "repeated_upgrade_count": 0,
+    "schema_sha256": "70c143645b1a0d2feb7a11337a991243a7b3f8143a561fc9a40f579fdd79a6f8",
+    "schema_tables": 38,
+    "started_at": "2026-10-07T11:30:55.586615+00:00",
+    "two_separate_migrators_observed_waiting_on_same_lock": true,
+    "upgrades_per_process": [
+      8,
+      0
+    ],
+    "waiter_executed_before_schema": true,
+    "waiter_exit_code": 0
+  },
+  "production_web_build": "PASS",
+  "recorded_utc": "2026-10-07T11:33:17.584614+00:00",
+  "references": [
+    "../QA_REPORT.md",
+    "../render-container-validation.md",
+    "../render-startup-smoke.md",
+    "../github-actions.md",
+    "../SECURITY_REVIEW.md",
+    "../LOAD_TEST_REPORT.md"
+  ],
+  "remote_github_actions": "Tracked separately after publication; local acceptance does not establish runner result.",
+  "render_hosted_deployment": "NOT_RUN; protected authentication and service IDs absent",
+  "ruff": "PASS",
+  "scope": "Render release and fresh-owner local acceptance; synthetic identities/content/providers",
+  "source_boundary": "Frozen working-tree inputs; the containing Git commit publishes this increment. Local images and future Render builds are separate artifacts.",
+  "workspace_typecheck": "PASS"
+}

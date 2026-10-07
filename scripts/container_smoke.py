@@ -30,15 +30,16 @@ def main():
         address = subprocess.run(["docker", "port", name, "8000"], check=True,
                                  capture_output=True, text=True).stdout.strip()
         with httpx.Client(base_url=f"http://{address}", timeout=5) as client:
-            for attempt in range(30):
+            deadline = time.monotonic() + 30
+            while (remaining := deadline - time.monotonic()) > 0:
                 try:
-                    if client.get("/health/ready").is_success:
+                    if client.get("/health/ready", timeout=min(2, remaining)).status_code == 200:
                         break
                 except httpx.TransportError:
                     pass
-                if attempt == 29:
-                    raise TimeoutError(f"Synthetic API container did not become ready; inspect docker logs {name}")
-                time.sleep(.25)
+                time.sleep(min(.25, max(0, deadline - time.monotonic())))
+            else:
+                raise TimeoutError("Synthetic API container did not become ready within 30 seconds")
             result = run_demo(client, Settings(internal_service_token=token))
             result["mode"] = "non_root_container_real_local_http_mock_transport"
             result["migration_and_readiness"] = "passed"

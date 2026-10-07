@@ -128,7 +128,8 @@ def bootstrap(request: Request, workspace_id: str | None = None,
         value = public(connector, "workspace_id", "provider", "account_id", "owner_sender_id", "status", "capabilities", "fence")
         value.update(simulation=connector.provider == "mock", lease_expires_at=aware(connector.lease_expires_at).isoformat()
                      if connector.lease_expires_at else None,
-                     health="healthy" if connector.status == "connected" and connector.lease_expires_at
+                     health="history_only" if connector.provider == "export_only" and connector.status == "connected"
+                     else "healthy" if connector.status == "connected" and connector.lease_expires_at
                      and aware(connector.lease_expires_at) > now() else "needs_attention")
         result["connections"].append(value)
     readable = select(Permission.conversation_id).where(

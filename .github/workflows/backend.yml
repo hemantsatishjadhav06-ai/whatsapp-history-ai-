@@ -1,27 +1,43 @@
 name: Backend
 on:
   push:
+    branches-ignore: [main]
   pull_request:
+  workflow_call:
 
 permissions:
   contents: read
 
+concurrency:
+  group: backend-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+defaults:
+  run:
+    shell: bash
+
 jobs:
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v6
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6
         with:
           version: "0.12.19"
           enable-cache: true
-      - run: uv python install 3.12
+      - run: uv python install 3.12.14
       - run: uv sync --frozen --group dev
       - run: uv run --frozen ruff check services tests scripts
-      - run: uv run --frozen pytest -q
-      - uses: actions/setup-node@v4
+      - name: SQLite regression suite
+        run: |
+          mkdir -p .local/ci-evidence
+          uv run --frozen pytest -q --junitxml=.local/ci-evidence/sqlite.xml | tee .local/ci-evidence/sqlite.log
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
-          node-version: "24"
+          node-version: "24.19.0"
           cache: npm
           cache-dependency-path: services/connector-gateway/package-lock.json
       - run: npm ci --prefix services/connector-gateway --ignore-scripts
@@ -40,9 +56,17 @@ jobs:
           uv run --frozen alembic upgrade head
           uv run --frozen alembic upgrade head
           uv run --frozen alembic check
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: backend-sqlite-${{ github.sha }}
+          path: .local/ci-evidence/
+          if-no-files-found: ignore
+          retention-days: 14
 
   postgres:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     services:
       postgres:
         image: postgres:16-alpine
@@ -71,13 +95,31 @@ jobs:
       TEST_DATABASE_URL: postgresql+psycopg://postgres:milo-ci-only@localhost:5432/milo_test
       ENVIRONMENT: test
     steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v6
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6
         with:
           version: "0.12.19"
           enable-cache: true
-      - run: uv python install 3.12
+      - run: uv python install 3.12.14
       - run: uv sync --frozen --group dev
       # Includes separate-process authority, job, receipt and quota races.
-      - run: uv run --frozen pytest -q
-      - run: uv run --frozen python scripts/request_limits_smoke.py
+      - name: Full PostgreSQL regression suite
+        run: |
+          mkdir -p .local/ci-evidence
+          uv run --frozen pytest -q --junitxml=.local/ci-evidence/postgres.xml | tee .local/ci-evidence/postgres.log
+      - name: Real Redis limits and failure recovery
+        run: uv run --frozen python scripts/request_limits_smoke.py | tee .local/ci-evidence/redis.log
+      - name: Separate-process migration locking and worker readiness
+        run: >-
+          uv run --frozen python scripts/render_startup_smoke.py
+          --output .local/ci-evidence/render-startup.json
+          | tee .local/ci-evidence/render-startup.log
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: backend-postgres-${{ github.sha }}
+          path: .local/ci-evidence/
+          if-no-files-found: ignore
+          retention-days: 14

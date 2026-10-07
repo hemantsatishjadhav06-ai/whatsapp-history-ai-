@@ -153,6 +153,8 @@ def create_connector(body: ConnectorInput, request: Request,
     if body.provider == "mock" and settings.environment == "production":
         raise HTTPException(403, "Mock connectors are unavailable in production")
     if body.provider == "whatsapp_cloud":
+        from .provider_authority import require_whatsapp_owner
+        require_whatsapp_owner(settings, user)
         if body.account_id != settings.whatsapp_phone_number_id:
             raise HTTPException(409, "Configure and verify this Business phone-number ID before connecting")
         status = "needs_verification"
@@ -231,6 +233,10 @@ def verify_connector(connector_id: str, request: Request,
     s = request.app.state.settings
     if row.provider != "whatsapp_cloud" or not s.whatsapp_access_token:
         raise HTTPException(409, "Only a configured WhatsApp Business number can be verified")
+    from .provider_authority import require_whatsapp_owner
+    require_whatsapp_owner(s, user)
+    if not s.whatsapp_phone_number_id or row.account_id != s.whatsapp_phone_number_id:
+        raise HTTPException(409, "Configure this Business phone-number ID before verifying")
     try:
         result = httpx.get(f"https://graph.facebook.com/{s.whatsapp_api_version}/{row.account_id}",
                            headers={"Authorization": f"Bearer {s.whatsapp_access_token}"},

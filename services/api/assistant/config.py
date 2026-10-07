@@ -35,6 +35,7 @@ class Settings(BaseSettings):
     whatsapp_verify_token: str = ""
     whatsapp_access_token: str = ""
     whatsapp_phone_number_id: str = ""
+    whatsapp_authorized_owner_subject: str = ""
     whatsapp_api_version: str = "v23.0"
     enable_external_sends: bool = False
     connector_gateway_url: str = ""
@@ -86,6 +87,11 @@ class Settings(BaseSettings):
             raise ValueError("Native refresh sessions must expire within 30 days and after the access session")
         if self.environment not in {"development", "test", "production"}:
             raise ValueError("Unknown environment")
+        if self.whatsapp_authorized_owner_subject:
+            subject = self.whatsapp_authorized_owner_subject
+            if (len(subject) > 248 or subject.startswith("google:")
+                    or subject != subject.strip() or any(character.isspace() for character in subject)):
+                raise ValueError("WhatsApp owner binding requires the exact raw verified Google subject")
         bounds = {
             "session_ttl_seconds": (300, 2592000), "max_import_bytes": (1, 20000000),
             "max_import_records": (1, 100000), "request_max_inflight": (2, 4096),

@@ -1,0 +1,175 @@
+name: Containers and security
+
+on:
+  workflow_call:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: containers-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  configuration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Check workflow expressions and shell scripts
+        run: |
+          tool_dir=$(mktemp -d)
+          curl --fail --silent --show-error --location --max-time 45 \
+            https://github.com/rhysd/actionlint/releases/download/v1.7.7/actionlint_1.7.7_linux_amd64.tar.gz \
+            --output "$tool_dir/actionlint.tar.gz"
+          echo "023070a287cd8cccd71515fedc843f1985bf96c436b7effaecce67290e7e0757  $tool_dir/actionlint.tar.gz" | sha256sum --check --strict
+          tar --extract --gzip --file "$tool_dir/actionlint.tar.gz" --directory "$tool_dir" actionlint
+          "$tool_dir/actionlint" -color
+  accept:
+    needs: configuration
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      # Immutable official Trivy image; the vulnerability database stays current.
+      TRIVY_IMAGE: aquasec/trivy:0.75.0@sha256:9db099105405c648166e6b94155eb32f8da12673cf1f455207f7385cc9a77283
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6
+        with:
+          version: '0.12.19'
+          enable-cache: true
+      - run: uv python install 3.12.14 && uv sync --frozen --group dev
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '24.19.0'
+          cache: npm
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+      - name: Build both runtime images from this checkout
+        run: |
+          mkdir -p .local/ci-evidence .local/ci-images .local/trivy-cache
+          docker buildx build --load --progress=plain --file services/api/Dockerfile --tag relationship-assistant-api:local . |& tee .local/ci-evidence/api-build.log
+          docker buildx build --load --progress=plain --file Dockerfile.web --tag milo-web:local . |& tee .local/ci-evidence/web-build.log
+          docker image inspect relationship-assistant-api:local milo-web:local > .local/ci-evidence/images.json
+          git rev-parse HEAD > .local/ci-evidence/source-commit.txt
+      - name: Exercise built API and web through actual local HTTP
+        run: |
+          uv run --frozen python scripts/container_smoke.py | tee .local/ci-evidence/api-acceptance.log
+          uv run --frozen python scripts/web_container_smoke.py | tee .local/ci-evidence/web-acceptance.log
+      - name: Exercise worker entrypoints on disposable empty databases
+        run: |
+          for module in jobs lifecycle actions; do
+            docker run --rm --network none \
+              --env ENVIRONMENT=test --env ALLOW_DEV_AUTH=false \
+              --env MODEL_PROVIDER=disabled --env ENABLE_EXTERNAL_SENDS=false \
+              --env DATABASE_URL=sqlite:///.local/ci-worker.db \
+              relationship-assistant-api:local /bin/sh -c \
+              "/app/.venv/bin/python -m assistant.render_entrypoint migrate && /app/.venv/bin/python -m assistant.render_entrypoint wait-schema && exec /app/.venv/bin/python -m assistant.$module --once" \
+              |& tee ".local/ci-evidence/worker-$module.log"
+          done
+      - name: Audit release dependencies and record native residual findings
+        run: |
+          npm ci --ignore-scripts
+          npm ci --prefix services/connector-gateway --ignore-scripts
+          npm audit --omit=dev --workspace=@milo/web --json > .local/ci-evidence/web-npm-audit.json
+          npm audit --prefix services/connector-gateway --json > .local/ci-evidence/gateway-npm-audit.json
+          uv export --frozen --no-dev --no-emit-project --output-file .local/ci-evidence/python-production.txt
+          uv tool run --python 3.12.14 --from pip-audit==2.10.1 pip-audit --strict --require-hashes --no-deps --disable-pip \
+            --cache-dir .local/pip-audit-cache \
+            --format json --output .local/ci-evidence/python-audit.json \
+            --requirement .local/ci-evidence/python-production.txt
+          # Native is not deployed to Render. Its known findings stay visible;
+          # an audit error or a newly discovered base advisory still fails CI.
+          set +e
+          npm audit --omit=dev --json > .local/ci-evidence/native-npm-audit.json
+          audit_status=$?
+          set -e
+          export AUDIT_STATUS="$audit_status"
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          result = json.loads(Path('.local/ci-evidence/native-npm-audit.json').read_text())
+          assert os.environ['AUDIT_STATUS'] in {'0', '1'}, 'npm audit did not complete'
+          assert 'error' not in result and 'metadata' in result, 'npm audit API failed'
+          reviewed = {
+              'GHSA-vfj7-8cjw-p6xm', 'GHSA-86w9-cpqp-85rv',
+              'GHSA-hp3w-g68c-fv3c', 'GHSA-vcc3-ghjq-m6fr',
+          }
+          observed = {item['url'].rsplit('/', 1)[-1]
+                      for node in result.get('vulnerabilities', {}).values()
+                      for item in node.get('via', []) if isinstance(item, dict)}
+          assert observed <= reviewed, f'Unreviewed native advisories: {sorted(observed - reviewed)}'
+          counts = result['metadata']['vulnerabilities']
+          for severity, maximum in {'critical': 0, 'high': 21, 'moderate': 8, 'total': 29}.items():
+              assert counts.get(severity, 0) <= maximum, f'Native {severity} findings exceed the reviewed baseline'
+          print('Native residual findings:', counts)
+          print('Review scope and compatibility constraints: docs/dependency-audit.md')
+          PY
+      - name: Produce full container reports and CycloneDX SBOMs
+        run: |
+          docker save relationship-assistant-api:local --output .local/ci-images/api.tar
+          docker save milo-web:local --output .local/ci-images/web.tar
+          sha256sum .local/ci-images/*.tar > .local/ci-evidence/image-archive-sha256.txt
+          docker pull "$TRIVY_IMAGE"
+          for image in api web; do
+            docker run --rm --user "$(id -u):$(id -g)" --cap-drop ALL --security-opt no-new-privileges \
+              --volume "$PWD/.local/ci-images:/images:ro" \
+              --volume "$PWD/.local/ci-evidence:/evidence" \
+              --volume "$PWD/.local/trivy-cache:/cache" \
+              "$TRIVY_IMAGE" --cache-dir /cache image --timeout 10m --scanners vuln \
+              --input "/images/$image.tar" --format json --output "/evidence/$image-trivy.json"
+            docker run --rm --user "$(id -u):$(id -g)" --cap-drop ALL --security-opt no-new-privileges \
+              --volume "$PWD/.local/ci-images:/images:ro" \
+              --volume "$PWD/.local/ci-evidence:/evidence" \
+              --volume "$PWD/.local/trivy-cache:/cache" \
+              "$TRIVY_IMAGE" --cache-dir /cache image --timeout 10m --skip-db-update --scanners vuln \
+              --input "/images/$image.tar" --format cyclonedx --output "/evidence/$image-sbom.cdx.json"
+          done
+      - name: Block available high and critical container fixes
+        run: |
+          # Unfixed findings remain in the full report; this gate is deliberately
+          # named for its limited scope and is not a zero-vulnerabilities claim.
+          for image in api web; do
+            docker run --rm --user "$(id -u):$(id -g)" --cap-drop ALL --security-opt no-new-privileges \
+              --volume "$PWD/.local/ci-images:/images:ro" \
+              --volume "$PWD/.local/ci-evidence:/evidence" \
+              --volume "$PWD/.local/trivy-cache:/cache" \
+              "$TRIVY_IMAGE" --cache-dir /cache image --timeout 10m --skip-db-update --scanners vuln \
+              --input "/images/$image.tar" --severity HIGH,CRITICAL --ignore-unfixed \
+              --exit-code 1 --format json --output "/evidence/$image-fixable-gate.json"
+          done
+      - name: Summarize the actual scan scopes
+        if: always()
+        run: |
+          python - <<'PY'
+          import json, os
+          from collections import Counter
+          from pathlib import Path
+          lines = ['### Container security evidence', '',
+                   'Full findings include unresolved vulnerabilities. The release gate blocks HIGH/CRITICAL findings with available fixes.', '']
+          for image in ('api', 'web'):
+              path = Path(f'.local/ci-evidence/{image}-trivy.json')
+              if not path.exists():
+                  lines.append(f'- {image}: scan did not complete; inspect the failed step.')
+                  continue
+              report = json.loads(path.read_text())
+              counts = Counter(v['Severity'] for r in report.get('Results', []) for v in r.get('Vulnerabilities', []))
+              lines.append(f'- {image}: {dict(sorted(counts.items()))}; full report and SBOM are attached as artifacts.')
+          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as summary:
+              summary.write('\n'.join(lines) + '\n')
+          PY
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: container-security-${{ github.sha }}
+          path: .local/ci-evidence/
+          if-no-files-found: ignore
+          retention-days: 14
