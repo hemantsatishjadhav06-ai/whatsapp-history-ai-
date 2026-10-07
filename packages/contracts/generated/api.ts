@@ -3574,6 +3574,382 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/integrations/whatsapp/personal/config": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Config */
+        get: operations["config_integrations_whatsapp_personal_config_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/integrations/whatsapp/personal/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Status */
+        get: operations["status_integrations_whatsapp_personal_status_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/integrations/whatsapp/personal/start": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Start */
+        post: operations["start_integrations_whatsapp_personal_start_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/integrations/whatsapp/personal/pairing": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Pairing */
+        get: operations["pairing_integrations_whatsapp_personal_pairing_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/integrations/whatsapp/personal/chats": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Chats */
+        get: operations["chats_integrations_whatsapp_personal_chats_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/integrations/whatsapp/personal/chats/authorize": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Authorize */
+        post: operations["authorize_integrations_whatsapp_personal_chats_authorize_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/integrations/whatsapp/personal/disconnect": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Disconnect */
+        post: operations["disconnect_integrations_whatsapp_personal_disconnect_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/internal/whatsapp-session-authority": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Session Authority */
+        post: operations["session_authority_internal_whatsapp_session_authority_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/internal/whatsapp-session-events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Session Event */
+        post: operations["session_event_internal_whatsapp_session_events_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/integrations/whatsapp/personal/authorship/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Confirm Authorship */
+        post: operations["confirm_authorship_integrations_whatsapp_personal_authorship_confirm_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/integrations/whatsapp/personal/config": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Config */
+        get: operations["config_v1_integrations_whatsapp_personal_config_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/integrations/whatsapp/personal/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Status */
+        get: operations["status_v1_integrations_whatsapp_personal_status_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/integrations/whatsapp/personal/start": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Start */
+        post: operations["start_v1_integrations_whatsapp_personal_start_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/integrations/whatsapp/personal/pairing": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Pairing */
+        get: operations["pairing_v1_integrations_whatsapp_personal_pairing_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/integrations/whatsapp/personal/chats": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Chats */
+        get: operations["chats_v1_integrations_whatsapp_personal_chats_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/integrations/whatsapp/personal/chats/authorize": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Authorize */
+        post: operations["authorize_v1_integrations_whatsapp_personal_chats_authorize_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/integrations/whatsapp/personal/disconnect": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Disconnect */
+        post: operations["disconnect_v1_integrations_whatsapp_personal_disconnect_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/internal/whatsapp-session-authority": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Session Authority */
+        post: operations["session_authority_v1_internal_whatsapp_session_authority_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/internal/whatsapp-session-events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Session Event */
+        post: operations["session_event_v1_internal_whatsapp_session_events_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/integrations/whatsapp/personal/authorship/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Confirm Authorship */
+        post: operations["confirm_authorship_v1_integrations_whatsapp_personal_authorship_confirm_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/conversations/{conversation_id}/automatic-drafts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Grant */
+        get: operations["get_grant_conversations__conversation_id__automatic_drafts_get"];
+        /** Put Grant */
+        put: operations["put_grant_conversations__conversation_id__automatic_drafts_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/conversations/{conversation_id}/automatic-drafts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Grant */
+        get: operations["get_grant_v1_conversations__conversation_id__automatic_drafts_get"];
+        /** Put Grant */
+        put: operations["put_grant_v1_conversations__conversation_id__automatic_drafts_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -3655,6 +4031,29 @@ export interface components {
             conversation_id: string;
             /** Question */
             question: string;
+        };
+        /** AuthorityInput */
+        AuthorityInput: {
+            /**
+             * Schema Version
+             * @default 1
+             * @constant
+             */
+            schema_version: 1;
+            /** Workspace Id */
+            workspace_id: string;
+            /** Connector Id */
+            connector_id: string;
+            /** Connector Fence */
+            connector_fence: number;
+            /** Account Id */
+            account_id?: string | null;
+            /**
+             * Operation
+             * @enum {string}
+             */
+            operation: "start" | "status" | "chats" | "disconnect" | "ingest" | "send";
+            send?: components["schemas"]["SendEnvelope"] | null;
         };
         /** AutomationGrant */
         AutomationGrant: {
@@ -3802,37 +4201,10 @@ export interface components {
              */
             limit: number;
         };
-        /** ConfirmAuthorship */
-        ConfirmAuthorship: {
-            /** Conversation Id */
-            conversation_id: string;
-            /** Message Ids */
-            message_ids: string[];
-            /**
-             * Confirm Authored By Owner
-             * @constant
-             */
-            confirm_authored_by_owner: true;
-        };
         /** ConnectInput */
         ConnectInput: {
             /** Workspace Id */
             workspace_id: string;
-        };
-        /** ConnectorInput */
-        ConnectorInput: {
-            /** Workspace Id */
-            workspace_id: string;
-            /**
-             * Provider
-             * @default export_only
-             * @enum {string}
-             */
-            provider: "export_only" | "mock" | "whatsapp_cloud";
-            /** Account Id */
-            account_id: string;
-            /** Owner Sender Id */
-            owner_sender_id: string;
         };
         /** ContactGrantInput */
         ContactGrantInput: {
@@ -3946,68 +4318,6 @@ export interface components {
             credential: string;
             /** Nonce */
             nonce: string;
-        };
-        /** GrantInput */
-        GrantInput: {
-            /** Conversation Id */
-            conversation_id: string;
-            /**
-             * Enabled
-             * @default true
-             */
-            enabled: boolean;
-            /**
-             * Mode
-             * @default AUTO
-             * @constant
-             */
-            mode: "AUTO";
-            /** Allowed Actions */
-            allowed_actions: ("SEND_TEXT" | "QUOTE" | "REACTION" | "FORWARD")[];
-            /** Allowed Intents */
-            allowed_intents: string[];
-            /** Reaction Palette */
-            reaction_palette?: string[];
-            /** Forward Route Ids */
-            forward_route_ids?: string[];
-            /**
-             * Require Grounded Facts
-             * @default true
-             * @constant
-             */
-            require_grounded_facts: true;
-            /**
-             * Max Outgoing Per Hour
-             * @default 6
-             */
-            max_outgoing_per_hour: number;
-            /**
-             * Max Trigger Age Seconds
-             * @default 300
-             */
-            max_trigger_age_seconds: number;
-            /**
-             * Quiet Start
-             * @default 21:00
-             */
-            quiet_start: string;
-            /**
-             * Quiet End
-             * @default 09:00
-             */
-            quiet_end: string;
-            /**
-             * Timezone
-             * @default Asia/Kolkata
-             */
-            timezone: string;
-            /**
-             * Expires At
-             * Format: date-time
-             */
-            expires_at: string;
-            /** Expected Version */
-            expected_version?: number | null;
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -4434,6 +4744,66 @@ export interface components {
              */
             original_expression: string;
         };
+        /** SendEnvelope */
+        SendEnvelope: {
+            /**
+             * Schema Version
+             * @default 1
+             * @constant
+             */
+            schema_version: 1;
+            /** Workspace Id */
+            workspace_id: string;
+            /** Connector Id */
+            connector_id: string;
+            /** Connector Fence */
+            connector_fence: number;
+            /** Account Id */
+            account_id: string;
+            /** Conversation Id */
+            conversation_id: string;
+            /** Recipient Id */
+            recipient_id: string;
+            /** Draft Id */
+            draft_id: string;
+            /** Attempt Id */
+            attempt_id: string;
+            /** Payload Hash */
+            payload_hash: string;
+            /** Text */
+            text: string;
+        };
+        /** SessionEvent */
+        SessionEvent: {
+            /**
+             * Schema Version
+             * @default 1
+             * @constant
+             */
+            schema_version: 1;
+            /** Workspace Id */
+            workspace_id: string;
+            /** Connector Id */
+            connector_id: string;
+            /** Connector Fence */
+            connector_fence: number;
+            /** Account Id */
+            account_id?: string | null;
+            /**
+             * Event Type
+             * @enum {string}
+             */
+            event_type: "connection" | "message" | "receipt";
+            /** Data */
+            data?: {
+                [key: string]: unknown;
+            };
+        };
+        /** StartInput */
+        StartInput: {
+            /** Workspace Id */
+            workspace_id: string;
+        };
         /** StyleEdit */
         StyleEdit: {
             /** Expected Version */
@@ -4536,6 +4906,97 @@ export interface components {
              */
             instruction: string;
         };
+        /** GrantInput */
+        assistant__actions__GrantInput: {
+            /** Conversation Id */
+            conversation_id: string;
+            /**
+             * Enabled
+             * @default true
+             */
+            enabled: boolean;
+            /**
+             * Mode
+             * @default AUTO
+             * @constant
+             */
+            mode: "AUTO";
+            /** Allowed Actions */
+            allowed_actions: ("SEND_TEXT" | "QUOTE" | "REACTION" | "FORWARD")[];
+            /** Allowed Intents */
+            allowed_intents: string[];
+            /** Reaction Palette */
+            reaction_palette?: string[];
+            /** Forward Route Ids */
+            forward_route_ids?: string[];
+            /**
+             * Require Grounded Facts
+             * @default true
+             * @constant
+             */
+            require_grounded_facts: true;
+            /**
+             * Max Outgoing Per Hour
+             * @default 6
+             */
+            max_outgoing_per_hour: number;
+            /**
+             * Max Trigger Age Seconds
+             * @default 300
+             */
+            max_trigger_age_seconds: number;
+            /**
+             * Quiet Start
+             * @default 21:00
+             */
+            quiet_start: string;
+            /**
+             * Quiet End
+             * @default 09:00
+             */
+            quiet_end: string;
+            /**
+             * Timezone
+             * @default Asia/Kolkata
+             */
+            timezone: string;
+            /**
+             * Expires At
+             * Format: date-time
+             */
+            expires_at: string;
+            /** Expected Version */
+            expected_version?: number | null;
+        };
+        /** GrantInput */
+        assistant__automatic_drafts__GrantInput: {
+            /** Enabled */
+            enabled: boolean;
+            /** Expected Version */
+            expected_version: number;
+            /** Expires At */
+            expires_at?: string | null;
+            /**
+             * Max Drafts Per Hour
+             * @default 3
+             */
+            max_drafts_per_hour: number;
+        };
+        /** ConnectorInput */
+        assistant__core__ConnectorInput: {
+            /** Workspace Id */
+            workspace_id: string;
+            /**
+             * Provider
+             * @default export_only
+             * @enum {string}
+             */
+            provider: "export_only" | "mock" | "whatsapp_cloud";
+            /** Account Id */
+            account_id: string;
+            /** Owner Sender Id */
+            owner_sender_id: string;
+        };
         /** ContactInput */
         assistant__people__ContactInput: {
             /** Conversation Id */
@@ -4551,12 +5012,80 @@ export interface components {
             /** Display Name */
             display_name?: string | null;
         };
+        /** ConfirmAuthorship */
+        assistant__whatsapp__ConfirmAuthorship: {
+            /** Conversation Id */
+            conversation_id: string;
+            /** Message Ids */
+            message_ids: string[];
+            /**
+             * Confirm Authored By Owner
+             * @constant
+             */
+            confirm_authored_by_owner: true;
+        };
         /** ContactInput */
         assistant__whatsapp__ContactInput: {
             /** Connector Id */
             connector_id: string;
             /** Phone Number */
             phone_number: string;
+            /** Title */
+            title: string;
+            /**
+             * Read
+             * @default false
+             */
+            read: boolean;
+            /**
+             * Retain
+             * @default false
+             */
+            retain: boolean;
+            /**
+             * Learn
+             * @default false
+             */
+            learn: boolean;
+            /**
+             * Draft
+             * @default false
+             */
+            draft: boolean;
+            /**
+             * Send
+             * @default false
+             */
+            send: boolean;
+            /**
+             * Recipient Opted In
+             * @default false
+             */
+            recipient_opted_in: boolean;
+        };
+        /** ConfirmAuthorship */
+        assistant__whatsapp_personal__ConfirmAuthorship: {
+            /** Conversation Id */
+            conversation_id: string;
+            /** Message Ids */
+            message_ids: string[];
+            /**
+             * Confirm Authored By Owner
+             * @constant
+             */
+            confirm_authored_by_owner: true;
+        };
+        /** ConnectorInput */
+        assistant__whatsapp_personal__ConnectorInput: {
+            /** Connector Id */
+            connector_id: string;
+        };
+        /** ContactInput */
+        assistant__whatsapp_personal__ContactInput: {
+            /** Connector Id */
+            connector_id: string;
+            /** Provider Chat Id */
+            provider_chat_id: string;
             /** Title */
             title: string;
             /**
@@ -4938,7 +5467,9 @@ export interface operations {
     create_workspace_workspaces_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "idempotency-key"?: string | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -5010,7 +5541,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["ConnectorInput"];
+                "application/json": components["schemas"]["assistant__core__ConnectorInput"];
             };
         };
         responses: {
@@ -5394,6 +5925,7 @@ export interface operations {
             query?: {
                 limit?: number;
                 before?: string | null;
+                before_id?: string | null;
                 derived_evidence?: boolean;
             };
             header?: never;
@@ -5805,7 +6337,9 @@ export interface operations {
     create_workspace_v1_workspaces_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "idempotency-key"?: string | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -5877,7 +6411,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["ConnectorInput"];
+                "application/json": components["schemas"]["assistant__core__ConnectorInput"];
             };
         };
         responses: {
@@ -6261,6 +6795,7 @@ export interface operations {
             query?: {
                 limit?: number;
                 before?: string | null;
+                before_id?: string | null;
                 derived_evidence?: boolean;
             };
             header?: never;
@@ -8465,7 +9000,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["GrantInput"];
+                "application/json": components["schemas"]["assistant__actions__GrantInput"];
             };
         };
         responses: {
@@ -8966,7 +9501,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["GrantInput"];
+                "application/json": components["schemas"]["assistant__actions__GrantInput"];
             };
         };
         responses: {
@@ -11918,7 +12453,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["ConfirmAuthorship"];
+                "application/json": components["schemas"]["assistant__whatsapp__ConfirmAuthorship"];
             };
         };
         responses: {
@@ -12112,7 +12647,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["ConfirmAuthorship"];
+                "application/json": components["schemas"]["assistant__whatsapp__ConfirmAuthorship"];
             };
         };
         responses: {
@@ -12146,6 +12681,782 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["SyncInput"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    config_integrations_whatsapp_personal_config_get: {
+        parameters: {
+            query: {
+                workspace_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    status_integrations_whatsapp_personal_status_get: {
+        parameters: {
+            query: {
+                workspace_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    start_integrations_whatsapp_personal_start_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StartInput"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    pairing_integrations_whatsapp_personal_pairing_get: {
+        parameters: {
+            query: {
+                connector_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    chats_integrations_whatsapp_personal_chats_get: {
+        parameters: {
+            query: {
+                connector_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    authorize_integrations_whatsapp_personal_chats_authorize_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["assistant__whatsapp_personal__ContactInput"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    disconnect_integrations_whatsapp_personal_disconnect_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["assistant__whatsapp_personal__ConnectorInput"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    session_authority_internal_whatsapp_session_authority_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AuthorityInput"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    session_event_internal_whatsapp_session_events_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SessionEvent"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    confirm_authorship_integrations_whatsapp_personal_authorship_confirm_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["assistant__whatsapp_personal__ConfirmAuthorship"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    config_v1_integrations_whatsapp_personal_config_get: {
+        parameters: {
+            query: {
+                workspace_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    status_v1_integrations_whatsapp_personal_status_get: {
+        parameters: {
+            query: {
+                workspace_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    start_v1_integrations_whatsapp_personal_start_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StartInput"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    pairing_v1_integrations_whatsapp_personal_pairing_get: {
+        parameters: {
+            query: {
+                connector_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    chats_v1_integrations_whatsapp_personal_chats_get: {
+        parameters: {
+            query: {
+                connector_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    authorize_v1_integrations_whatsapp_personal_chats_authorize_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["assistant__whatsapp_personal__ContactInput"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    disconnect_v1_integrations_whatsapp_personal_disconnect_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["assistant__whatsapp_personal__ConnectorInput"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    session_authority_v1_internal_whatsapp_session_authority_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AuthorityInput"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    session_event_v1_internal_whatsapp_session_events_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SessionEvent"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    confirm_authorship_v1_integrations_whatsapp_personal_authorship_confirm_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["assistant__whatsapp_personal__ConfirmAuthorship"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_grant_conversations__conversation_id__automatic_drafts_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                conversation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    put_grant_conversations__conversation_id__automatic_drafts_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                conversation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["assistant__automatic_drafts__GrantInput"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_grant_v1_conversations__conversation_id__automatic_drafts_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                conversation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    put_grant_v1_conversations__conversation_id__automatic_drafts_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                conversation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["assistant__automatic_drafts__GrantInput"];
             };
         };
         responses: {

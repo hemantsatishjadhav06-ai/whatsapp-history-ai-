@@ -5,7 +5,8 @@ The connectivity release `3336764b` passed exact-source CI and was redeployed to
 All 117 hosted checks passed with Google sign-in, model generation and external sending
 disabled. The implemented login and Business connection flows need real provider
 configuration and authorized account acceptance before those integrations can be enabled.
-Personal WhatsApp pairing remains unavailable.
+The new launch increment adds an optional private server-held QR pilot; its current
+source and live-account acceptance boundaries are recorded in [launch analysis](docs/LAUNCH_ANALYSIS.md).
 
 A WhatsApp-first communication assistant with Milo web and native clients. It receives
 permitted Business contact messages through signed webhooks, requests eligible Business
@@ -99,11 +100,12 @@ process-local counters. Redis does not determine owner permissions.
 | Area | Backend scope |
 | --- | --- |
 | Identity | Browser Google Identity Services with nonce-bound verified claims, HttpOnly sessions and CSRF; native system-browser HTTPS OAuth broker with S256 proof and an opaque app handoff; opt-in local development login |
+| Personal QR connection | Private pinned linked-device SDK service, owner-only expiring local QR, encrypted Signal state, browser-free server restart, selected 1:1 text ingestion and exact approved send; real phone acceptance pending |
 | Business connection | One server-configured eligible WhatsApp Business number bound to one exact verified Google owner; provider identity verification, bounded leases, signed public webhook and explicit contact setup |
 | Authorization | Workspace ownership and separate conversation read/retain/learn/draft/send/share permissions |
 | History | Authorized personal/group text exports with explicit owner/date/timezone mapping and reimport deduplication; conditional Coexistence requests for up to 180 days of eligible 1:1 Business history, with a durable once-only claim |
 | Personalization | Explicitly reviewed owner-authored samples, independent per-chat read/retain/learn consent, local style statistics and owner rules; evidence-backed candidate/confirmed memories; no model fine-tuning |
-| Drafts | Disabled, synthetic mock, or configured structured model proposal; owner edit/reject and exact-hash approval |
+| Drafts | Separate expiring per-chat opt-in for durable live-inbound background preparation; all generated drafts require owner approval. Disabled, synthetic mock, or configured structured model proposal; owner edit/reject and exact-hash approval |
 | Control | Pause all, conversation takeover/resume, permission versions, conversation revisions, connector fencing |
 | Bounded automation | Explicit business-hours fact/templates plus selected-chat action grants, conservative fresh-event policy, expiry/quiet hours and hourly budgets |
 | Native actions | Encrypted authentic-text originals, same-chat quote/reaction, two-audience native forward routes, immutable action/attempt ledger and current SQL bridge authority; mock operations |
@@ -126,8 +128,9 @@ current server authority. Approved provider Coexistence onboarding, history-shar
 permission and exact contact consent are required before requesting earlier Business
 app messages. Outgoing employee messages are not assumed to be owner writing: the
 owner reviews individual examples before those examples can support learning.
-The product does not implement general multi-tenant Embedded Signup or personal QR
-linking. Personal and group history use selected text exports; live groups are unsupported.
+General multi-tenant Embedded Signup remains unimplemented. The optional personal QR
+pilot is a distinct private service; full history sync is disabled and live groups
+are unsupported. Personal and group history can use authorized text exports.
 See the [connectivity setup](docs/connectivity-setup.md) before enabling real accounts.
 
 Current feature status is recorded in [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md).
@@ -199,8 +202,9 @@ remains evidence for its earlier source only.
 
 Google, Meta and model credentials are absent from the deployed pilot. The Business
 adapter supports one operator-configured number bound to one verified Google owner,
-with per-contact consent; general multi-customer Embedded Signup, personal QR linking
-and live groups are not implemented. Conditional eligible Business 1:1 history is
+with per-contact consent. That historical deployed release predates the optional
+QR launch increment; general multi-customer Embedded Signup and live groups remain
+unimplemented. Conditional eligible Business 1:1 history is
 implemented but has not been exercised against a live account. Calendar/Gmail and a
 live general-action forward transport remain unavailable. Real reply/receipt trials,
 installed-device acceptance, managed backup recovery and 50,000 simultaneous users

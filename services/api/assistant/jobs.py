@@ -10,6 +10,7 @@ import asyncio
 from datetime import UTC, datetime, time, timedelta
 import hashlib
 import json
+import logging
 from typing import Literal
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
@@ -25,6 +26,8 @@ from .messaging import require_internal, submit_guard
 from .models import Connector, Conversation, Memory, Message, Suppression, Workspace
 
 router = APIRouter(tags=["jobs"])
+logger = logging.getLogger(__name__)
+WORKER_POLL_SECONDS = 1
 ACTIVE = ("scheduled", "held", "running")
 ActionKind = Literal["SEND_TEXT", "QUOTE", "REACTION", "FORWARD", "REMINDER"]
 
@@ -471,7 +474,10 @@ async def process_jobs(session_factory, settings, job_id=None):
         query = select(AuthorizedJob.id).where(AuthorizedJob.status.in_(ACTIVE), AuthorizedJob.due_at <= now())
         if job_id:
             query = query.where(AuthorizedJob.id == job_id)
-        ids = list(db.scalars(query.order_by(AuthorizedJob.due_at).limit(100)))
+        # A held backlog remains due, but cannot occupy every bounded batch.
+        # Persist the rotation in SQL so a worker restart does not reset it.
+        ids = list(db.scalars(query.order_by(AuthorizedJob.last_checked_at.asc().nulls_first(),
+                                            AuthorizedJob.due_at, AuthorizedJob.id).limit(100)))
     results = []
     for selected in ids:
         with session_factory() as db:
@@ -483,6 +489,10 @@ async def process_jobs(session_factory, settings, job_id=None):
             job = db.get(AuthorizedJob, selected)
             if job is None or job.status not in ACTIVE or aware(job.due_at) > now():
                 continue
+            checked = now()
+            if job.last_checked_at is not None:
+                checked = max(checked, aware(job.last_checked_at) + timedelta(microseconds=1))
+            job.last_checked_at = checked
             run = db.scalar(select(JobRun).where(JobRun.job_id == job.id, JobRun.occurrence == job.runs_done))
             try:
                 _check_occurrence(db, job)
@@ -579,6 +589,8 @@ async def run_due(request: Request):
 
 
 def forget_job_sources(db, conversation_id, source_ids):
+    from .automatic_drafts import forget_automatic_draft_sources
+    forget_automatic_draft_sources(db, conversation_id, source_ids)
     sources = set(source_ids)
     for job in db.scalars(select(AuthorizedJob).where(AuthorizedJob.conversation_id == conversation_id)):
         dependent = set(job.source_revisions) & sources
@@ -596,6 +608,8 @@ def forget_job_sources(db, conversation_id, source_ids):
 
 
 def purge_job_data(db, conversation_id):
+    from .automatic_drafts import purge_automatic_draft_data
+    purge_automatic_draft_data(db, conversation_id)
     ids = select(AuthorizedJob.id).where(AuthorizedJob.conversation_id == conversation_id)
     db.execute(delete(JobRun).where(JobRun.job_id.in_(ids)))
     db.execute(delete(AuthorizedJob).where(AuthorizedJob.conversation_id == conversation_id))
@@ -603,6 +617,8 @@ def purge_job_data(db, conversation_id):
 
 def purge_workspace_jobs(db, workspace_id):
     """Includes owner-local reminders, which deliberately have no chat scope."""
+    from .automatic_drafts import purge_workspace_automatic_drafts
+    purge_workspace_automatic_drafts(db, workspace_id)
     ids = select(AuthorizedJob.id).where(AuthorizedJob.workspace_id == workspace_id)
     db.execute(delete(JobRun).where(JobRun.job_id.in_(ids)))
     db.execute(delete(AuthorizedJob).where(AuthorizedJob.workspace_id == workspace_id))
@@ -617,6 +633,33 @@ def export_local_reminders(db, workspace_id):
         AuthorizedJob.workspace_id == workspace_id, AuthorizedJob.action_kind == "REMINDER"))]
 
 
+async def run_worker_tick(session_factory, settings):
+    """Run every bounded reactive/proactive lane in the required Jobs service.
+
+    Each lane retains its SQL claims and existing provider capability gates.
+    Failures are isolated for this tick so one queue cannot prevent the others
+    from making progress; the process can restart after all lanes are attempted.
+    The generic action lane still has no live production adapter.
+    """
+    from .actions import process_auto_actions
+    from .automation import process_automation
+    from .automatic_drafts import process_automatic_drafts
+    from .messaging import process_due
+
+    results = []
+    for lane, process in (("authorized_jobs", process_jobs), ("scheduled_intents", process_due),
+                          ("verified_business_hours", process_automation), ("selected_actions", process_auto_actions),
+                          ("automatic_draft_admission", process_automatic_drafts)):
+        try:
+            results.append({"lane": lane, "results": await process(session_factory, settings)})
+        except Exception as error:
+            # Provider/SQL exception strings can contain private message content
+            # or credentials. Report only the lane and exception class.
+            logger.error("Worker lane failed: lane=%s error_type=%s", lane, type(error).__name__)
+            results.append({"lane": lane, "status": "failed", "error_type": type(error).__name__})
+    return results
+
+
 def main():
     parser = argparse.ArgumentParser(description="Run trusted authorized jobs; all outbound authority is rechecked")
     parser.add_argument("--once", action="store_true")
@@ -625,14 +668,29 @@ def main():
     from .db import make_database
     settings = Settings().prepare()
     engine, factory = make_database(settings)
+    logging.basicConfig(level=logging.INFO)
     async def run():
-        while True:
-            await process_jobs(factory, settings)
-            from .messaging import process_due
-            await process_due(factory, settings)
-            if args.once:
-                return
-            await asyncio.sleep(5)
+        from .automatic_drafts import generation_loop, run_one_generation
+        generation_task = None if args.once else asyncio.create_task(generation_loop(factory, settings))
+        try:
+            while True:
+                results = await run_worker_tick(factory, settings)
+                if any(result.get("status") == "failed" for result in results):
+                    raise RuntimeError("A required worker lane failed after all queues were attempted")
+                if args.once:
+                    await run_one_generation(factory, settings)
+                    return
+                if generation_task.done():
+                    generation_task.result()
+                    raise RuntimeError("Automatic draft generation worker stopped")
+                await asyncio.sleep(WORKER_POLL_SECONDS)
+        finally:
+            if generation_task:
+                generation_task.cancel()
+                try:
+                    await generation_task
+                except asyncio.CancelledError:
+                    pass
     try:
         asyncio.run(run())
     finally:

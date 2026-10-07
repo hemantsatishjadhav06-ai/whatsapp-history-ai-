@@ -11,6 +11,7 @@ export function Home({ openAssistant }: { openAssistant(intent?: string): void }
   const receipts = state.data.actions.filter(action => ['accepted', 'delivered', 'read'].includes(String(action.status))).slice(0, 3);
   const upcoming = [...state.data.tasks, ...state.data.jobs].filter(job => ['pending', 'active', 'scheduled', 'held'].includes(String(job.status))).sort((a,b) => String(a.due_at ?? '').localeCompare(String(b.due_at ?? ''))).slice(0, 2);
   const needs = takeover.length + missing.length;
+  const needsConnection = state.mode === 'live' && !state.data.conversations.length;
   return <div className="home-content">
     <section className="briefing" aria-labelledby="home-heading">
       <Milo size={92}/><div className="briefing-copy"><div className="eyebrow">A LITTLE MORE ROOM TO BREATHE</div>
@@ -20,7 +21,8 @@ export function Home({ openAssistant }: { openAssistant(intent?: string): void }
           <button className="text-button" onClick={() => openAssistant('write_with_me')}>Write with me</button><button className="text-button" onClick={() => openAssistant('teach_me')}>Teach me</button></div>
       </div>
     </section>
-    <div className="home-columns"><section aria-labelledby="needs-heading" className="needs-column"><div className="section-heading"><h2 id="needs-heading">What needs you</h2><span>{needs ? `${Math.min(needs, 5)} things` : 'You’re caught up'}</span></div>
+    {needsConnection && <section className="need-card" aria-label="Start your connected workspace"><span className="card-marker"><Icon name="whatsapp" size={18}/> YOUR NEXT STEP</span><h2>Bring in your first conversation.</h2><p>Link your WhatsApp phone when the pilot is available, connect an eligible Business number, or import a selected chat. Choose what Milo may read and learn before you ask it to help.</p><button className="button" onClick={() => actions.navigate('/onboarding')}>Continue setup <Icon name="arrow" size={16}/></button><div className="fine-print">No conversations are being monitored yet. Connecting alone enables no automatic replies.</div></section>}
+    <div className="home-columns"><section aria-labelledby="needs-heading" className="needs-column"><div className="section-heading"><h2 id="needs-heading">What needs you</h2><span>{needs ? `${Math.min(needs, 5)} things` : needsConnection ? 'Waiting for your first chat' : 'No decisions in this view'}</span></div>
       {takeover.slice(0, 3).map(chat => <article className="need-card caution" key={chat.id}>
         <span className="card-marker"><Icon name="whatsapp" size={18}/> PHONE TAKEOVER</span><h3>Your phone has the floor.</h3><p>You replied to {chat.title} on WhatsApp. Auto stays paused in this chat.</p>
         <div className="fine-print">Other selected chats remain active · {state.mode === 'demo' ? 'Synthetic phone observation' : 'Observed by your connector'}</div>
@@ -35,7 +37,7 @@ export function Home({ openAssistant }: { openAssistant(intent?: string): void }
           <button className="button secondary" onClick={() => uncertain ? actions.navigate(`/activity/${encodeURIComponent(action.id)}`) : chat ? actions.selectConversation(chat.id) : actions.navigate('/actions')}>{uncertain ? 'Review the attempt' : 'See the conversation'} <Icon name="arrow" size={15}/></button>
         </article>;
       })}
-      {!needs && <article className="need-card empty-card"><Icon name="check" size={30}/><h3>Nothing urgent needs your attention.</h3><p>New decisions will appear here with their conversation and scope.</p><button className="button secondary" onClick={() => actions.navigate('/inbox')}>Open your inbox</button></article>}
+      {!needs && <article className="need-card empty-card"><Icon name="check" size={30}/><h3>{needsConnection ? 'Your connected inbox starts here.' : 'No pending decisions in this view.'}</h3><p>{needsConnection ? 'After you select a chat, its available messages and requests for your attention appear here.' : 'New decisions will appear here with their conversation and scope. This view does not certify that every account or message was received.'}</p><button className="button secondary" onClick={() => actions.navigate(needsConnection ? '/connections' : '/inbox')}>{needsConnection ? 'Choose a connection' : 'Open your inbox'}</button></article>}
     </section><aside className="home-right"><section><div className="section-heading"><h2>Upcoming</h2><button className="text-button small" onClick={() => actions.navigate('/actions')}>View all <Icon name="chevron" size={13}/></button></div>
       {upcoming.length ? upcoming.map(job => {
         const kind = textValue(job.action_kind,textValue(job.kind)).toUpperCase();

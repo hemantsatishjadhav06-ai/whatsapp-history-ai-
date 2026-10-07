@@ -2,7 +2,7 @@
 
 PyYAML is supplied by the pinned isolated CI tool environment; it is not an
 application dependency. Runtime behavior and vulnerabilities are checked on
-the four actual built images separately.
+the five actual built images separately.
 """
 
 import json
@@ -17,7 +17,7 @@ def require(condition, message):
         raise ValueError(message)
 
 
-def check_dockerfile(path, *, mount_free):
+def check_dockerfile(path, *, mount_free, runtime_user="10001:10001"):
     text = path.read_text()
     # Join Dockerfile continuations before examining executable instructions.
     logical = re.sub(r"\\\r?\n", " ", text)
@@ -27,9 +27,11 @@ def check_dockerfile(path, *, mount_free):
     require(sources and all(re.search(r"@sha256:[0-9a-f]{64}$", source) for source in sources),
             f"{path}: all base images must have immutable SHA-256 digests")
     users = [line.split(None, 1)[1] for line in instructions if line.upper().startswith("USER ")]
-    require(users and users[-1] == "10001:10001", f"{path}: runtime must use UID/GID 10001")
+    require(users and users[-1] == runtime_user, f"{path}: runtime must use its declared non-root user {runtime_user}")
     commands = [line.split(None, 1)[1] for line in instructions if line.upper().startswith("CMD ")]
-    require(commands and isinstance(json.loads(commands[-1]), list), f"{path}: JSON runtime CMD required")
+    command = json.loads(commands[-1]) if commands else None
+    require(isinstance(command, list) and command and all(isinstance(item, str) and item for item in command),
+            f"{path}: nonempty JSON string runtime CMD required")
     if mount_free:
         require(not any(re.search(r"--mount\s*=", line) for line in instructions
                         if line.upper().startswith("RUN ")),
@@ -45,6 +47,7 @@ def main():
         "api": (Path("infra/railway-api.json"), "services/api/Dockerfile.railway"),
         "jobs": (Path("infra/railway-jobs.json"), "services/api/Dockerfile.railway"),
         "retention": (Path("infra/railway-retention.json"), "services/api/Dockerfile.railway"),
+        "whatsapp-session": (Path("infra/railway-whatsapp-session.json"), "services/whatsapp-session/Dockerfile"),
         "actions": (Path("infra/railway-actions.json"), "services/api/Dockerfile.railway"),
     }
     settings = json.loads(Path("infra/railway-service-settings.json").read_text())
@@ -54,6 +57,9 @@ def main():
         require(manifest["build"]["dockerfilePath"] == dockerfile,
                 f"{manifest_path}: wrong Railway Dockerfile")
         require(Path(dockerfile).is_file(), f"{manifest_path}: missing Dockerfile")
+        if name == "whatsapp-session":
+            require(manifest["deploy"].get("startCommand") == "node src/runtime.ts",
+                    f"{manifest_path}: isolated dependency-console runtime entrypoint required")
         if name in settings:
             configured = settings[name]
             require(configured["dockerfilePath"] == dockerfile,
@@ -77,9 +83,10 @@ def main():
                 f"Render {name}: wrong Render Dockerfile")
 
     for dockerfile in sorted(set(expected_render.values()) | {item[1] for item in targets.values()}):
-        check_dockerfile(Path(dockerfile), mount_free=dockerfile.endswith(".railway"))
-    print(json.dumps({"provider_dockerfile_selection": "passed", "pinned_non_root_images": 4,
-                      "railway_mount_free_images": 2, "railway_manifests": len(targets),
+        check_dockerfile(Path(dockerfile), mount_free=dockerfile.endswith(".railway") or dockerfile == "services/whatsapp-session/Dockerfile",
+                         runtime_user="node" if dockerfile == "services/whatsapp-session/Dockerfile" else "10001:10001")
+    print(json.dumps({"provider_dockerfile_selection": "passed", "pinned_non_root_images": 5,
+                      "railway_mount_free_images": 3, "railway_manifests": len(targets),
                       "railway_service_settings": len(settings), "render_docker_services": len(expected_render),
                       "railway_root_legacy_config_absent": True}))
 

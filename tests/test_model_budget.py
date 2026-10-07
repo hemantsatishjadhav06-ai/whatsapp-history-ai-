@@ -34,12 +34,12 @@ def invoke(client, chat):
 
 
 def provider(monkeypatch, respond):
-    original = httpx.Client
+    original = httpx.AsyncClient
 
     def mocked_client(**kwargs):
         return original(**kwargs, transport=httpx.MockTransport(respond))
 
-    monkeypatch.setattr(intelligence.httpx, "Client", mocked_client)
+    monkeypatch.setattr(intelligence.httpx, "AsyncClient", mocked_client)
 
 
 def valid_response(*, usage=None):

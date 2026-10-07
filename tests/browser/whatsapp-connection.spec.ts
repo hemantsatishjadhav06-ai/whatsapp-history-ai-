@@ -67,7 +67,7 @@ test('Business setup explains missing server requirements without a credential i
   await expect(panel.getByText('The deployment operator must authorize your Google account for this Business number.',{exact:true})).toBeVisible();
   await expect(panel.getByText('Provider credentials are entered in the deployment settings, never in this app.',{exact:true})).toBeVisible();
   await expect(panel.getByRole('textbox')).toHaveCount(0);
-  await expect(panel).toContainText('Personal WhatsApp linking and live group access are unavailable.');
+  await expect(panel).toContainText('Phone linking is configured separately in the linked-device pilot. Live group access is unavailable.');
 });
 
 test('each contact starts with zero grants and sending requires explicit recipient opt-in',async({page})=>{

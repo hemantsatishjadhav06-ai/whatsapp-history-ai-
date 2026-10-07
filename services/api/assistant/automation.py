@@ -18,6 +18,7 @@ from zoneinfo import ZoneInfo
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from sqlalchemy import func, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from .access import audit, conversation_for, permission_for
@@ -32,6 +33,7 @@ from .models import (
     AuditEvent, Automation, Connector, Conversation, Draft, Memory, Message, Outbox, SendAttempt, StyleProfile,
     Workspace,
 )
+from .storage_authority import lock_workspace
 
 router = APIRouter(tags=["automation"])
 logger = logging.getLogger(__name__)
@@ -288,6 +290,7 @@ async def process_automation(session_factory, settings, batch_size: int = 50):
         ).order_by(Outbox.created_at, Outbox.id).limit(remaining)).all()
     for source_id, workspace_id in refs:
         with submit_guard(workspace_id), session_factory() as db:
+            lock_workspace(db, workspace_id)
             marker_id = _stable_id("auto-handled", source_id)
             if db.get(Outbox, marker_id):
                 continue
@@ -304,7 +307,13 @@ async def process_automation(session_factory, settings, batch_size: int = 50):
             if draft:
                 audit(db, workspace_id, "automation", "automation.draft_prepared", draft.id,
                       automation_id=draft.automation_id, source_id=source_id)
-            db.commit()
+            try:
+                db.commit()
+            except IntegrityError:
+                # A duplicate marker means another worker committed this exact
+                # reference; it never permits replay or worker termination.
+                db.rollback()
+                continue
             draft_id = draft.id if draft else None
         if draft_id:
             result = await _execute(session_factory, settings, draft_id)
@@ -322,6 +331,7 @@ async def _execute(session_factory, settings, draft_id):
             workspace_id = db.scalar(select(Draft.workspace_id).where(Draft.id == draft_id))
         if workspace_id:
             with submit_guard(workspace_id), session_factory() as db:
+                lock_workspace(db, workspace_id)
                 draft = db.get(Draft, draft_id)
                 if draft and draft.status == "approved":
                     draft.status = "cancelled"

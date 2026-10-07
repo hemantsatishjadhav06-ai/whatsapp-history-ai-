@@ -2,7 +2,7 @@
 
 from datetime import datetime
 
-from sqlalchemy import JSON, DateTime, ForeignKey, Integer, String, UniqueConstraint
+from sqlalchemy import JSON, DateTime, ForeignKey, Index, Integer, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from .db import Base, EncryptedText
@@ -11,7 +11,8 @@ from .models import Entity, Tenant
 
 class AuthorizedJob(Entity, Tenant, Base):
     __tablename__ = "authorized_jobs"
-    __table_args__ = (UniqueConstraint("workspace_id", "idempotency_key", name="uq_job_idempotency"),)
+    __table_args__ = (UniqueConstraint("workspace_id", "idempotency_key", name="uq_job_idempotency"),
+                      Index("ix_jobs_due_fairness", "status", "last_checked_at", "due_at", "id"))
     conversation_id: Mapped[str | None] = mapped_column(ForeignKey("conversations.id"), nullable=True, index=True)
     connector_id: Mapped[str | None] = mapped_column(ForeignKey("connectors.id"), nullable=True)
     created_by: Mapped[str] = mapped_column(ForeignKey("users.id"))
@@ -31,6 +32,7 @@ class AuthorizedJob(Entity, Tenant, Base):
     memory_versions: Mapped[dict] = mapped_column(JSON, default=dict)
     content_hash: Mapped[str] = mapped_column(String(64))
     due_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    last_checked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     timezone: Mapped[str] = mapped_column(String(80))
     recurrence: Mapped[str] = mapped_column(String(12), default="none")

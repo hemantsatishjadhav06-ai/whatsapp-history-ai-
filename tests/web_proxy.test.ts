@@ -3,7 +3,7 @@ import test from 'node:test';
 import type { TestContext } from 'node:test';
 import type { NextRequest } from 'next/server';
 import { createHmac } from 'node:crypto';
-import { GET, POST } from '../apps/web/app/api/[...path]/route.ts';
+import { GET, POST, PUT } from '../apps/web/app/api/[...path]/route.ts';
 import { boundedProxyBody, UploadTimeoutError } from '../apps/web/lib/proxy-body.ts';
 const controllers = new Set<AbortController>();
 
@@ -38,6 +38,28 @@ function request(path: string, options: RequestInit = {}, url = 'http://internal
   return value as NextRequest;
 }
 function context(path: string) { return { params: Promise.resolve({ path: path.split('/') }) }; }
+
+test('phone linking routes preserve owner cookies, no-store and expected public methods', async t => {
+  const sent = setup(t);
+  for (const suffix of ['config', 'status', 'pairing', 'chats']) {
+    const path = `integrations/whatsapp/personal/${suffix}`;
+    const result = await GET(request(path, { headers: { Cookie: 'session=synthetic-owner' } }), context(path));
+    assert.equal(result.status, 200); await result.text();
+    assert.equal(result.headers.get('cache-control'), 'no-store');
+    assert.equal(new Headers(sent.at(-1)?.init?.headers).get('cookie'), 'session=synthetic-owner');
+    assert.equal((await POST(request(path, { method: 'POST', body: '{}' }), context(path))).status, 405);
+  }
+  for (const suffix of ['start', 'chats/authorize', 'authorship/confirm', 'disconnect']) {
+    const path = `integrations/whatsapp/personal/${suffix}`;
+    const result = await POST(request(path, { method: 'POST', body: '{}', headers: { Origin: 'https://milo.example.test', 'X-CSRF-Token': 'synthetic-csrf' } }), context(path));
+    assert.equal(result.status, 200); await result.text();
+    assert.equal((await GET(request(path), context(path))).status, 405);
+  }
+  const path = 'conversations/synthetic-chat/automatic-drafts';
+  const result = await PUT(request(path, { method: 'PUT', body: '{"enabled":false,"expected_version":1}', headers: { Origin: 'https://milo.example.test' } }), context(path));
+  assert.equal(result.status, 200); await result.text();
+  assert.equal(sent.at(-1)?.url, 'http://private-api.railway.internal:8000/v1/' + path);
+});
 
 test('configured public HTTPS origin survives private HTTP reverse-proxy routing', async t => {
   const sent = setup(t);

@@ -42,6 +42,11 @@ jobs:
           cache-dependency-path: services/connector-gateway/package-lock.json
       - run: npm ci --prefix services/connector-gateway --ignore-scripts
       - run: npm --prefix services/connector-gateway run check
+      - name: Private QR session service and dependency audit
+        run: |
+          npm ci --prefix services/whatsapp-session --ignore-scripts
+          npm --prefix services/whatsapp-session run check
+          npm --prefix services/whatsapp-session audit --omit=dev --audit-level=high
       - name: Verify shared API contracts and authenticated mock bridge
         run: |
           uv run --frozen python scripts/export_contracts.py
@@ -109,6 +114,22 @@ jobs:
         run: |
           mkdir -p .local/ci-evidence
           uv run --frozen pytest -q --junitxml=.local/ci-evidence/postgres.xml | tee .local/ci-evidence/postgres.log
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: "24.19.0"
+          cache: npm
+          cache-dependency-path: services/whatsapp-session/package-lock.json
+      - name: Actual PostgreSQL session encryption and ownership recovery
+        env:
+          NODE_TEST_DATABASE_URL: postgresql://postgres:milo-ci-only@localhost:5432/milo_test
+        run: |
+          npm ci --prefix services/whatsapp-session --ignore-scripts
+          npm --prefix services/whatsapp-session run check | tee .local/ci-evidence/qr-postgres.log
+      - name: Private QR connection and approved text bridge
+        run: >-
+          uv run --frozen python scripts/personal_qr_bridge_smoke.py
+          --output .local/ci-evidence/personal-qr-bridge.json
+          | tee .local/ci-evidence/personal-qr-bridge.log
       - name: Real Redis limits and failure recovery
         run: uv run --frozen python scripts/request_limits_smoke.py | tee .local/ci-evidence/redis.log
       - name: Separate-process migration locking and worker readiness

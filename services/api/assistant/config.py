@@ -40,6 +40,10 @@ class Settings(BaseSettings):
     whatsapp_phone_number_id: str = ""
     whatsapp_authorized_owner_subject: str = ""
     whatsapp_api_version: str = "v23.0"
+    whatsapp_personal_enabled: bool = False
+    whatsapp_personal_session_url: str = ""
+    whatsapp_personal_session_token: str = ""
+    whatsapp_personal_timeout_seconds: int = 10
     enable_external_sends: bool = False
     connector_gateway_url: str = ""
     connector_gateway_token: str = ""
@@ -136,6 +140,22 @@ class Settings(BaseSettings):
             raise ValueError("Invalid rate-limit namespace")
         if self.trusted_proxy_key and len(self.trusted_proxy_key.encode()) < 32:
             raise ValueError("Trusted proxy signing key must contain at least 32 bytes")
+        if self.whatsapp_personal_session_url:
+            from urllib.parse import urlsplit
+            endpoint = urlsplit(self.whatsapp_personal_session_url)
+            private_http = endpoint.hostname in {"localhost", "127.0.0.1", "::1"} or (
+                bool(endpoint.hostname) and endpoint.hostname.endswith(".railway.internal"))
+            if (endpoint.username or endpoint.password or endpoint.query or endpoint.fragment
+                    or not endpoint.hostname or endpoint.path not in {"", "/"}
+                    or endpoint.scheme not in {"https", "http"}
+                    or endpoint.scheme == "http" and not private_http):
+                raise ValueError("Personal WhatsApp session service requires HTTPS or a private service origin")
+        if not 1 <= self.whatsapp_personal_timeout_seconds <= 30:
+            raise ValueError("Personal WhatsApp timeout must be between 1 and 30 seconds")
+        if self.whatsapp_personal_enabled and (
+                not self.whatsapp_personal_session_url or len(self.whatsapp_personal_session_token.encode()) < 32
+                or not self.internal_service_token):
+            raise ValueError("Personal WhatsApp requires a private session service and strong service token")
         if self.connector_gateway_url:
             from urllib.parse import urlsplit
             endpoint = urlsplit(self.connector_gateway_url)

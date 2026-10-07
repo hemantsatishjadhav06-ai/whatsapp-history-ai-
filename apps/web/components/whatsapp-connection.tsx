@@ -144,7 +144,7 @@ export function WhatsAppConnection({ state, actions }: { state: MiloState; actio
   if (!state.workspaceId) return null;
   return <section className={styles.panel} aria-label="WhatsApp Business connection">
     <div className={styles.panelHeader}><div><span className={styles.eyebrow}>Live account setup</span><h2>Connect WhatsApp Business</h2></div><button className="button secondary" disabled={busy || loading} onClick={() => void refreshStatus()}>Refresh connection status</button></div>
-    <p className={styles.bodyMuted}>Connect an eligible Business number, then choose individual contacts. Personal WhatsApp linking and live group access are unavailable. Connecting does not grant access to every chat.</p>
+    <p className={styles.bodyMuted}>Connect an eligible Business number, then choose individual contacts. Phone linking is configured separately in the linked-device pilot. Live group access is unavailable. Connecting does not grant access to every chat.</p>
     {loading && <p className={styles.meta} role="status">Checking current Business connection…</p>}
     {error && <p className={styles.warning} role="alert">{error}</p>}
     {notice && <p className={styles.success} role="status">{notice}</p>}

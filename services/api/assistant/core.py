@@ -2,12 +2,15 @@ from datetime import datetime, timedelta
 from hashlib import sha256
 from functools import wraps
 import inspect
+import json
+import re
 from typing import Literal
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import LargeBinary, cast, delete, func, or_, select, true, union_all, update
+from sqlalchemy.exc import IntegrityError
 
 from .access import audit, conversation_for, permission_for, workspace_for
 from .auth import get_current_user
@@ -113,16 +116,47 @@ def list_workspaces(limit: int = Query(100, ge=1, le=200), offset: int = Query(0
 
 
 @router.post("/workspaces", status_code=201)
-def create_workspace(body: WorkspaceInput, user=Depends(get_current_user), db=Depends(get_db)):
+def create_workspace(body: WorkspaceInput, user=Depends(get_current_user), db=Depends(get_db),
+                     idempotency_key: str | None = Header(default=None)):
     try:
         ZoneInfo(body.timezone)
     except (ZoneInfoNotFoundError, ValueError):
         raise HTTPException(422, "Unknown timezone")
-    row = Workspace(owner_id=user.id, **body.model_dump())
+    key_hash = None
+    body_hash = None
+    if idempotency_key is not None:
+        if not re.fullmatch(r"[A-Za-z0-9_-]{8,128}", idempotency_key):
+            raise HTTPException(422, "Use an 8–128 character workspace creation key")
+        key_hash = sha256(idempotency_key.encode()).hexdigest()
+        body_hash = sha256(json.dumps(body.model_dump(), sort_keys=True,
+                                     separators=(",", ":"), ensure_ascii=False).encode()).hexdigest()
+
+    def previous_creation():
+        if key_hash is None:
+            return None
+        previous = db.scalar(select(Workspace).where(
+            Workspace.owner_id == user.id, Workspace.creation_key_hash == key_hash))
+        if previous and previous.creation_payload_hash != body_hash:
+            raise HTTPException(409, "This creation key belongs to a different workspace request")
+        return previous
+
+    row = previous_creation()
+    if row is not None:
+        return public(row, "name", "timezone", "paused", "pause_generation")
+    row = Workspace(owner_id=user.id, creation_key_hash=key_hash,
+                    creation_payload_hash=body_hash, **body.model_dump())
     db.add(row)
-    db.flush()
-    audit(db, row.id, user.id, "workspace.created", row.id)
-    db.commit()
+    try:
+        db.flush()
+        audit(db, row.id, user.id, "workspace.created", row.id)
+        db.commit()
+    except IntegrityError:
+        # The unique owner/key constraint is the cross-process arbiter. A lost
+        # response or simultaneous retry returns the committed workspace once.
+        db.rollback()
+        row = previous_creation()
+        if row is None:
+            raise
     return public(row, "name", "timezone", "paused", "pause_generation")
 
 
@@ -139,6 +173,9 @@ def capabilities(provider):
         unavailable = {"pairing_code", "qr_pairing", "owner_self_chat", "phone_continuity",
                        "contact_write_whatsapp", "contact_write_google", "contact_write_os"}
         values.update({n: "supported" for n in names if n not in unavailable})
+    elif provider == "whatsapp_personal":
+        values.update(qr_pairing="unknown", live_receive="unknown", send_text="unknown",
+                      human_outgoing="unknown", assistant_echo="unknown", delivery_receipts="unknown")
     elif provider == "whatsapp_cloud":
         values.update(live_receive="unknown", send_text="unknown", group_read="unknown", group_send="unknown")
     return values
@@ -295,6 +332,8 @@ def disconnect_connector(connector_id: str, user=Depends(get_current_user), db=D
                                                      Conversation.workspace_id == row.workspace_id)):
         invalidate(db, conv, "disconnect")
         conv.control_state = "RECONNECT_REVIEW"
+    from .whatsapp_personal import erase_session_credentials
+    erase_session_credentials(db, row)
     audit(db, row.workspace_id, user.id, "connector.disconnected", row.id)
     db.commit()
     return {"status": "disconnected", "provider_revocation": "not_requested", "fence": row.fence}
@@ -304,6 +343,8 @@ def disconnect_connector(connector_id: str, user=Depends(get_current_user), db=D
 @serialized_control
 def create_conversation(body: ConversationInput, user=Depends(get_current_user), db=Depends(get_db)):
     connector = connector_for(db, user, body.connector_id)
+    if connector.provider == "whatsapp_personal":
+        raise HTTPException(403, "Authorize personal WhatsApp contacts through the connected session")
     existing = db.scalar(select(Conversation).where(Conversation.connector_id == connector.id,
                                                    Conversation.provider_chat_id == body.provider_chat_id))
     if existing:
@@ -394,6 +435,7 @@ def get_draft(draft_id: str, user=Depends(get_current_user), db=Depends(get_db))
 
 @router.get("/conversations/{conversation_id}/messages")
 def list_messages(conversation_id: str, limit: int = 50, before: datetime | None = None,
+                  before_id: str | None = Query(default=None, min_length=1, max_length=36),
                   derived_evidence: bool = False,
                   user=Depends(get_current_user), db=Depends(get_db)):
     row = conversation_for(db, user, conversation_id)
@@ -414,7 +456,21 @@ def list_messages(conversation_id: str, limit: int = 50, before: datetime | None
             Suppression.workspace_id == row.workspace_id, Suppression.conversation_id == row.id,
             refs.c.value == Message.id).correlate(Message).exists()
         query = query.where(~suppressed)
-    if before:
+    if before_id:
+        if before is None:
+            raise HTTPException(422, "A message cursor requires both timestamp and ID")
+        # Look up only the cursor timestamp inside the already authorized chat.
+        # An arbitrary foreign ID cannot load or reveal private message content.
+        cursor_stamp = db.scalar(select(Message.provider_timestamp).where(
+            Message.workspace_id == row.workspace_id, Message.conversation_id == row.id,
+            Message.id == before_id, Message.deleted.is_(False)))
+        if cursor_stamp is None:
+            raise HTTPException(404, "Message cursor is unavailable")
+        if aware(cursor_stamp) != aware(before):
+            raise HTTPException(422, "Message cursor timestamp does not match")
+        query = query.where(or_(Message.provider_timestamp < before,
+                                (Message.provider_timestamp == before) & (Message.id < before_id)))
+    elif before:
         query = query.where(Message.provider_timestamp < before)
     messages = list(db.scalars(query.order_by(Message.provider_timestamp.desc(), Message.id.desc()).limit(limit)))
     from .native import message_available
@@ -595,6 +651,7 @@ def _admit_private_operation(db, workspace_id, *, operation, conversation_id=Non
     larger exports and erasures need a separate durable batching workflow.
     """
     from .action_models import AutomationGrant, ForwardRoute, OutboundAction, SubmissionAttempt
+    from .automatic_drafts_models import AutoDraftGrant, AutomaticDraftJob
     from .jobs_models import AuthorizedJob, JobRun
     from .models import Automation, ScheduledIntent, SendAttempt
     from .native_models import MessageContext, NativeRecord, ReactionExample
@@ -632,7 +689,7 @@ def _admit_private_operation(db, workspace_id, *, operation, conversation_id=Non
 
     for model in (Permission, Message, MessageEvent, ImportRecord, StyleProfile, Automation, Memory, Task,
                   Suppression, Draft, ScheduledIntent, AutomationGrant, MessageContext, NativeRecord,
-                  ReactionExample, ContactSource, ContactSaveGrant):
+                  ReactionExample, ContactSource, ContactSaveGrant, AutoDraftGrant, AutomaticDraftJob):
         if model is Task and operation == "purge_workspace":
             count_rows(model)
         else:
@@ -731,6 +788,7 @@ def delete_conversation_data(conversation_id: str, user=Depends(get_current_user
 @serialized_control
 def export_data(workspace_id: str, user=Depends(get_current_user), db=Depends(get_db)):
     from .actions import export_action_data
+    from .automatic_drafts import export_automatic_draft_data
     from .jobs import export_job_data
     from .jobs import export_local_reminders
     from .native import export_native_data, message_available
@@ -752,6 +810,7 @@ def export_data(workspace_id: str, user=Depends(get_current_user), db=Depends(ge
                        .order_by(Message.provider_timestamp).limit(20000)) if message_available(db, m)],
                         "actions": export_action_data(db, conv.id),
                         "jobs": export_job_data(db, conv.id),
+                        "automatic_drafts": export_automatic_draft_data(db, conv.id),
                         "people": export_people_data(db, conv.id),
                         "native": export_native_data(db, conv.id),
                         "memories": [public(m, "text", "status", "source_message_ids", "version", "expires_at")
@@ -767,6 +826,20 @@ def delete_account_data(workspace_id: str, user=Depends(get_current_user), db=De
     from .people import purge_workspace_people_data
     from .jobs import purge_workspace_jobs
     workspace = workspace_for(db, user, workspace_id)
+    # Authentication keys are always erased, including when a later bounded
+    # content purge needs a separate batch. Fencing closes the private actor.
+    from .whatsapp_personal import erase_session_credentials
+    personal = list(db.scalars(select(Connector).where(Connector.workspace_id == workspace_id,
+                                                     Connector.provider == "whatsapp_personal")))
+    for conn in personal:
+        conn.status, conn.lease_expires_at = "disconnected", now()
+        conn.fence += 1
+        erase_session_credentials(db, conn)
+    if personal:
+        db.commit()
+        from .storage_authority import lock_workspace
+        lock_workspace(db, workspace_id)
+        db.refresh(workspace)
     _admit_private_operation(db, workspace_id, operation="purge_workspace")
     workspace.paused = True
     workspace.pause_generation += 1

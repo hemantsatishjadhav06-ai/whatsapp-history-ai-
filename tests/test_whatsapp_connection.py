@@ -3,6 +3,9 @@
 from datetime import timedelta
 import asyncio
 from types import SimpleNamespace
+from concurrent.futures import ThreadPoolExecutor
+from threading import Event
+from time import monotonic
 
 import httpx
 import pytest
@@ -65,6 +68,31 @@ def test_status_is_owner_scoped_and_never_contains_provider_credentials(app, bus
     assert "synthetic-app-secret" not in result.text
     assert business["client"].get("/integrations/whatsapp/status",
                                    params={"workspace_id": "other-owner-workspace"}).status_code == 404
+
+
+def test_slow_history_provider_does_not_block_owner_pause(business, monkeypatch):
+    assert contact(business).status_code == 201
+    entered, release = Event(), Event()
+
+    def slow_provider(url, **kwargs):
+        entered.set()
+        assert release.wait(timeout=8)
+        return httpx.Response(200, request=httpx.Request("POST", url), json={"request_id": "history-proof"})
+
+    monkeypatch.setattr(httpx, "post", slow_provider)
+    with ThreadPoolExecutor(max_workers=1) as executor:
+        future = executor.submit(business["client"].post, "/integrations/whatsapp/history-sync",
+                                 json={"connector_id": business["connector_id"]})
+        try:
+            assert entered.wait(timeout=3)
+            started = monotonic()
+            paused = business["client"].post("/pause-all", params={"workspace_id": business["workspace_id"]})
+            elapsed = monotonic() - started
+            assert paused.status_code == 200
+            assert elapsed < 2, "Owner controls waited on the provider network call"
+        finally:
+            release.set()
+        assert future.result(timeout=3).json()["status"] == "accepted"
 
 
 def test_new_business_contact_grants_are_explicit_normalized_and_upserted(app, business):

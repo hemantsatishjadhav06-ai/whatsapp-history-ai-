@@ -5,6 +5,7 @@ untrusted input; only the authenticated owner's recorded permissions authorize
 retrieval. Style previews are local statistics, not trained model weights.
 """
 
+import asyncio
 import hashlib
 import json
 import re
@@ -35,6 +36,8 @@ from .models import (
 
 router = APIRouter(tags=["intelligence"])
 MAX_EVIDENCE = 40
+MAX_CONTEXT_MEMORIES = 20
+MAX_MEMORY_CANDIDATES = 200
 
 
 class StrictInput(BaseModel):
@@ -245,6 +248,8 @@ def invalidate_derived_actions(db, conversation):
         row.status = "cancelled"
     from .actions import invalidate_actions
     invalidate_actions(db, conversation, "derived_context_changed")
+    from .automatic_drafts import invalidate_automatic_drafts
+    invalidate_automatic_drafts(db, conversation.id)
 
 
 def available_message_query(db, conversation):
@@ -532,14 +537,14 @@ def forget_memory(memory_id: str, db=Depends(get_db), user=Depends(get_current_u
 
 
 def valid_memories(db, conversation):
+    """Select a bounded set of usable facts, rather than the newest invalid rows."""
     result = []
     blocked = suppressed_sources(db, conversation)
     for row in db.scalars(select(Memory).where(
         Memory.workspace_id == conversation.workspace_id, Memory.conversation_id == conversation.id,
-        Memory.status == "confirmed",
-    ).order_by(Memory.created_at.desc()).limit(20)):
-        if row.expires_at and aware(row.expires_at) <= now():
-            continue
+        Memory.status == "confirmed", Memory.visibility == "conversation",
+        Memory.expires_at.is_(None) | (Memory.expires_at > now()),
+    ).order_by(Memory.created_at.desc(), Memory.id).limit(MAX_MEMORY_CANDIDATES)):
         if not row.source_message_ids or set(row.source_message_ids) & blocked:
             continue
         sources = list(db.scalars(select(Message).where(
@@ -550,6 +555,8 @@ def valid_memories(db, conversation):
         if {source.id: source.revision for source in sources} != row.source_revision:
             continue
         result.append((row, sources))
+        if len(result) >= MAX_CONTEXT_MEMORIES:
+            break
     return result
 
 
@@ -718,7 +725,7 @@ def reserve_model_budget(db, workspace_id, settings, context):
             "input_bound": input_bound, "output_bound": output_bound, "rates": rates}
 
 
-def settle_model_budget(db, admission, result=None):
+def settle_model_budget(db, admission, result=None, *, provider_called=True):
     from .messaging import submit_guard
     from .people_models import UsageLedger
     usage = result._provider_usage if isinstance(result, ModelResult) else None
@@ -730,7 +737,9 @@ def settle_model_budget(db, admission, result=None):
             # Privacy deletion can remove accounting while a call is in flight.
             # Never recreate erased tenant records from the completed call.
             return
-        if admission["mock"]:
+        if not provider_called:
+            row.status = "released"
+        elif admission["mock"]:
             row.status = "consumed"
         elif usage:
             cost = model_usage_cost(*usage, admission["rates"]) if admission["rates"] else None
@@ -772,17 +781,25 @@ def call_model(settings, context):
         return result, "mock-v1"
     payload = model_request_payload(settings, context)
     try:
-        # Do not follow redirects carrying the configured API credential.
-        with httpx.Client(timeout=min(max(settings.model_timeout_seconds, 1), 120),
-                          follow_redirects=False, trust_env=False) as client:
-            with client.stream("POST", settings.model_api_url.rstrip("/") + "/chat/completions",
-                               headers={"Authorization": f"Bearer {settings.model_api_key}"}, json=payload) as response:
-                response.raise_for_status()
-                data = bytearray()
-                for chunk in response.iter_bytes():
-                    data.extend(chunk)
-                    if len(data) > 65536:
-                        raise ValueError("Provider response exceeded limit")
+        async def request_body():
+            # HTTPX phase timeouts alone do not bound trickling bodies. The
+            # outer cancellable deadline covers connection, headers and every
+            # response chunk, before the shared generation lease can expire.
+            duration = min(max(settings.model_timeout_seconds, 1), 120)
+            async with asyncio.timeout(duration):
+                async with httpx.AsyncClient(timeout=duration, follow_redirects=False, trust_env=False) as client:
+                    async with client.stream("POST", settings.model_api_url.rstrip("/") + "/chat/completions",
+                            headers={"Authorization": f"Bearer {settings.model_api_key}"}, json=payload) as response:
+                        response.raise_for_status()
+                        data = bytearray()
+                        async for chunk in response.aiter_bytes():
+                            data.extend(chunk)
+                            if len(data) > 65536:
+                                raise ValueError("Provider response exceeded limit")
+                        return data
+        # Draft entrypoints are synchronous request/worker threads. Keeping
+        # this boundary synchronous also makes SQL lock lifetime inspectable.
+        data = asyncio.run(request_body())
         body = json.loads(data)
         result = ModelResult.model_validate_json(body["choices"][0]["message"]["content"])
         usage = body.get("usage")
@@ -793,7 +810,7 @@ def call_model(settings, context):
                     and ("total_tokens" not in usage or (isinstance(usage["total_tokens"], int)
                          and not isinstance(usage["total_tokens"], bool) and usage["total_tokens"] == sum(counts)))):
                 result._provider_usage = counts
-    except (httpx.HTTPError, ValueError, KeyError, IndexError, TypeError):
+    except (httpx.HTTPError, TimeoutError, ValueError, KeyError, IndexError, TypeError):
         raise HTTPException(502, "Draft provider returned an invalid or unavailable response") from None
     return result, settings.model_name
 
@@ -886,7 +903,8 @@ def build_scoped_context(db, conversation, permission, settings, instruction, *,
     return context, selected_ids, memory_ids, context_expiries, profile is not None
 
 
-def generate_scoped_result(db, user, conversation_id, settings, instruction, *, purpose="draft_reply"):
+def generate_scoped_result(db, user, conversation_id, settings, instruction, *, purpose="draft_reply",
+                           authority_check=None, provider_deadline=None):
     conversation = conversation_for(db, user, conversation_id)
     permission = permission_for(db, conversation, "read")
     require_draft = purpose == "draft_reply"
@@ -900,17 +918,35 @@ def generate_scoped_result(db, user, conversation_id, settings, instruction, *, 
     db.rollback()  # Release the read transaction during the network call.
     from .messaging import submit_guard
     with submit_guard(workspace_id):
+        from .storage_authority import lock_workspace
+        lock_workspace(db, workspace_id)
         db.expire_all()
         conversation = conversation_for(db, user, conversation_id)
         fresh = generation_snapshot(db, conversation, user, selected_ids, memory_ids, profile_used,
                                     require_draft=require_draft)
         if snapshot != fresh:
             raise HTTPException(409, "Draft cancelled because context or conversation controls changed")
+        if authority_check:
+            authority_check(db)
         admission = reserve_model_budget(db, workspace_id, settings, context)
+    provider_called = False
     try:
-        result, model_version = call_model(settings, context)
+        if authority_check:
+            with submit_guard(workspace_id):
+                lock_workspace(db, workspace_id)
+                authority_check(db)
+                db.rollback()
+        call_settings = settings
+        if provider_deadline:
+            remaining = int((aware(provider_deadline) - now()).total_seconds())
+            if remaining < 1:
+                raise HTTPException(409, "Generation claim expired before provider admission")
+            call_settings = settings.model_copy(update={"model_timeout_seconds": min(
+                settings.model_timeout_seconds, remaining)})
+        provider_called = True
+        result, model_version = call_model(call_settings, context)
     except Exception:
-        settle_model_budget(db, admission)
+        settle_model_budget(db, admission, provider_called=provider_called)
         raise
     settle_model_budget(db, admission, result)
     if not isinstance(result, ModelResult):

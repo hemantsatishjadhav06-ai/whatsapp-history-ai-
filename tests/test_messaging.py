@@ -480,6 +480,29 @@ def test_cloud_transport_http_contract_and_delivered_receipt(app, owner_client, 
     assert len(captured) == 1
 
 
+def test_confirmed_receipt_clears_uncertain_error_and_settles_usage(app, owner_client, chat):
+    from assistant.people_models import UsageLedger
+    draft = make_draft(app, chat)
+    approve(owner_client, draft)
+    response = owner_client.post(f"/drafts/{draft[0]}/dispatch")
+    assert response.status_code == 200 and response.json()["status"] == "accepted"
+    provider_id = response.json()["provider_message_id"]
+    with app.state.session_factory() as db:
+        attempt = db.scalar(select(SendAttempt).where(SendAttempt.draft_id == draft[0]))
+        attempt.status, attempt.error_code = "uncertain", "transport_outcome_unknown"
+        db.get(Draft, draft[0]).status = "uncertain"
+        usage = db.scalar(select(UsageLedger).where(UsageLedger.operation_key == f"action:draft:{draft[0]}"))
+        usage.status = "uncertain"
+        db.commit()
+    confirmed = owner_client.post("/internal/send-receipts", headers=INTERNAL, json={
+        "connector_id": chat["connector"]["id"], "provider_message_id": provider_id, "status": "delivered"})
+    assert confirmed.status_code == 200
+    assert confirmed.json()["status"] == "delivered" and confirmed.json()["error_code"] is None
+    with app.state.session_factory() as db:
+        usage = db.scalar(select(UsageLedger).where(UsageLedger.operation_key == f"action:draft:{draft[0]}"))
+        assert usage.status == "consumed" and usage.action_units == 1
+
+
 def test_real_timeout_is_uncertain_without_retry(app, owner_client, chat, monkeypatch):
     configure_cloud(app, chat)
     calls = []

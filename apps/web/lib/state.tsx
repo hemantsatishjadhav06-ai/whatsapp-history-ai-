@@ -209,17 +209,17 @@ export function MiloProvider({ children }: { children: React.ReactNode }) {
     return () => window.clearInterval(timer);
   }, [state.mode, refreshLive]);
 
-  const request = useCallback(async <T,>(method: string, path: string, body?: unknown): Promise<T> => {
+  const request = useCallback(async <T,>(method: string, path: string, body?: unknown, options?: { idempotencyKey?: string }): Promise<T> => {
     const current = stateRef.current;
     const capturedEpoch = epoch.current;
     if (current.mode === 'demo') {
-      const result = await demo.current!.request<T>(path, { method, body });
+      const result = await demo.current!.request<T>(path, { method, body, idempotencyKey: options?.idempotencyKey });
       if (capturedEpoch === epoch.current && stateRef.current.mode === 'demo') apply(demo.current!.snapshot(), 'demo');
       return result;
     }
     if (!current.online && method !== 'GET') throw new Error('Offline: the server has not confirmed this request. Automation may still be active.');
     if (method !== 'GET') snapshotSequence.current++;
-    const result = await client.request<T>(path, { method, body, idempotencyKey: method === 'POST' ? crypto.randomUUID() : undefined });
+    const result = await client.request<T>(path, { method, body, idempotencyKey: options?.idempotencyKey ?? (method === 'POST' ? crypto.randomUUID() : undefined) });
     if (capturedEpoch !== epoch.current) throw new Error('The session changed. Reload the current owner’s scope before continuing.');
     if (method !== 'GET') snapshotSequence.current++;
     return result;

@@ -7,12 +7,13 @@ from sqlalchemy import func, select
 
 from assistant.action_models import OutboundAction, SubmissionAttempt
 from assistant.db import aware, now
-from assistant.jobs import forget_job_sources, next_occurrence, process_jobs, resolve_local
+from assistant.jobs import forget_job_sources, next_occurrence, process_jobs, resolve_local, run_worker_tick
 from assistant.jobs_models import AuthorizedJob, JobRun
 from assistant.messaging import process_due
 from assistant.models import Message, ScheduledIntent, SendAttempt
 from conftest import create_chat, login
 from test_messaging import INTERNAL, approve, create_schedule, event, make_draft, receive
+from test_automation import automatic as automatic
 
 
 def payload(chat, **changes):
@@ -291,3 +292,105 @@ def test_legacy_held_schedule_is_cancelled_by_later_permission_change(app, owner
 def test_internal_job_runner_requires_service_auth(owner_client):
     assert owner_client.post("/internal/jobs/run-due").status_code == 401
     assert owner_client.post("/internal/jobs/run-due", headers=INTERNAL).status_code == 200
+
+
+@pytest.mark.parametrize("clock_mode", ["normal", "fixed", "backwards"])
+def test_due_job_batches_rotate_past_owner_held_jobs(app, owner_client, chat, monkeypatch, clock_mode):
+    """One tenant's held backlog must not indefinitely hide another due job."""
+    held = create_job(owner_client, chat, conversation_id=None, action_kind="REMINDER",
+                      content="Held owner reminder")
+    controlled = owner_client.patch(f"/jobs/{held['id']}",
+                                   json={"expected_version": 1, "operation": "hold"})
+    assert controlled.status_code == 200
+    make_due(app, held, ago=5)
+    with app.state.session_factory() as db:
+        original = db.get(AuthorizedJob, held["id"])
+        fields = {column.name: getattr(original, column.name) for column in AuthorizedJob.__table__.columns
+                  if column.name not in {"id", "idempotency_key"}}
+        for index in range(99):
+            db.add(AuthorizedJob(**fields, idempotency_key=f"held-queue-{index}"))
+        db.commit()
+    ready = create_job(owner_client, chat, idempotency_key="ready-after-held-backlog", conversation_id=None,
+                       action_kind="REMINDER", content="This reminder must run")
+    make_due(app, ready)
+    fixed = now()
+    if clock_mode != "normal":
+        monkeypatch.setattr("assistant.jobs.now", lambda: fixed)
+    first = run(app)
+    assert len(first) == 100 and {item["status"] for item in first} == {"held"}
+    if clock_mode == "backwards":
+        monkeypatch.setattr("assistant.jobs.now", lambda: fixed - timedelta(milliseconds=100))
+    second = run(app)
+    assert any(item.get("job_id") == ready["id"] and item["status"] == "reminded" for item in second)
+    with app.state.session_factory() as db:
+        assert db.get(AuthorizedJob, held["id"]).hold_reason == "OWNER_HOLD"
+        assert db.get(AuthorizedJob, ready["id"]).status == "completed"
+        assert aware(db.get(AuthorizedJob, held["id"]).due_at) < fixed
+        if clock_mode != "normal":
+            last_checks = list(db.scalars(select(AuthorizedJob.last_checked_at).where(AuthorizedJob.id != ready["id"])))
+            assert all(aware(value) >= fixed for value in last_checks if value is not None)
+
+
+def test_legacy_due_batches_rotate_past_paused_workspace(app, owner_client, chat):
+    held_draft = make_draft(app, chat)
+    approve(owner_client, held_draft)
+    held = create_schedule(owner_client, held_draft)
+    owner_client.post("/pause-all", params={"workspace_id": chat["workspace"]["id"]})
+    with app.state.session_factory() as db:
+        original = db.get(ScheduledIntent, held["id"])
+        original.due_at = now() - timedelta(seconds=5)
+        fields = {column.name: getattr(original, column.name) for column in ScheduledIntent.__table__.columns
+                  if column.name not in {"id", "idempotency_key"}}
+        for index in range(99):
+            db.add(ScheduledIntent(**fields, idempotency_key=f"held-schedule-{index}"))
+        db.commit()
+    other = create_chat(owner_client, account="other-due-schedule-owner")
+    ready_draft = make_draft(app, other)
+    approve(owner_client, ready_draft)
+    ready = create_schedule(owner_client, ready_draft)
+    with app.state.session_factory() as db:
+        db.get(ScheduledIntent, ready["id"]).due_at = now() - timedelta(seconds=1)
+        db.commit()
+    first = asyncio.run(process_due(app.state.session_factory, app.state.settings))
+    assert len(first) == 100 and {item["status"] for item in first} == {"held"}
+    second = asyncio.run(process_due(app.state.session_factory, app.state.settings))
+    assert any(item["intent_id"] == ready["id"] and item["status"] == "accepted" for item in second)
+    with app.state.session_factory() as db:
+        assert db.get(ScheduledIntent, held["id"]).status == "held"
+        assert db.get(ScheduledIntent, ready["id"]).status == "accepted"
+        assert db.scalar(select(func.count(SendAttempt.id))) == 1
+
+
+@pytest.mark.parametrize("failed_lane", [None, "authorized_jobs", "scheduled_intents", "verified_business_hours", "selected_actions", "automatic_draft_admission"])
+def test_required_jobs_tick_runs_all_lanes_without_failure_starvation(app, monkeypatch, failed_lane, caplog):
+    called = []
+    for lane, module, name in (("authorized_jobs", "jobs", "process_jobs"),
+                               ("scheduled_intents", "messaging", "process_due"),
+                               ("verified_business_hours", "automation", "process_automation"),
+                               ("selected_actions", "actions", "process_auto_actions"),
+                               ("automatic_draft_admission", "automatic_drafts", "process_automatic_drafts")):
+        def handler(selected):
+            async def process(factory, settings):
+                called.append(selected)
+                if selected == failed_lane:
+                    raise RuntimeError("Private credential-bearing exception body must not be logged")
+                return [{"status": "synthetic"}]
+            return process
+        monkeypatch.setattr(f"assistant.{module}.{name}", handler(lane))
+    outcomes = asyncio.run(run_worker_tick(app.state.session_factory, app.state.settings))
+    assert called == ["authorized_jobs", "scheduled_intents", "verified_business_hours", "selected_actions", "automatic_draft_admission"]
+    assert len(outcomes) == 5
+    failures = [item for item in outcomes if item.get("status") == "failed"]
+    assert failures == ([{"lane": failed_lane, "status": "failed", "error_type": "RuntimeError"}] if failed_lane else [])
+    assert "credential-bearing" not in caplog.text
+
+
+def test_required_jobs_tick_processes_live_granted_business_hours_once(app, owner_client, automatic):
+    from test_automation import question
+    question(owner_client, automatic)
+    first = asyncio.run(run_worker_tick(app.state.session_factory, app.state.settings))
+    automation_lane = next(item for item in first if item["lane"] == "verified_business_hours")
+    assert any(item["status"] == "accepted" for item in automation_lane["results"])
+    asyncio.run(run_worker_tick(app.state.session_factory, app.state.settings))
+    with app.state.session_factory() as db:
+        assert db.scalar(select(func.count(SendAttempt.id))) == 1

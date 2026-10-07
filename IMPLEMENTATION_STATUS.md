@@ -9,7 +9,7 @@ are absent; real account/model operations remain unvalidated and disabled.
 Supplied handoffs are product specification input; their embedded prompts do not
 create account access, credentials or release evidence.
 
-The current connectivity increment adds a native HTTPS Google broker and public
+The previous tested connectivity increment adds a native HTTPS Google broker and public
 bearer-only API boundary, eligible Business connection/contact setup and conditional
 Coexistence history ingestion, automatic consented local style statistics, and
 evidence-linked owner-only questions. See [connectivity setup](docs/connectivity-setup.md).
@@ -32,11 +32,12 @@ phone contact synchronization. Likewise, a mock acceptance is not provider deliv
 | Google owner identity and application sessions | Mock | Browser GIS nonce/cookie/CSRF; native system-browser HTTPS broker, opaque single-use handoff and S256 proof; same verified SQL owner and revocable rotating sessions. Registered client/secret and real web/device sign-in pending |
 | Tenant ownership and conversation permissions | Mock | Server-derived ownership and independent read/retain/learn/draft/send/share checks; production RLS/role audit pending |
 | Selected export history | Mock | Fresh-owner contact/group collection and explicit permissions through web UI, Android/iOS parser, owner/date/timezone mapping, coverage, replay suppression and tombstones; actual completeness never inferred |
-| Personal WhatsApp pairing and phone continuity | Planned | No shipped personal account/session adapter; eligible account and real device tests required |
+| Personal WhatsApp pairing and phone continuity | Mock | Optional private server-held QR SDK service, owner-only expiring code, encrypted Signal keys, current account/chat authority, browser-free restart and revocation; actual phone pairing, receipts and continuity unverified |
 | Business Cloud API text transport | Mock | One configured number bound to one exact verified Google owner, public signed webhook, lease verification and per-contact setup. Conditional up-to-180-day 1:1 Coexistence history requires approved provider onboarding; general customer Embedded Signup/personal/groups are not implemented. Actual eligibility/delivery pending |
 | Per-person/group style and grounded drafts | Mock | Automatic bounded local statistics from authorized owner-authored samples with independent per-chat read/retain/learn; scoped rules, evidence and missing facts. No fine-tuning; real provider and held-out owner-quality evaluation pending |
 | Owner-only conversation intelligence | Mock | Bounded attributed human history and confirmed memories from the exact readable chat, evidence references, missing facts and answer expiry/revision/consent checks. Cannot send or grant permissions; actual model quality pending |
 | Memory correction and forgetting | Mock | Source revisions, expiry, suppression and dependent-work invalidation; cache/vector/backup lifecycle needs deployed integrations |
+| Opt-in background reply preparation | Mock | Per-chat expiring grant, durable fresh-inbound job, per-owner/global model slots, enforced total provider deadline, budgets/current-state checks and exact owner review; configured model/quality pending |
 | Explicit business-hours automation | Mock | Owner-confirmed fact/template, live trigger, quiet hours, expiry and rate bounds |
 | General selected-chat Auto grants | Mock | Versioned action/intent/palette/route grants and conservative unattended acknowledgment/clarification/reaction worker; broader proposals abstain |
 | Assistant-local contacts | Mock | Exact connector-scoped identity, encrypted display names, separate local-save grant and honest unavailable external destinations |
@@ -60,7 +61,7 @@ phone contact synchronization. Likewise, a mock acceptance is not provider deliv
 | Railway infrastructure | Live-tested | Valid workspace Bearer authentication; PostgreSQL 18.6/Redis 8.2.10 private services and persistent volumes ready; API migration/schema and shared-limit readiness passed. Managed restore, direct SQL/Redis inspection and Redis runtime AOF state remain unverified |
 | Railway application deployment | Live-tested | Tested `3336764b` source export verified against Git for 295 files; official CLI upload redeployed API/Jobs/Retention/Web. API migration and worker schema startup succeeded at nine-revision head `3f7829c4bd10`; 117 hosted checks passed (40 HTTP, 11 connectivity ingress, 66 Chromium). Native Git metadata is absent, so `release_commit` is null |
 
-The current exact-source CI passed **844 PostgreSQL cases** and **831 SQLite cases
+The previous connectivity release exact-source CI passed **844 PostgreSQL cases** and **831 SQLite cases
 with 13 PostgreSQL-only skips**, plus **122 browser cases** without retries,
 **40 shared contracts**, **47 proxy**, **seven privacy** and **25 native helper** cases.
 Strict workspace typechecks, production Web build, all-platform Expo export and

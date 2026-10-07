@@ -286,15 +286,26 @@ def run(args, report):
             if actual_heads != heads:
                 raise RuntimeError("Concurrent migrations did not reach exact repository head")
             signature, tables, counts = schema_signature(observer, deadline)
+            # The automatic-draft migration seeds four empty global admission
+            # slots. They are infrastructure state, not customer fixture data.
+            infrastructure_counts = {}
+            if "automatic_draft_slots" in tables:
+                slots = startup_query(observer, deadline,
+                    "SELECT id,claim_id,owner_hash,expires_at FROM automatic_draft_slots ORDER BY id").fetchall()
+                if slots != [(index, None, None, None) for index in range(4)]:
+                    raise RuntimeError("Automatic draft admission slots are not exactly four empty slots")
+                infrastructure_counts["automatic_draft_slots"] = 4
             if len(tables) <= 1 or counts.get("alembic_version") != 1 or any(
-                    count for table, count in counts.items() if table != "alembic_version"):
+                    count for table, count in counts.items()
+                    if table != "alembic_version" and table not in infrastructure_counts):
                 raise RuntimeError("Unexpected rows in migrated synthetic schema")
             report.update(migration_exit_codes=[code for code, _ in outcomes],
                           migration_process_ids=[child["process"].pid for child in migrations],
                           upgrades_per_process=[len(applied) for _, applied in outcomes],
                           each_revision_applied_once=True, actual_heads=actual_heads,
                           waiter_exit_code=waiter_code, waiter_process_id=waiter["process"].pid,
-                          schema_tables=len(tables), business_rows=0, schema_sha256=signature)
+                          schema_tables=len(tables), business_rows=0, infrastructure_rows=sum(infrastructure_counts.values()),
+                          schema_sha256=signature)
             report["phase"] = "verify_repeated_migration"
             repeated = start_child("migrate", url, key, "milo_repeat_" + uuid4().hex,
                                    args.timeout, directory, children)

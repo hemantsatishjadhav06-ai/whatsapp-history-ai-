@@ -1,0 +1,23 @@
+{
+  "name": "@milo/whatsapp-session",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Private, bounded server-held WhatsApp linked-device pilot",
+  "engines": { "node": ">=24 <25" },
+  "scripts": {
+    "start": "node src/runtime.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "node --test tests/*.test.ts",
+    "check": "npm run typecheck && npm test"
+  },
+  "dependencies": {
+    "@whiskeysockets/baileys": "7.0.0-rc14",
+    "pg": "8.23.1"
+  },
+  "devDependencies": {
+    "@types/node": "24.19.1",
+    "@types/pg": "8.23.1",
+    "typescript": "7.0.2"
+  }
+}

@@ -5,10 +5,10 @@ import { boundedProxyBody, UploadTimeoutError } from '../../../lib/proxy-body';
 import { acquireProxyLease, leaseProxyBody } from '../../../lib/proxy-admission';
 
 export const dynamic = 'force-dynamic';
-const ALLOWED = /^(?:auth\/(?:config|nonce|google|csrf|logout|sessions(?:\/[^/]+)?)|me|ui\/(?:bootstrap|updates|resolve)|(?:workspaces|connectors|conversations|drafts|messages|imports|inbox|tasks|memories|forward-routes|actions|jobs|schedules|scheduled-intents|contacts|people|integrations)(?:\/[A-Za-z0-9_.:@+-]+){0,3}|automation\/grants(?:\/[^/]+)?|assistant\/(?:commands|digest)|privacy\/(?:retention(?:\/sweep)?|model-processing)|pause-all|resume-all|activity|data-export|account-data)$/;
+const ALLOWED = /^(?:auth\/(?:config|nonce|google|csrf|logout|sessions(?:\/[^/]+)?)|me|ui\/(?:bootstrap|updates|resolve)|(?:workspaces|connectors|conversations|drafts|messages|imports|inbox|tasks|memories|forward-routes|actions|jobs|schedules|scheduled-intents|contacts|people|integrations)(?:\/[A-Za-z0-9_.:@+-]+){0,3}|integrations\/whatsapp\/personal\/(?:config|status|start|pairing|chats(?:\/authorize)?|disconnect|authorship\/confirm)|automation\/grants(?:\/[^/]+)?|assistant\/(?:commands|digest)|privacy\/(?:retention(?:\/sweep)?|model-processing)|pause-all|resume-all|activity|data-export|account-data)$/;
 const MAX_JSON_BODY_BYTES = 64 * 1024;
 const MAX_IMPORT_BODY_BYTES = 12 * 1024 * 1024;
-const CONTROL_ROUTES = /^(?:pause-all|resume-all|auth\/logout|conversations\/[^/]+\/(?:control|takeover|resume)|actions\/[^/]+\/cancel)$/;
+const CONTROL_ROUTES = /^(?:pause-all|resume-all|auth\/logout|conversations\/[^/]+\/(?:control|takeover|resume)|actions\/[^/]+\/cancel|integrations\/whatsapp\/personal\/disconnect)$/;
 
 function loopback(hostname: string) {
   return hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '[::1]' || hostname === '::1';
@@ -37,6 +37,10 @@ async function proxy(request: NextRequest, context: { params: Promise<{ path: st
   const route = path.join('/');
   if (!ALLOWED.test(route) || path.some(segment => !/^[A-Za-z0-9_.:@+-]+$/.test(segment) || segment.includes('..'))) {
     return Response.json({ detail: 'This service route is not available to the browser' }, { status: 404 });
+  }
+  if (route.startsWith('integrations/whatsapp/personal/')) {
+    const allowedMethod = /^(?:config|status|pairing|chats)$/.test(route.slice('integrations/whatsapp/personal/'.length)) ? 'GET' : 'POST';
+    if (request.method !== allowedMethod) return Response.json({ detail: 'Method unavailable' }, { status: 405, headers: { 'Cache-Control': 'no-store' } });
   }
   const configured = process.env.BACKEND_URL;
   if (!configured) {

@@ -66,7 +66,7 @@ jobs:
           node-version: '24.19.0'
           cache: npm
       - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
-      - name: Build all four provider runtime images from this checkout
+      - name: Build all five provider runtime images from this checkout
         run: |
           mkdir -p .local/ci-evidence .local/ci-images .local/trivy-cache
           docker buildx build --load --progress=plain --file services/api/Dockerfile --tag relationship-assistant-api:local . |& tee .local/ci-evidence/api-build.log
@@ -75,7 +75,8 @@ jobs:
           # trust from pinned official images, without custom CA secrets.
           docker buildx build --load --progress=plain --file services/api/Dockerfile.railway --tag relationship-assistant-api:railway . |& tee .local/ci-evidence/railway-api-build.log
           docker buildx build --load --progress=plain --file Dockerfile.web.railway --tag milo-web:railway . |& tee .local/ci-evidence/railway-web-build.log
-          docker image inspect relationship-assistant-api:local milo-web:local relationship-assistant-api:railway milo-web:railway > .local/ci-evidence/images.json
+          docker buildx build --load --progress=plain --file services/whatsapp-session/Dockerfile --tag milo-whatsapp-session:local . |& tee .local/ci-evidence/qr-build.log
+          docker image inspect milo-whatsapp-session:local relationship-assistant-api:local milo-web:local relationship-assistant-api:railway milo-web:railway > .local/ci-evidence/images.json
           git rev-parse HEAD > .local/ci-evidence/source-commit.txt
       - name: Exercise both provider APIs and websites through actual local HTTP
         run: |
@@ -83,6 +84,8 @@ jobs:
           uv run --frozen python scripts/web_container_smoke.py | tee .local/ci-evidence/web-acceptance.log
           uv run --frozen python scripts/container_smoke.py --image relationship-assistant-api:railway | tee .local/ci-evidence/railway-api-acceptance.log
           uv run --frozen python scripts/web_container_smoke.py --image milo-web:railway | tee .local/ci-evidence/railway-web-acceptance.log
+      - name: Exercise private QR runtime through HTTP with disposable PostgreSQL
+        run: uv run --frozen python scripts/qr_container_smoke.py | tee .local/ci-evidence/qr-acceptance.log
       - name: Exercise Railway manifest PORT, dual-stack, admission recovery and drain
         run: |
           uv run --frozen python scripts/railway_runtime_smoke.py --image relationship-assistant-api:railway \
@@ -104,8 +107,10 @@ jobs:
         run: |
           npm ci --ignore-scripts
           npm ci --prefix services/connector-gateway --ignore-scripts
+          npm ci --prefix services/whatsapp-session --ignore-scripts
           npm audit --omit=dev --workspace=@milo/web --json > .local/ci-evidence/web-npm-audit.json
           npm audit --prefix services/connector-gateway --json > .local/ci-evidence/gateway-npm-audit.json
+          npm audit --prefix services/whatsapp-session --omit=dev --json > .local/ci-evidence/qr-npm-audit.json
           uv export --frozen --no-dev --no-emit-project --output-file .local/ci-evidence/python-production.txt
           uv tool run --python 3.12.14 --from pip-audit==2.10.1 pip-audit --strict --require-hashes --no-deps --disable-pip \
             --cache-dir .local/pip-audit-cache \
@@ -144,9 +149,10 @@ jobs:
           docker save milo-web:local --output .local/ci-images/web.tar
           docker save relationship-assistant-api:railway --output .local/ci-images/railway-api.tar
           docker save milo-web:railway --output .local/ci-images/railway-web.tar
+          docker save milo-whatsapp-session:local --output .local/ci-images/qr.tar
           sha256sum .local/ci-images/*.tar > .local/ci-evidence/image-archive-sha256.txt
           docker pull "$TRIVY_IMAGE"
-          for image in api web railway-api railway-web; do
+          for image in api web railway-api railway-web qr; do
             docker run --rm --user "$(id -u):$(id -g)" --cap-drop ALL --security-opt no-new-privileges \
               --volume "$PWD/.local/ci-images:/images:ro" \
               --volume "$PWD/.local/ci-evidence:/evidence" \
@@ -165,7 +171,7 @@ jobs:
           # Unfixed findings remain in the full report; this gate is deliberately
           # named for its limited scope and is not a zero-vulnerabilities claim.
           gate_failed=0
-          for image in api web railway-api railway-web; do
+          for image in api web railway-api railway-web qr; do
             if ! docker run --rm --user "$(id -u):$(id -g)" --cap-drop ALL --security-opt no-new-privileges \
               --volume "$PWD/.local/ci-images:/images:ro" \
               --volume "$PWD/.local/ci-evidence:/evidence" \
@@ -186,7 +192,7 @@ jobs:
           from pathlib import Path
           lines = ['### Container security evidence', '',
                    'Full findings include unresolved vulnerabilities. The release gate blocks HIGH/CRITICAL findings with available fixes.', '']
-          for image in ('api', 'web', 'railway-api', 'railway-web'):
+          for image in ('api', 'web', 'railway-api', 'railway-web', 'qr'):
               path = Path(f'.local/ci-evidence/{image}-trivy.json')
               if not path.exists():
                   lines.append(f'- {image}: scan did not complete; inspect the failed step.')

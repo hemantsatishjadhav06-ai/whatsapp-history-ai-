@@ -14,12 +14,13 @@ from assistant.action_models import SubmissionAttempt
 from assistant.config import Settings
 from assistant.db import make_database, uid
 from assistant.jobs_models import AuthorizedJob, JobRun
-from assistant.models import Memory, Message
+from assistant.models import Draft, Memory, Message, Outbox, SendAttempt
 from assistant.people_models import UsageLedger
 from conftest import TEST_KEY, create_chat
 from test_actions import grant, make_action, source
 from test_jobs import create_job, make_due, payload
 from test_messaging import event, receive
+from test_automation import automatic as automatic, question
 
 
 def _worker(options, operation, body, start, output, release=None):
@@ -43,6 +44,15 @@ def _worker(options, operation, body, start, output, release=None):
             elif operation == "job-tick":
                 from assistant.jobs import process_jobs
                 result = asyncio.run(process_jobs(factory, Settings(_env_file=None, **options).prepare(), body["job_id"]))
+            elif operation == "automation-tick":
+                from assistant import automation
+                import time
+                plan = automation._plan
+                def delayed_plan(*args):
+                    time.sleep(0.2)  # Widen the separate-process duplicate-planning race.
+                    return plan(*args)
+                automation._plan = delayed_plan
+                result = asyncio.run(automation.process_automation(factory, Settings(_env_file=None, **options).prepare()))
             elif operation == "job-control":
                 from assistant.jobs import JobControl, control_job
                 from assistant.models import User
@@ -181,6 +191,18 @@ def test_pg_process_job_control_version_has_one_winner(app, owner_client, chat):
     results = _parallel(app, "job-control", [body.copy() for _ in range(4)])
     assert sum(result.get("status") == "held" for result in results) == 1
     assert sum(result.get("http_status") == 409 for result in results) == 3
+
+
+def test_pg_process_business_hours_planning_is_one_durable_decision(app, owner_client, automatic):
+    _options(app)
+    question(owner_client, automatic)
+    results = _parallel(app, "automation-tick", [{} for _ in range(4)])
+    assert any(any(row.get("status") == "accepted" for row in batch) for batch in results)
+    assert _parallel(app, "automation-tick", [{}]) == [[]]
+    with app.state.session_factory() as db:
+        assert db.scalar(select(func.count()).select_from(Draft)) == 1
+        assert db.scalar(select(func.count()).select_from(SendAttempt)) == 1
+        assert db.scalar(select(func.count()).select_from(Outbox).where(Outbox.kind == "automation.handled")) == 1
 
 
 @pytest.mark.parametrize("control", ["pause", "forget", "takeover", "delete", "permission"])

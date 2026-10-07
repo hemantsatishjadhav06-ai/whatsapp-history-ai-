@@ -1,0 +1,1016 @@
+{
+  "started_at": "2026-10-07T19:35:05.422424+00:00",
+  "source_head": "bdbf2daf52a80c33d52b2db10ca65d0e5bf9b67d",
+  "source_dirty": true,
+  "capacity_50000": "NOT_MEASURED",
+  "sql": {
+    "mode": "diagnostic_local_postgresql_explain_only",
+    "actual_authenticated_users": 0,
+    "requests": 0,
+    "external_provider_calls": 0,
+    "production_indexes_modified": false,
+    "dataset_disposable": true,
+    "queries": {
+      "usage": "SELECT coalesce(sum(action_units),0), coalesce(sum(token_units),0), coalesce(sum(cost_microusd),0) FROM usage_ledger WHERE workspace_id=:workspace AND window_day=:day AND status IN ('reserved','consumed','uncertain')",
+      "messages": "SELECT * FROM messages WHERE workspace_id=:workspace AND conversation_id=:chat AND deleted IS FALSE ORDER BY provider_timestamp DESC,id DESC LIMIT 50",
+      "retention": "SELECT * FROM messages WHERE workspace_id=:workspace AND deleted IS FALSE AND received_at<:cutoff ORDER BY received_at,id LIMIT 500"
+    },
+    "parameters": {
+      "workspace": "one synthetic workspace of 100",
+      "chat": "one synthetic conversation",
+      "day": "current UTC day",
+      "cutoff": "current UTC time minus 30 days"
+    },
+    "usage_before": {
+      "repeats": 5,
+      "median_execution_ms": 0.182,
+      "runs": [
+        {
+          "execution_ms": 0.261,
+          "nodes": [
+            {
+              "Node Type": "Aggregate",
+              "Actual Rows": 1,
+              "Actual Loops": 1,
+              "Shared Hit Blocks": 30,
+              "Shared Read Blocks": 0
+            },
+            {
+              "Node Type": "Bitmap Heap Scan",
+              "Actual Rows": 21,
+              "Actual Loops": 1,
+              "Rows Removed by Filter": 4,
+              "Shared Hit Blocks": 30,
+              "Shared Read Blocks": 0
+            },
+            {
+              "Node Type": "BitmapAnd",
+              "Actual Rows": 0,
+              "Actual Loops": 1,
+              "Shared Hit Blocks": 5,
+              "Shared Read Blocks": 0
+            },
+            {
+              "Node Type": "Bitmap Index Scan",
+              "Index Name": "ix_usage_ledger_workspace_id",
+              "Actual Rows": 500,
+              "Actual Loops": 1,
+              "Shared Hit Blocks": 2,
+              "Shared Read Blocks": 0
+            },
+            {
+              "Node Type": "Bitmap Index Scan",
+              "Index Name": "ix_usage_ledger_window_day",
+              "Actual Rows": 2500,
+              "Actual Loops": 1,
+              "Shared Hit Blocks": 3,
+              "Shared Read Blocks": 0
+            }
+          ]
+        },
+        {
+          "execution_ms": 0.182,
+          "nodes": [
+            {
+              "Node Type": "Aggregate",
+              "Actual Rows": 1,
+              "Actual Loops": 1,
+              "Shared Hit Blocks": 30,
+              "Shared Read Blocks": 0
+            },
+            {
+              "Node Type": "Bitmap Heap Scan",
+              "Actual Rows": 21,
+              "Actual Loops": 1,
+              "Rows Removed by Filter": 4,
+              "Shared Hit Blocks": 30,
+              "Shared Read Blocks": 0
+            },
+            {
+              "Node Type": "BitmapAnd",
+              "Actual Rows": 0,
+              "Actual Loops": 1,
+              "Shared Hit Blocks": 5,
+              "Shared Read Blocks": 0
+            },
+            {
+              "Node Type": "Bitmap Index Scan",
+              "Index Name": "ix_usage_ledger_workspace_id",
+              "Actual Rows": 500,
+              "Actual Loops": 1,
+              "Shared Hit Blocks": 2,
+              "Shared Read Blocks": 0
+            },
+            {
+              "Node Type": "Bitmap Index Scan",
+              "Index Name": "ix_usage_ledger_window_day",
+              "Actual Rows": 2500,
+              "Actual Loops": 1,
+              "Shared Hit Blocks": 3,
+              "Shared Read Blocks": 0
+            }
+          ]
+        },
+        {
+          "execution_ms": 0.187,
+          "nodes": [
+            {
+              "Node Type": "Aggregate",
+              "Actual Rows": 1,
+              "Actual Loops": 1,
+              "Shared Hit Blocks": 30,
+              "Shared Read Blocks": 0
+            },
+            {
+              "Node Type": "Bitmap Heap Scan",
+              "Actual Rows": 21,
+              "Actual Loops": 1,
+              "Rows Removed by Filter": 4,
+              "Shared Hit Blocks": 30,
+              "Shared Read Blocks": 0
+            },
+            {
+              "Node Type": "BitmapAnd",
+              "Actual Rows": 0,
+              "Actual Loops": 1,
+              "Shared Hit Blocks": 5,
+              "Shared Read Blocks": 0
+            },
+            {
+              "Node Type": "Bitmap Index Scan",
+              "Index Name": "ix_usage_ledger_workspace_id",
+              "Actual Rows": 500,
+              "Actual Loops": 1,
+              "Shared Hit Blocks": 2,
+              "Shared Read Blocks": 0
+            },
+            {
+              "Node Type": "Bitmap Index Scan",
+              "Index Name": "ix_usage_ledger_window_day",
+              "Actual Rows": 2500,
+              "Actual Loops": 1,
+              "Shared Hit Blocks": 3,
+              "Shared Read Blocks": 0
+            }
+          ]
+        },
+        {
+          "execution_ms": 0.169,
+          "nodes": [
+            {
+              "Node Type": "Aggregate",
+              "Actual Rows": 1,
+              "Actual Loops": 1,
+              "Shared Hit Blocks": 30,
+              "Shared Read Blocks": 0
+            },
+            {
+              "Node Type": "Bitmap Heap Scan",
+              "Actual Rows": 21,
+              "Actual Loops": 1,
+              "Rows Removed by Filter": 4,
+              "Shared Hit Blocks": 30,
+              "Shared Read Blocks": 0
+            },
+            {
+              "Node Type": "BitmapAnd",
+              "Actual Rows": 0,
+              "Actual Loops": 1,
+              "Shared Hit Blocks": 5,
+              "Shared Read Blocks": 0
+            },
+            {
+              "Node Type": "Bitmap Index Scan",
+              "Index Name": "ix_usage_ledger_workspace_id",
+              "Actual Rows": 500,
+              "Actual Loops": 1,
+              "Shared Hit Blocks": 2,
+              "Shared Read Blocks": 0
+            },
+            {
+              "Node Type": "Bitmap Index Scan",
+              "Index Name": "ix_usage_ledger_window_day",
+              "Actual Rows": 2500,
+              "Actual Loops": 1,
+              "Shared Hit Blocks": 3,
+              "Shared Read Blocks": 0
+            }
+          ]
+        },
+        {
+          "execution_ms": 0.18,
+          "nodes": [
+            {
+              "Node Type": "Aggregate",
+              "Actual Rows": 1,
+              "Actual Loops": 1,
+              "Shared Hit Blocks": 30,
+              "Shared Read Blocks": 0
+            },
+            {
+              "Node Type": "Bitmap Heap Scan",
+              "Actual Rows": 21,
+              "Actual Loops": 1,
+              "Rows Removed by Filter": 4,
+              "Shared Hit Blocks": 30,
+              "Shared Read Blocks": 0
+            },
+            {
+              "Node Type": "BitmapAnd",
+              "Actual Rows": 0,
+              "Actual Loops": 1,
+              "Shared Hit Blocks": 5,
+              "Shared Read Blocks": 0
+            },
+            {
+              "Node Type": "Bitmap Index Scan",
+              "Index Name": "ix_usage_ledger_workspace_id",
+              "Actual Rows": 500,
+              "Actual Loops": 1,
+              "Shared Hit Blocks": 2,
+              "Shared Read Blocks": 0
+            },
+            {
+              "Node Type": "Bitmap Index Scan",
+              "Index Name": "ix_usage_ledger_window_day",
+              "Actual Rows": 2500,
+              "Actual Loops": 1,
+              "Shared Hit Blocks": 3,
+              "Shared Read Blocks": 0
+            }
+          ]
+        }
+      ]
+    },
+    "messages_before": {
+      "repeats": 5,
+      "median_execution_ms": 19.868,
+      "runs": [
+        {
+          "execution_ms": 27.254,
+          "nodes": [
+            {
+              "Node Type": "Limit",
+              "Actual Rows": 50,
+              "Actual Loops": 1,
+              "Shared Hit Blocks": 5815,
+              "Shared Read Blocks": 0
+            },
+            {
+              "Node Type": "Gather Merge",
+              "Actual Rows": 50,
+              "Actual Loops": 1,
+              "Shared Hit Blocks": 5815,
+              "Shared Read Blocks": 0
+            },
+            {
+              "Node Type": "Sort",
+              "Actual Rows": 50,
+              "Actual Loops": 3,
+              "Shared Hit Blocks": 5815,
+              "Shared Read Blocks": 0
+            },
+            {
+              "Node Type": "Seq Scan",
+              "Actual Rows": 13333,
+              "Actual Loops": 3,
+              "Rows Removed by Filter": 0,
+              "Shared Hit Blocks": 5715,
+              "Shared Read Blocks": 0
+            }
+          ]
+        },
+        {
+          "execution_ms": 27.177,
+          "nodes": [
+            {
+              "Node Type": "Limit",
+              "Actual Rows": 50,
+              "Actual Loops": 1,
+              "Shared Hit Blocks": 5845,
+              "Shared Read Blocks": 0
+            },
+            {
+              "Node Type": "Gather Merge",
+              "Actual Rows": 50,
+              "Actual Loops": 1,
+              "Shared Hit Blocks": 5845,
+              "Shared Read Blocks": 0
+            },
+            {
+              "Node Type": "Sort",
+              "Actual Rows": 50,
+              "Actual Loops": 3,
+              "Shared Hit Blocks": 5845,
+              "Shared Read Blocks": 0
+            },
+            {
+              "Node Type": "Seq Scan",
+              "Actual Rows": 13333,
+              "Actual Loops": 3,
+              "Rows Removed by Filter": 0,
+              "Shared Hit Blocks": 5715,
+              "Shared Read Blocks": 0
+            }
+          ]
+        },
+        {
+          "execution_ms": 19.868,
+          "nodes": [
+            {
+              "Node Type": "Limit",
+              "Actual Rows": 50,
+              "Actual Loops": 1,
+              "Shared Hit Blocks": 5845,
+              "Shared Read Blocks": 0
+            },
+            {
+              "Node Type": "Gather Merge",
+              "Actual Rows": 50,
+              "Actual Loops": 1,
+              "Shared Hit Blocks": 5845,
+              "Shared Read Blocks": 0
+            },
+            {
+              "Node Type": "Sort",
+              "Actual Rows": 50,
+              "Actual Loops": 3,
+              "Shared Hit Blocks": 5845,
+              "Shared Read Blocks": 0
+            },
+            {
+              "Node Type": "Seq Scan",
+              "Actual Rows": 13333,
+              "Actual Loops": 3,
+              "Rows Removed by Filter": 0,
+              "Shared Hit Blocks": 5715,
+              "Shared Read Blocks": 0
+            }
+          ]
+        },
+        {
+          "execution_ms": 16.275,
+          "nodes": [
+            {
+              "Node Type": "Limit",
+              "Actual Rows": 50,
+              "Actual Loops": 1,
+              "Shared Hit Blocks": 5845,
+              "Shared Read Blocks": 0
+            },
+            {
+              "Node Type": "Gather Merge",
+              "Actual Rows": 50,
+              "Actual Loops": 1,
+              "Shared Hit Blocks": 5845,
+              "Shared Read Blocks": 0
+            },
+            {
+              "Node Type": "Sort",
+              "Actual Rows": 50,
+              "Actual Loops": 3,
+              "Shared Hit Blocks": 5845,
+              "Shared Read Blocks": 0
+            },
+            {
+              "Node Type": "Seq Scan",
+              "Actual Rows": 13333,
+              "Actual Loops": 3,
+              "Rows Removed by Filter": 0,
+              "Shared Hit Blocks": 5715,
+              "Shared Read Blocks": 0
+            }
+          ]
+        },
+        {
+          "execution_ms": 13.101,
+          "nodes": [
+            {
+              "Node Type": "Limit",
+              "Actual Rows": 50,
+              "Actual Loops": 1,
+              "Shared Hit Blocks": 5845,
+              "Shared Read Blocks": 0
+            },
+            {
+              "Node Type": "Gather Merge",
+              "Actual Rows": 50,
+              "Actual Loops": 1,
+              "Shared Hit Blocks": 5845,
+              "Shared Read Blocks": 0
+            },
+            {
+              "Node Type": "Sort",
+              "Actual Rows": 50,
+              "Actual Loops": 3,
+              "Shared Hit Blocks": 5845,
+              "Shared Read Blocks": 0
+            },
+            {
+              "Node Type": "Seq Scan",
+              "Actual Rows": 13333,
+              "Actual Loops": 3,
+              "Rows Removed by Filter": 0,
+              "Shared Hit Blocks": 5715,
+              "Shared Read Blocks": 0
+            }
+          ]
+        }
+      ]
+    },
+    "retention_before": {
+      "repeats": 5,
+      "median_execution_ms": 16.354,
+      "runs": [
+        {
+          "execution_ms": 26.982,
+          "nodes": [
+            {
+              "Node Type": "Limit",
+              "Actual Rows": 500,
+              "Actual Loops": 1,
+              "Shared Hit Blocks": 5845,
+              "Shared Read Blocks": 0
+            },
+            {
+              "Node Type": "Gather Merge",
+              "Actual Rows": 500,
+              "Actual Loops": 1,
+              "Shared Hit Blocks": 5845,
+              "Shared Read Blocks": 0
+            },
+            {
+              "Node Type": "Sort",
+              "Actual Rows": 207,
+              "Actual Loops": 3,
+              "Shared Hit Blocks": 5845,
+              "Shared Read Blocks": 0
+            },
+            {
+              "Node Type": "Seq Scan",
+              "Actual Rows": 8735,
+              "Actual Loops": 3,
+              "Rows Removed by Filter": 4598,
+              "Shared Hit Blocks": 5715,
+              "Shared Read Blocks": 0
+            }
+          ]
+        },
+        {
+          "execution_ms": 14.398,
+          "nodes": [
+            {
+              "Node Type": "Limit",
+              "Actual Rows": 500,
+              "Actual Loops": 1,
+              "Shared Hit Blocks": 5845,
+              "Shared Read Blocks": 0
+            },
+            {
+              "Node Type": "Gather Merge",
+              "Actual Rows": 500,
+              "Actual Loops": 1,
+              "Shared Hit Blocks": 5845,
+              "Shared Read Blocks": 0
+            },
+            {
+              "Node Type": "Sort",
+              "Actual Rows": 208,
+              "Actual Loops": 3,
+              "Shared Hit Blocks": 5845,
+              "Shared Read Blocks": 0
+            },
+            {
+              "Node Type": "Seq Scan",
+              "Actual Rows": 8735,
+              "Actual Loops": 3,
+              "Rows Removed by Filter": 4598,
+              "Shared Hit Blocks": 5715,
+              "Shared Read Blocks": 0
+            }
+          ]
+        },
+        {
+          "execution_ms": 17.246,
+          "nodes": [
+            {
+              "Node Type": "Limit",
+              "Actual Rows": 500,
+              "Actual Loops": 1,
+              "Shared Hit Blocks": 5845,
+              "Shared Read Blocks": 0
+            },
+            {
+              "Node Type": "Gather Merge",
+              "Actual Rows": 500,
+              "Actual Loops": 1,
+              "Shared Hit Blocks": 5845,
+              "Shared Read Blocks": 0
+            },
+            {
+              "Node Type": "Sort",
+              "Actual Rows": 206,
+              "Actual Loops": 3,
+              "Shared Hit Blocks": 5845,
+              "Shared Read Blocks": 0
+            },
+            {
+              "Node Type": "Seq Scan",
+              "Actual Rows": 8735,
+              "Actual Loops": 3,
+              "Rows Removed by Filter": 4598,
+              "Shared Hit Blocks": 5715,
+              "Shared Read Blocks": 0
+            }
+          ]
+        },
+        {
+          "execution_ms": 16.114,
+          "nodes": [
+            {
+              "Node Type": "Limit",
+              "Actual Rows": 500,
+              "Actual Loops": 1,
+              "Shared Hit Blocks": 5845,
+              "Shared Read Blocks": 0
+            },
+            {
+              "Node Type": "Gather Merge",
+              "Actual Rows": 500,
+              "Actual Loops": 1,
+              "Shared Hit Blocks": 5845,
+              "Shared Read Blocks": 0
+            },
+            {
+              "Node Type": "Sort",
+              "Actual Rows": 207,
+              "Actual Loops": 3,
+              "Shared Hit Blocks": 5845,
+              "Shared Read Blocks": 0
+            },
+            {
+              "Node Type": "Seq Scan",
+              "Actual Rows": 8735,
+              "Actual Loops": 3,
+              "Rows Removed by Filter": 4598,
+              "Shared Hit Blocks": 5715,
+              "Shared Read Blocks": 0
+            }
+          ]
+        },
+        {
+          "execution_ms": 16.354,
+          "nodes": [
+            {
+              "Node Type": "Limit",
+              "Actual Rows": 500,
+              "Actual Loops": 1,
+              "Shared Hit Blocks": 5845,
+              "Shared Read Blocks": 0
+            },
+            {
+              "Node Type": "Gather Merge",
+              "Actual Rows": 500,
+              "Actual Loops": 1,
+              "Shared Hit Blocks": 5845,
+              "Shared Read Blocks": 0
+            },
+            {
+              "Node Type": "Sort",
+              "Actual Rows": 207,
+              "Actual Loops": 3,
+              "Shared Hit Blocks": 5845,
+              "Shared Read Blocks": 0
+            },
+            {
+              "Node Type": "Seq Scan",
+              "Actual Rows": 8735,
+              "Actual Loops": 3,
+              "Rows Removed by Filter": 4598,
+              "Shared Hit Blocks": 5715,
+              "Shared Read Blocks": 0
+            }
+          ]
+        }
+      ]
+    },
+    "usage_after": {
+      "repeats": 5,
+      "median_execution_ms": 0.062,
+      "runs": [
+        {
+          "execution_ms": 0.079,
+          "nodes": [
+            {
+              "Node Type": "Aggregate",
+              "Actual Rows": 1,
+              "Actual Loops": 1,
+              "Shared Hit Blocks": 27,
+              "Shared Read Blocks": 3
+            },
+            {
+              "Node Type": "Bitmap Heap Scan",
+              "Actual Rows": 21,
+              "Actual Loops": 1,
+              "Shared Hit Blocks": 27,
+              "Shared Read Blocks": 3
+            },
+            {
+              "Node Type": "Bitmap Index Scan",
+              "Index Name": "diagnostic_usage_workspace_day_status",
+              "Actual Rows": 21,
+              "Actual Loops": 1,
+              "Shared Hit Blocks": 6,
+              "Shared Read Blocks": 3
+            }
+          ]
+        },
+        {
+          "execution_ms": 0.189,
+          "nodes": [
+            {
+              "Node Type": "Aggregate",
+              "Actual Rows": 1,
+              "Actual Loops": 1,
+              "Shared Hit Blocks": 30,
+              "Shared Read Blocks": 0
+            },
+            {
+              "Node Type": "Bitmap Heap Scan",
+              "Actual Rows": 21,
+              "Actual Loops": 1,
+              "Shared Hit Blocks": 30,
+              "Shared Read Blocks": 0
+            },
+            {
+              "Node Type": "Bitmap Index Scan",
+              "Index Name": "diagnostic_usage_workspace_day_status",
+              "Actual Rows": 21,
+              "Actual Loops": 1,
+              "Shared Hit Blocks": 9,
+              "Shared Read Blocks": 0
+            }
+          ]
+        },
+        {
+          "execution_ms": 0.052,
+          "nodes": [
+            {
+              "Node Type": "Aggregate",
+              "Actual Rows": 1,
+              "Actual Loops": 1,
+              "Shared Hit Blocks": 30,
+              "Shared Read Blocks": 0
+            },
+            {
+              "Node Type": "Bitmap Heap Scan",
+              "Actual Rows": 21,
+              "Actual Loops": 1,
+              "Shared Hit Blocks": 30,
+              "Shared Read Blocks": 0
+            },
+            {
+              "Node Type": "Bitmap Index Scan",
+              "Index Name": "diagnostic_usage_workspace_day_status",
+              "Actual Rows": 21,
+              "Actual Loops": 1,
+              "Shared Hit Blocks": 9,
+              "Shared Read Blocks": 0
+            }
+          ]
+        },
+        {
+          "execution_ms": 0.062,
+          "nodes": [
+            {
+              "Node Type": "Aggregate",
+              "Actual Rows": 1,
+              "Actual Loops": 1,
+              "Shared Hit Blocks": 30,
+              "Shared Read Blocks": 0
+            },
+            {
+              "Node Type": "Bitmap Heap Scan",
+              "Actual Rows": 21,
+              "Actual Loops": 1,
+              "Shared Hit Blocks": 30,
+              "Shared Read Blocks": 0
+            },
+            {
+              "Node Type": "Bitmap Index Scan",
+              "Index Name": "diagnostic_usage_workspace_day_status",
+              "Actual Rows": 21,
+              "Actual Loops": 1,
+              "Shared Hit Blocks": 9,
+              "Shared Read Blocks": 0
+            }
+          ]
+        },
+        {
+          "execution_ms": 0.048,
+          "nodes": [
+            {
+              "Node Type": "Aggregate",
+              "Actual Rows": 1,
+              "Actual Loops": 1,
+              "Shared Hit Blocks": 30,
+              "Shared Read Blocks": 0
+            },
+            {
+              "Node Type": "Bitmap Heap Scan",
+              "Actual Rows": 21,
+              "Actual Loops": 1,
+              "Shared Hit Blocks": 30,
+              "Shared Read Blocks": 0
+            },
+            {
+              "Node Type": "Bitmap Index Scan",
+              "Index Name": "diagnostic_usage_workspace_day_status",
+              "Actual Rows": 21,
+              "Actual Loops": 1,
+              "Shared Hit Blocks": 9,
+              "Shared Read Blocks": 0
+            }
+          ]
+        }
+      ]
+    },
+    "messages_after": {
+      "repeats": 5,
+      "median_execution_ms": 0.024,
+      "runs": [
+        {
+          "execution_ms": 0.045,
+          "nodes": [
+            {
+              "Node Type": "Limit",
+              "Actual Rows": 50,
+              "Actual Loops": 1,
+              "Shared Hit Blocks": 8,
+              "Shared Read Blocks": 3
+            },
+            {
+              "Node Type": "Index Scan",
+              "Index Name": "ix_messages_read_page",
+              "Actual Rows": 50,
+              "Actual Loops": 1,
+              "Shared Hit Blocks": 8,
+              "Shared Read Blocks": 3
+            }
+          ]
+        },
+        {
+          "execution_ms": 0.032,
+          "nodes": [
+            {
+              "Node Type": "Limit",
+              "Actual Rows": 50,
+              "Actual Loops": 1,
+              "Shared Hit Blocks": 11,
+              "Shared Read Blocks": 0
+            },
+            {
+              "Node Type": "Index Scan",
+              "Index Name": "ix_messages_read_page",
+              "Actual Rows": 50,
+              "Actual Loops": 1,
+              "Shared Hit Blocks": 11,
+              "Shared Read Blocks": 0
+            }
+          ]
+        },
+        {
+          "execution_ms": 0.024,
+          "nodes": [
+            {
+              "Node Type": "Limit",
+              "Actual Rows": 50,
+              "Actual Loops": 1,
+              "Shared Hit Blocks": 11,
+              "Shared Read Blocks": 0
+            },
+            {
+              "Node Type": "Index Scan",
+              "Index Name": "ix_messages_read_page",
+              "Actual Rows": 50,
+              "Actual Loops": 1,
+              "Shared Hit Blocks": 11,
+              "Shared Read Blocks": 0
+            }
+          ]
+        },
+        {
+          "execution_ms": 0.023,
+          "nodes": [
+            {
+              "Node Type": "Limit",
+              "Actual Rows": 50,
+              "Actual Loops": 1,
+              "Shared Hit Blocks": 11,
+              "Shared Read Blocks": 0
+            },
+            {
+              "Node Type": "Index Scan",
+              "Index Name": "ix_messages_read_page",
+              "Actual Rows": 50,
+              "Actual Loops": 1,
+              "Shared Hit Blocks": 11,
+              "Shared Read Blocks": 0
+            }
+          ]
+        },
+        {
+          "execution_ms": 0.023,
+          "nodes": [
+            {
+              "Node Type": "Limit",
+              "Actual Rows": 50,
+              "Actual Loops": 1,
+              "Shared Hit Blocks": 11,
+              "Shared Read Blocks": 0
+            },
+            {
+              "Node Type": "Index Scan",
+              "Index Name": "ix_messages_read_page",
+              "Actual Rows": 50,
+              "Actual Loops": 1,
+              "Shared Hit Blocks": 11,
+              "Shared Read Blocks": 0
+            }
+          ]
+        }
+      ]
+    },
+    "retention_after": {
+      "repeats": 5,
+      "median_execution_ms": 0.322,
+      "runs": [
+        {
+          "execution_ms": 0.57,
+          "nodes": [
+            {
+              "Node Type": "Limit",
+              "Actual Rows": 500,
+              "Actual Loops": 1,
+              "Shared Hit Blocks": 500,
+              "Shared Read Blocks": 9
+            },
+            {
+              "Node Type": "Index Scan",
+              "Index Name": "ix_messages_retention_page",
+              "Actual Rows": 500,
+              "Actual Loops": 1,
+              "Shared Hit Blocks": 500,
+              "Shared Read Blocks": 9
+            }
+          ]
+        },
+        {
+          "execution_ms": 0.408,
+          "nodes": [
+            {
+              "Node Type": "Limit",
+              "Actual Rows": 500,
+              "Actual Loops": 1,
+              "Shared Hit Blocks": 509,
+              "Shared Read Blocks": 0
+            },
+            {
+              "Node Type": "Index Scan",
+              "Index Name": "ix_messages_retention_page",
+              "Actual Rows": 500,
+              "Actual Loops": 1,
+              "Shared Hit Blocks": 509,
+              "Shared Read Blocks": 0
+            }
+          ]
+        },
+        {
+          "execution_ms": 0.286,
+          "nodes": [
+            {
+              "Node Type": "Limit",
+              "Actual Rows": 500,
+              "Actual Loops": 1,
+              "Shared Hit Blocks": 509,
+              "Shared Read Blocks": 0
+            },
+            {
+              "Node Type": "Index Scan",
+              "Index Name": "ix_messages_retention_page",
+              "Actual Rows": 500,
+              "Actual Loops": 1,
+              "Shared Hit Blocks": 509,
+              "Shared Read Blocks": 0
+            }
+          ]
+        },
+        {
+          "execution_ms": 0.322,
+          "nodes": [
+            {
+              "Node Type": "Limit",
+              "Actual Rows": 500,
+              "Actual Loops": 1,
+              "Shared Hit Blocks": 509,
+              "Shared Read Blocks": 0
+            },
+            {
+              "Node Type": "Index Scan",
+              "Index Name": "ix_messages_retention_page",
+              "Actual Rows": 500,
+              "Actual Loops": 1,
+              "Shared Hit Blocks": 509,
+              "Shared Read Blocks": 0
+            }
+          ]
+        },
+        {
+          "execution_ms": 0.314,
+          "nodes": [
+            {
+              "Node Type": "Limit",
+              "Actual Rows": 500,
+              "Actual Loops": 1,
+              "Shared Hit Blocks": 509,
+              "Shared Read Blocks": 0
+            },
+            {
+              "Node Type": "Index Scan",
+              "Index Name": "ix_messages_retention_page",
+              "Actual Rows": 500,
+              "Actual Loops": 1,
+              "Shared Hit Blocks": 509,
+              "Shared Read Blocks": 0
+            }
+          ]
+        }
+      ]
+    },
+    "database_bytes": 105259535,
+    "rows": {
+      "usage_ledger": 50000,
+      "messages": 40000,
+      "workspaces": 100,
+      "distinct_usage_days": 20
+    },
+    "candidate_indexes": {
+      "message_page": "implemented production migration ae912f73c804; no deployment performed",
+      "usage_workspace_day_status": "diagnostic only",
+      "message_retention": "implemented production migration ae912f73c804; no deployment performed"
+    },
+    "disposable_database_dropped": true
+  },
+  "redis": {
+    "mode": "two_local_redis_limiter_instances_synthetic_presented_credentials",
+    "sql_engines": 0,
+    "authenticated_owners": 0,
+    "external_provider_calls": 0,
+    "window_seconds": 60,
+    "tested_api_source_limit": 6000,
+    "tested_auth_source_limit": 30,
+    "tested_control_source_limit": 120,
+    "capacity_50000": "NOT_MEASURED",
+    "shared_api_source": {
+      "submitted": 6064,
+      "accepted": 6000,
+      "rejected": 64
+    },
+    "shared_auth_source": {
+      "submitted": 64,
+      "accepted": 30,
+      "rejected": 34
+    },
+    "shared_control_source": {
+      "submitted": 192,
+      "accepted": 120,
+      "rejected": 72
+    },
+    "verified_signed_auth_sources": {
+      "submitted": 64,
+      "accepted": 64,
+      "rejected": 0
+    },
+    "verified_signed_control_sources": {
+      "submitted": 192,
+      "accepted": 192,
+      "rejected": 0
+    },
+    "same_rate_window": true,
+    "elapsed_seconds": 0.7128,
+    "counter_keys": 6519,
+    "owned_counter_keys_removed": true
+  },
+  "fernet_ciphertext_bytes": {
+    "250": 420,
+    "500": 760,
+    "1000": 1420,
+    "4000": 5432
+  },
+  "source_hashes": {
+    "services/api/assistant/models.py": "879529c216398895f5e61e9a42a851b5aa06971e21a8371d90072b81a361b1da",
+    "services/api/assistant/people_models.py": "55dc13c31617ed40f9e6e58b9fe9d6dc24aaa12ee25f8d5a8efd008e4d1a7315",
+    "services/api/assistant/request_security.py": "c94cbdb4c67a777ab24ceb88d5c516c660b9b61c2534e68c48ad8d7788404266",
+    "services/api/assistant/companion.py": "98dfb07826307cb751f03fd181ed2484267368f964245dfea38af2c9af6349a0"
+  }
+}

@@ -129,7 +129,7 @@ export function WhatsAppConnection() {
   if(app.mode!=='live')return <Card><Heading>Connect WhatsApp Business</Heading><Body>You are exploring a synthetic demo. Sign in with Google to set up your eligible Business number and choose each contact’s permissions.</Body></Card>;
   if(!workspaceId)return null;
   return <>
-    <Card><Heading>Connect WhatsApp Business</Heading><Body>Connect an eligible Business number, then choose individual contacts. Personal WhatsApp linking and live group access are unavailable. Connecting does not grant access to every chat.</Body>
+    <Card><Heading>Connect WhatsApp Business</Heading><Body>Connect an eligible Business number, then choose individual contacts. Phone linking is configured separately in the linked-device pilot. Live group access is unavailable. Connecting does not grant access to every chat.</Body>
       <Button secondary label="Refresh connection status" disabled={busy || loading} onPress={()=>void refreshStatus()}/>
       {loading && <Body small>Checking current Business connection…</Body>}
       {error && <View accessibilityLiveRegion="assertive"><Body>{error}</Body></View>}

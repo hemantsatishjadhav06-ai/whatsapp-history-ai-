@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, Index, Integer, String, UniqueConstraint
+from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, Index, Integer, String, UniqueConstraint, text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from .db import Base, EncryptedJSON, EncryptedText, now, uid
@@ -40,7 +40,10 @@ class LoginNonce(Entity, Base):
 
 class Workspace(Entity, Base):
     __tablename__ = "workspaces"
+    __table_args__ = (Index("uq_workspace_creation_key", "owner_id", "creation_key_hash", unique=True),)
     owner_id: Mapped[str] = mapped_column(ForeignKey("users.id"), index=True)
+    creation_key_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    creation_payload_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
     name: Mapped[str] = mapped_column(String(120))
     timezone: Mapped[str] = mapped_column(String(80), default="Asia/Kolkata")
     paused: Mapped[bool] = mapped_column(Boolean, default=False)
@@ -90,7 +93,13 @@ class Permission(Entity, Tenant, Base):
 
 class Message(Entity, Tenant, Base):
     __tablename__ = "messages"
-    __table_args__ = (UniqueConstraint("workspace_id", "connector_id", "conversation_id", "provider_message_id", name="uq_message_key"),)
+    __table_args__ = (
+        UniqueConstraint("workspace_id", "connector_id", "conversation_id", "provider_message_id", name="uq_message_key"),
+        Index("ix_messages_read_page", "workspace_id", "conversation_id", "provider_timestamp", "id",
+              postgresql_where=text("deleted IS FALSE"), sqlite_where=text("deleted IS 0")),
+        Index("ix_messages_retention_page", "workspace_id", "received_at", "id",
+              postgresql_where=text("deleted IS FALSE"), sqlite_where=text("deleted IS 0")),
+    )
     connector_id: Mapped[str] = mapped_column(ForeignKey("connectors.id"), index=True)
     conversation_id: Mapped[str] = mapped_column(ForeignKey("conversations.id"), index=True)
     provider_message_id: Mapped[str] = mapped_column(String(180))
@@ -188,11 +197,13 @@ class Draft(Entity, Tenant, Base):
 
 class ScheduledIntent(Entity, Tenant, Base):
     __tablename__ = "scheduled_intents"
-    __table_args__ = (UniqueConstraint("workspace_id", "idempotency_key", name="uq_schedule_idempotency"),)
+    __table_args__ = (UniqueConstraint("workspace_id", "idempotency_key", name="uq_schedule_idempotency"),
+                      Index("ix_schedules_due_fairness", "status", "last_checked_at", "due_at", "id"))
     draft_id: Mapped[str] = mapped_column(ForeignKey("drafts.id"))
     conversation_id: Mapped[str] = mapped_column(ForeignKey("conversations.id"), index=True)
     idempotency_key: Mapped[str] = mapped_column(String(120))
     due_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    last_checked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     timezone: Mapped[str] = mapped_column(String(80))
     original_expression: Mapped[str] = mapped_column(String(200), default="")
@@ -202,6 +213,7 @@ class ScheduledIntent(Entity, Tenant, Base):
 
 class Outbox(Entity, Tenant, Base):
     __tablename__ = "outbox"
+    __table_args__ = (Index("ix_outbox_automatic_draft_source", "kind", "created_at", "id"),)
     kind: Mapped[str] = mapped_column(String(60))
     aggregate_id: Mapped[str] = mapped_column(String(200))
     payload: Mapped[dict] = mapped_column(JSON, default=dict)
@@ -257,4 +269,4 @@ class Task(Entity, Tenant, Base):
 
 
 # Register additive feature schemas after the common tenant/entity definitions.
-from . import action_models, jobs_models, lifecycle_models, mobile_models, native_models, people_models  # noqa: E402, F401
+from . import action_models, automatic_drafts_models, jobs_models, lifecycle_models, mobile_models, native_models, people_models, whatsapp_personal_models  # noqa: E402, F401

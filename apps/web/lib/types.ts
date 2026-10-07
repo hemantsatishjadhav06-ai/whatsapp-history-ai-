@@ -27,7 +27,7 @@ export type MiloState = {
   nextCursor: string | null; hasMore: boolean;
 };
 export type MiloActions = {
-  request<T = unknown>(method: string, path: string, body?: unknown): Promise<T>;
+  request<T = unknown>(method: string, path: string, body?: unknown, options?: { idempotencyKey?: string }): Promise<T>;
   refresh(): Promise<void>; confirmOwnerAnswer(value: unknown, stillSelected: () => boolean): Promise<MiloSnapshot>;
   clearOwnerAnswerScope(): void; navigate(path: string): void; selectConversation(id: string): void;
   logout(): Promise<void>; setPaused(paused: boolean): Promise<void>;

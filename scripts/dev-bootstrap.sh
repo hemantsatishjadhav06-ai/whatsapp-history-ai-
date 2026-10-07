@@ -19,6 +19,9 @@ fi
 if [[ -f package-lock.json ]]; then
   npm ci --cache "$PWD/.local/npm-cache" --ignore-scripts
 fi
+if [[ -f services/whatsapp-session/package-lock.json ]]; then
+  npm ci --prefix services/whatsapp-session --cache "$PWD/.local/npm-cache" --ignore-scripts
+fi
 if [[ ! -f .env ]]; then
   cp .env.example .env
   chmod 600 .env

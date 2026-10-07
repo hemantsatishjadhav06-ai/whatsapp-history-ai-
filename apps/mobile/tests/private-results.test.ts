@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {createDemoSnapshot} from '@milo/contracts';
+import {createDemoSnapshot, usablePersonalQR, type PersonalPairing} from '@milo/contracts';
 import {currentPrivateResult,reconcilePrivateResponse,snapshotVersion} from '../lib/private-results';
 
 test('same-owner same-workspace read revocation hides a previously permitted private command result immediately',()=>{
@@ -8,6 +8,21 @@ test('same-owner same-workspace read revocation hides a previously permitted pri
   const revoked={...before,conversations:before.conversations.filter(row=>row.id!=='chat_maya')};
   assert.equal(currentPrivateResult(entry,revoked),null);
   assert.equal(reconcilePrivateResponse(entry.value,before,revoked),null);
+});
+
+test('temporary personal pairing material cannot survive a native owner, workspace or session change',()=>{
+  const before={...createDemoSnapshot(),snapshot_version:'paired-session'};const now=Date.now();
+  const value:PersonalPairing={connector_id:'synthetic-owner-connector',state:'pairing',poll_after_seconds:3,
+    qr:{value:'synthetic-native,temporary,owner-only',expires_at:new Date(now+45000).toISOString()}};
+  const entry={value,version:snapshotVersion(before)};
+  assert.ok(usablePersonalQR(currentPrivateResult(entry,before),'synthetic-owner-connector',now));
+  for(const fresh of [{...before,user:{...before.user,id:'different-owner'}},
+    {...before,workspace:{...before.workspace,id:'different-workspace'}},{...before,snapshot_version:'new-session'},null]){
+    assert.equal(currentPrivateResult(entry,fresh),null);
+    assert.equal(usablePersonalQR(currentPrivateResult(entry,fresh),'synthetic-owner-connector',now),null);
+  }
+  assert.equal(usablePersonalQR(currentPrivateResult(entry,before),'replacement-connector',now),null);
+  assert.equal(usablePersonalQR(currentPrivateResult(entry,before),'synthetic-owner-connector',now+45000),null);
 });
 
 test('memory forget and permission edits clear prior evidence even when owner, workspace and conversation remain unchanged',()=>{

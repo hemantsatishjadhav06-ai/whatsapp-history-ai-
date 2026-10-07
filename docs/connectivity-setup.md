@@ -99,8 +99,11 @@ uncertain outcome is not automatically resubmitted. Completion percentages do no
 prove complete history. Business employees' outgoing messages are not assumed to
 be owner-authored; review exact examples before learning from them.
 
-Consumer WhatsApp QR linking and live group connectivity are not implemented.
-Authorized text exports remain the supported personal/group history route.
+An optional private linked-device QR pilot now implements personal 1:1 text
+connection. It is separate from this Business setup, uses an unofficial pinned
+release-candidate SDK, and requires actual phone acceptance. Full history sync
+is disabled; live groups remain unavailable. Authorized exports can provide
+personal/group past history. See the [QR setup and limits](../services/whatsapp-session/README.md).
 Sources:
 [Google native OAuth](https://developers.google.com/identity/protocols/oauth2/native-app)
 and [Meta Business app onboarding](https://developers.facebook.com/docs/whatsapp/embedded-signup/custom-flows/onboarding-business-app-users/).
@@ -133,3 +136,22 @@ takeover and uncertain-outcome tests. No synthetic transport test proves those
 provider outcomes. Current account limits, security findings, storage recovery
 and capacity evidence are recorded in [readiness](readiness.md) and
 [QA](QA_REPORT.md).
+
+## Optional personal QR and automatic drafts
+
+Configure the private session service and Python settings described in its README;
+do not publish a domain for the session service. Google-verified owners use
+Connections to scan in WhatsApp Linked Devices, then select individual contacts and
+permissions. QR data expires, is rendered locally and is discarded when hidden or
+the owner changes. Outgoing phone messages require explicit review before they
+count as owner writing. Existing encrypted credentials may restore the same account
+after server restart; lease/reconnect gaps put conversations into review. Pause
+blocks sends and ingestion of private content while preserving the connection.
+
+Automatic draft preparation is a separate opt-in for each selected chat, with a
+1–30-day expiry and 1–10 draft/hour limit. The Jobs worker admits only fresh live
+inbound messages; imported/history/replayed/outgoing messages cannot trigger it.
+A configured model, current permissions and budgets are required. Generation
+produces a proposal requiring owner review and never grants a send. Revoke, pause,
+Forget or a context/connection change invalidates pending work. Unknown provider
+outcomes remain charged conservatively and are not retried automatically.

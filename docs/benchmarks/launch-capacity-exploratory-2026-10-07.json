@@ -1,0 +1,884 @@
+{
+  "label": "launch-current-read-audit",
+  "timestamp_utc": "2026-10-07T19:10:46.468200+00:00",
+  "source_commit": "bdbf2daf52a80c33d52b2db10ca65d0e5bf9b67d",
+  "source_dirty": true,
+  "mode": "real_http_loopback_postgresql_and_next_proxy",
+  "runs": [
+    {
+      "actual_http_stage_started_at": "2026-10-07T19:10:50.400034+00:00",
+      "http_requests": 80,
+      "independent_authenticated_owners": 8,
+      "configured_owner_identities": 8,
+      "presented_session_owners": 8,
+      "successful_owner_reads": 72,
+      "successful_foreign_owner_denials": 8,
+      "virtual_users": 8,
+      "peak_http_requests_in_flight": 8,
+      "max_client_http_connections": 8,
+      "per_user_requests": 10,
+      "closed_loop_think_seconds": 0,
+      "initial_stagger_seconds": 0,
+      "elapsed_seconds": 2.174,
+      "adaptive_aborted": false,
+      "attempted_requests_per_second": 36.802,
+      "successful_invariant_checks": 80,
+      "failed_invariant_checks": 0,
+      "safety_invariant_failures": 0,
+      "unavailable_or_transport_failures": 0,
+      "errors": {},
+      "http_statuses": {
+        "200": 72,
+        "404": 8
+      },
+      "endpoint_requests": {
+        "bootstrap": 48,
+        "messages": 16,
+        "resolve": 8,
+        "foreign": 8
+      },
+      "endpoint_latency": {
+        "bootstrap": {
+          "p50_ms": 301.739,
+          "p95_ms": 401.983,
+          "p99_ms": 432.216
+        },
+        "messages": {
+          "p50_ms": 89.653,
+          "p95_ms": 186.653,
+          "p99_ms": 186.653
+        },
+        "resolve": {
+          "p50_ms": 55.35,
+          "p95_ms": 70.841,
+          "p99_ms": 70.841
+        },
+        "foreign": {
+          "p50_ms": 28.663,
+          "p95_ms": 68.865,
+          "p99_ms": 68.865
+        }
+      },
+      "latency_by_status": {
+        "200": {
+          "p50_ms": 254.736,
+          "p95_ms": 397.384,
+          "p99_ms": 432.216
+        },
+        "404": {
+          "p50_ms": 28.663,
+          "p95_ms": 68.865,
+          "p99_ms": 68.865
+        }
+      },
+      "expected_forbidden_probes": 8,
+      "p50_ms": 252.29,
+      "p95_ms": 395.17,
+      "p99_ms": 432.216,
+      "max_ms": 432.216,
+      "arrival_model": "closed-loop bounded per-owner sequential requests; not fixed-rate open-loop",
+      "endpoint": "direct_api",
+      "resources": {
+        "service_rss_bytes_peak": 218742784,
+        "driver_rss_bytes_peak": 111509504,
+        "postgres_rss_bytes_peak": 598421504,
+        "postgres_connections_peak": 9,
+        "postgres_active_peak": 3,
+        "postgres_idle_in_transaction_peak": 8,
+        "postgres_waiting_peak": 8,
+        "api_established_tcp_connections_peak": 9,
+        "web_established_tcp_connections_peak": 0,
+        "samples": 7,
+        "sample_errors": 0,
+        "service_cpu_seconds": 2.11,
+        "driver_cpu_seconds": 0.68,
+        "postgres_cpu_seconds": 0.77,
+        "rss_measure": "sum of process RSS; shared PostgreSQL pages may be counted repeatedly",
+        "postgres_cpu_scope": "local PostgreSQL service including background processes",
+        "tcp_measure": "sampled IPv4 established server-side sockets by dedicated loopback port, including idle keep-alive; 250ms samples may miss shorter-lived peaks",
+        "cpu_measure": "per-PID tick deltas retained across samples; exited short-lived processes may lose at most the last sample interval"
+      },
+      "api_query_pool_delta": {
+        "query_count": 1320,
+        "query_seconds": 11.336156,
+        "pool_wait_seconds": 0.21028,
+        "pool_checkouts": 80
+      },
+      "api_pool_max_wait_observed_seconds": 0.0835573510012182,
+      "api_pool_peak_checkouts_observed": 9
+    },
+    {
+      "actual_http_stage_started_at": "2026-10-07T19:10:53.024567+00:00",
+      "http_requests": 240,
+      "independent_authenticated_owners": 24,
+      "configured_owner_identities": 24,
+      "presented_session_owners": 24,
+      "successful_owner_reads": 216,
+      "successful_foreign_owner_denials": 24,
+      "virtual_users": 24,
+      "peak_http_requests_in_flight": 24,
+      "max_client_http_connections": 24,
+      "per_user_requests": 10,
+      "closed_loop_think_seconds": 0,
+      "initial_stagger_seconds": 0,
+      "elapsed_seconds": 5.033,
+      "adaptive_aborted": false,
+      "attempted_requests_per_second": 47.683,
+      "successful_invariant_checks": 240,
+      "failed_invariant_checks": 0,
+      "safety_invariant_failures": 0,
+      "unavailable_or_transport_failures": 0,
+      "errors": {},
+      "http_statuses": {
+        "200": 216,
+        "404": 24
+      },
+      "endpoint_requests": {
+        "bootstrap": 144,
+        "messages": 48,
+        "resolve": 24,
+        "foreign": 24
+      },
+      "endpoint_latency": {
+        "bootstrap": {
+          "p50_ms": 673.767,
+          "p95_ms": 1135.404,
+          "p99_ms": 1647.727
+        },
+        "messages": {
+          "p50_ms": 286.834,
+          "p95_ms": 574.324,
+          "p99_ms": 794.063
+        },
+        "resolve": {
+          "p50_ms": 131.613,
+          "p95_ms": 343.614,
+          "p99_ms": 406.817
+        },
+        "foreign": {
+          "p50_ms": 80.191,
+          "p95_ms": 212.115,
+          "p99_ms": 264.189
+        }
+      },
+      "latency_by_status": {
+        "200": {
+          "p50_ms": 521.503,
+          "p95_ms": 1107.704,
+          "p99_ms": 1518.721
+        },
+        "404": {
+          "p50_ms": 80.191,
+          "p95_ms": 212.115,
+          "p99_ms": 264.189
+        }
+      },
+      "expected_forbidden_probes": 24,
+      "p50_ms": 439.824,
+      "p95_ms": 1078.344,
+      "p99_ms": 1518.721,
+      "max_ms": 1963.244,
+      "arrival_model": "closed-loop bounded per-owner sequential requests; not fixed-rate open-loop",
+      "endpoint": "direct_api",
+      "resources": {
+        "service_rss_bytes_peak": 226213888,
+        "driver_rss_bytes_peak": 119533568,
+        "postgres_rss_bytes_peak": 635957248,
+        "postgres_connections_peak": 10,
+        "postgres_active_peak": 2,
+        "postgres_idle_in_transaction_peak": 10,
+        "postgres_waiting_peak": 10,
+        "api_established_tcp_connections_peak": 25,
+        "web_established_tcp_connections_peak": 0,
+        "samples": 17,
+        "sample_errors": 0,
+        "service_cpu_seconds": 5.23,
+        "driver_cpu_seconds": 1.35,
+        "postgres_cpu_seconds": 1.77,
+        "rss_measure": "sum of process RSS; shared PostgreSQL pages may be counted repeatedly",
+        "postgres_cpu_scope": "local PostgreSQL service including background processes",
+        "tcp_measure": "sampled IPv4 established server-side sockets by dedicated loopback port, including idle keep-alive; 250ms samples may miss shorter-lived peaks",
+        "cpu_measure": "per-PID tick deltas retained across samples; exited short-lived processes may lose at most the last sample interval"
+      },
+      "api_query_pool_delta": {
+        "query_count": 3960,
+        "query_seconds": 35.90769,
+        "pool_wait_seconds": 64.57219,
+        "pool_checkouts": 240
+      },
+      "api_pool_max_wait_observed_seconds": 1.6593985589970544,
+      "api_pool_peak_checkouts_observed": 10
+    },
+    {
+      "actual_http_stage_started_at": "2026-10-07T19:10:58.478017+00:00",
+      "http_requests": 127,
+      "independent_authenticated_owners": 28,
+      "configured_owner_identities": 64,
+      "presented_session_owners": 64,
+      "successful_owner_reads": 28,
+      "successful_foreign_owner_denials": 0,
+      "virtual_users": 64,
+      "peak_http_requests_in_flight": 64,
+      "max_client_http_connections": 64,
+      "per_user_requests": 10,
+      "closed_loop_think_seconds": 0,
+      "initial_stagger_seconds": 0,
+      "elapsed_seconds": 1.011,
+      "adaptive_aborted": true,
+      "attempted_requests_per_second": 125.641,
+      "successful_invariant_checks": 28,
+      "failed_invariant_checks": 99,
+      "safety_invariant_failures": 0,
+      "unavailable_or_transport_failures": 99,
+      "errors": {
+        "bootstrap:http_503": 99
+      },
+      "http_statuses": {
+        "503": 99,
+        "200": 28
+      },
+      "endpoint_requests": {
+        "bootstrap": 127
+      },
+      "endpoint_latency": {
+        "bootstrap": {
+          "p50_ms": 112.582,
+          "p95_ms": 967.115,
+          "p99_ms": 992.519
+        }
+      },
+      "latency_by_status": {
+        "503": {
+          "p50_ms": 82.862,
+          "p95_ms": 135.992,
+          "p99_ms": 137.488
+        },
+        "200": {
+          "p50_ms": 674.268,
+          "p95_ms": 992.519,
+          "p99_ms": 993.907
+        }
+      },
+      "expected_forbidden_probes": 0,
+      "p50_ms": 112.582,
+      "p95_ms": 967.115,
+      "p99_ms": 992.519,
+      "max_ms": 993.907,
+      "arrival_model": "closed-loop bounded per-owner sequential requests; not fixed-rate open-loop",
+      "endpoint": "direct_api",
+      "resources": {
+        "service_rss_bytes_peak": 218632192,
+        "driver_rss_bytes_peak": 119664640,
+        "postgres_rss_bytes_peak": 631836672,
+        "postgres_connections_peak": 10,
+        "postgres_active_peak": 1,
+        "postgres_idle_in_transaction_peak": 10,
+        "postgres_waiting_peak": 10,
+        "api_established_tcp_connections_peak": 64,
+        "web_established_tcp_connections_peak": 0,
+        "samples": 3,
+        "sample_errors": 0,
+        "service_cpu_seconds": 0.99,
+        "driver_cpu_seconds": 0.45,
+        "postgres_cpu_seconds": 0.32,
+        "rss_measure": "sum of process RSS; shared PostgreSQL pages may be counted repeatedly",
+        "postgres_cpu_scope": "local PostgreSQL service including background processes",
+        "tcp_measure": "sampled IPv4 established server-side sockets by dedicated loopback port, including idle keep-alive; 250ms samples may miss shorter-lived peaks",
+        "cpu_measure": "per-PID tick deltas retained across samples; exited short-lived processes may lose at most the last sample interval"
+      },
+      "api_query_pool_delta": {
+        "query_count": 644,
+        "query_seconds": 6.027012,
+        "pool_wait_seconds": 6.45098,
+        "pool_checkouts": 28
+      },
+      "api_pool_max_wait_observed_seconds": 1.6593985589970544,
+      "api_pool_peak_checkouts_observed": 10,
+      "post_overload_recovery_probe": {
+        "status": 200,
+        "scope_and_identity_valid": true,
+        "wall_ms": 37.863,
+        "retries": 0,
+        "excluded_from_stage_throughput": true
+      }
+    },
+    {
+      "actual_http_stage_started_at": "2026-10-07T19:10:59.915628+00:00",
+      "http_requests": 80,
+      "independent_authenticated_owners": 8,
+      "configured_owner_identities": 8,
+      "presented_session_owners": 8,
+      "successful_owner_reads": 72,
+      "successful_foreign_owner_denials": 8,
+      "virtual_users": 8,
+      "peak_http_requests_in_flight": 8,
+      "max_client_http_connections": 8,
+      "per_user_requests": 10,
+      "closed_loop_think_seconds": 0,
+      "initial_stagger_seconds": 0,
+      "elapsed_seconds": 1.721,
+      "adaptive_aborted": false,
+      "attempted_requests_per_second": 46.474,
+      "successful_invariant_checks": 80,
+      "failed_invariant_checks": 0,
+      "safety_invariant_failures": 0,
+      "unavailable_or_transport_failures": 0,
+      "errors": {},
+      "http_statuses": {
+        "200": 72,
+        "404": 8
+      },
+      "endpoint_requests": {
+        "bootstrap": 48,
+        "messages": 16,
+        "resolve": 8,
+        "foreign": 8
+      },
+      "endpoint_latency": {
+        "bootstrap": {
+          "p50_ms": 239.541,
+          "p95_ms": 307.892,
+          "p99_ms": 361.732
+        },
+        "messages": {
+          "p50_ms": 74.932,
+          "p95_ms": 148.379,
+          "p99_ms": 148.379
+        },
+        "resolve": {
+          "p50_ms": 53.269,
+          "p95_ms": 74.294,
+          "p99_ms": 74.294
+        },
+        "foreign": {
+          "p50_ms": 38.227,
+          "p95_ms": 58.72,
+          "p99_ms": 58.72
+        }
+      },
+      "latency_by_status": {
+        "200": {
+          "p50_ms": 214.27,
+          "p95_ms": 294.592,
+          "p99_ms": 361.732
+        },
+        "404": {
+          "p50_ms": 38.227,
+          "p95_ms": 58.72,
+          "p99_ms": 58.72
+        }
+      },
+      "expected_forbidden_probes": 8,
+      "p50_ms": 197.195,
+      "p95_ms": 292.758,
+      "p99_ms": 361.732,
+      "max_ms": 361.732,
+      "arrival_model": "closed-loop bounded per-owner sequential requests; not fixed-rate open-loop",
+      "endpoint": "next_browser_proxy",
+      "resources": {
+        "service_rss_bytes_peak": 240865280,
+        "driver_rss_bytes_peak": 120057856,
+        "postgres_rss_bytes_peak": 600322048,
+        "postgres_connections_peak": 9,
+        "postgres_active_peak": 1,
+        "postgres_idle_in_transaction_peak": 8,
+        "postgres_waiting_peak": 8,
+        "api_established_tcp_connections_peak": 8,
+        "web_established_tcp_connections_peak": 8,
+        "samples": 6,
+        "sample_errors": 0,
+        "service_cpu_seconds": 2.15,
+        "driver_cpu_seconds": 0.48,
+        "postgres_cpu_seconds": 0.6,
+        "rss_measure": "sum of process RSS; shared PostgreSQL pages may be counted repeatedly",
+        "postgres_cpu_scope": "local PostgreSQL service including background processes",
+        "tcp_measure": "sampled IPv4 established server-side sockets by dedicated loopback port, including idle keep-alive; 250ms samples may miss shorter-lived peaks",
+        "cpu_measure": "per-PID tick deltas retained across samples; exited short-lived processes may lose at most the last sample interval"
+      },
+      "api_query_pool_delta": {
+        "query_count": 1343,
+        "query_seconds": 8.551077,
+        "pool_wait_seconds": 0.109314,
+        "pool_checkouts": 81
+      },
+      "api_pool_max_wait_observed_seconds": 1.6593985589970544,
+      "api_pool_peak_checkouts_observed": 10
+    },
+    {
+      "actual_http_stage_started_at": "2026-10-07T19:11:02.034897+00:00",
+      "http_requests": 240,
+      "independent_authenticated_owners": 24,
+      "configured_owner_identities": 24,
+      "presented_session_owners": 24,
+      "successful_owner_reads": 216,
+      "successful_foreign_owner_denials": 24,
+      "virtual_users": 24,
+      "peak_http_requests_in_flight": 24,
+      "max_client_http_connections": 24,
+      "per_user_requests": 10,
+      "closed_loop_think_seconds": 0,
+      "initial_stagger_seconds": 0,
+      "elapsed_seconds": 5.445,
+      "adaptive_aborted": false,
+      "attempted_requests_per_second": 44.08,
+      "successful_invariant_checks": 240,
+      "failed_invariant_checks": 0,
+      "safety_invariant_failures": 0,
+      "unavailable_or_transport_failures": 0,
+      "errors": {},
+      "http_statuses": {
+        "200": 216,
+        "404": 24
+      },
+      "endpoint_requests": {
+        "bootstrap": 144,
+        "messages": 48,
+        "resolve": 24,
+        "foreign": 24
+      },
+      "endpoint_latency": {
+        "bootstrap": {
+          "p50_ms": 732.904,
+          "p95_ms": 1219.416,
+          "p99_ms": 1730.677
+        },
+        "messages": {
+          "p50_ms": 273.03,
+          "p95_ms": 678.713,
+          "p99_ms": 688.783
+        },
+        "resolve": {
+          "p50_ms": 151.803,
+          "p95_ms": 271.477,
+          "p99_ms": 357.534
+        },
+        "foreign": {
+          "p50_ms": 135.791,
+          "p95_ms": 271.629,
+          "p99_ms": 273.546
+        }
+      },
+      "latency_by_status": {
+        "200": {
+          "p50_ms": 598.441,
+          "p95_ms": 1173.859,
+          "p99_ms": 1480.193
+        },
+        "404": {
+          "p50_ms": 135.791,
+          "p95_ms": 271.629,
+          "p99_ms": 273.546
+        }
+      },
+      "expected_forbidden_probes": 24,
+      "p50_ms": 459.181,
+      "p95_ms": 1151.17,
+      "p99_ms": 1480.193,
+      "max_ms": 1799.909,
+      "arrival_model": "closed-loop bounded per-owner sequential requests; not fixed-rate open-loop",
+      "endpoint": "next_browser_proxy",
+      "resources": {
+        "service_rss_bytes_peak": 274923520,
+        "driver_rss_bytes_peak": 123334656,
+        "postgres_rss_bytes_peak": 633745408,
+        "postgres_connections_peak": 10,
+        "postgres_active_peak": 3,
+        "postgres_idle_in_transaction_peak": 10,
+        "postgres_waiting_peak": 10,
+        "api_established_tcp_connections_peak": 24,
+        "web_established_tcp_connections_peak": 24,
+        "samples": 17,
+        "sample_errors": 0,
+        "service_cpu_seconds": 6.35,
+        "driver_cpu_seconds": 1.41,
+        "postgres_cpu_seconds": 1.89,
+        "rss_measure": "sum of process RSS; shared PostgreSQL pages may be counted repeatedly",
+        "postgres_cpu_scope": "local PostgreSQL service including background processes",
+        "tcp_measure": "sampled IPv4 established server-side sockets by dedicated loopback port, including idle keep-alive; 250ms samples may miss shorter-lived peaks",
+        "cpu_measure": "per-PID tick deltas retained across samples; exited short-lived processes may lose at most the last sample interval"
+      },
+      "api_query_pool_delta": {
+        "query_count": 3960,
+        "query_seconds": 38.019305,
+        "pool_wait_seconds": 66.09558,
+        "pool_checkouts": 240
+      },
+      "api_pool_max_wait_observed_seconds": 1.6593985589970544,
+      "api_pool_peak_checkouts_observed": 10
+    },
+    {
+      "actual_http_stage_started_at": "2026-10-07T19:11:07.870754+00:00",
+      "http_requests": 127,
+      "independent_authenticated_owners": 28,
+      "configured_owner_identities": 64,
+      "presented_session_owners": 64,
+      "successful_owner_reads": 28,
+      "successful_foreign_owner_denials": 0,
+      "virtual_users": 64,
+      "peak_http_requests_in_flight": 64,
+      "max_client_http_connections": 64,
+      "per_user_requests": 10,
+      "closed_loop_think_seconds": 0,
+      "initial_stagger_seconds": 0,
+      "elapsed_seconds": 0.989,
+      "adaptive_aborted": true,
+      "attempted_requests_per_second": 128.468,
+      "successful_invariant_checks": 28,
+      "failed_invariant_checks": 99,
+      "safety_invariant_failures": 0,
+      "unavailable_or_transport_failures": 99,
+      "errors": {
+        "bootstrap:http_503": 99
+      },
+      "http_statuses": {
+        "503": 99,
+        "200": 28
+      },
+      "endpoint_requests": {
+        "bootstrap": 127
+      },
+      "endpoint_latency": {
+        "bootstrap": {
+          "p50_ms": 118.481,
+          "p95_ms": 943.336,
+          "p99_ms": 974.787
+        }
+      },
+      "latency_by_status": {
+        "503": {
+          "p50_ms": 81.287,
+          "p95_ms": 172.171,
+          "p99_ms": 177.663
+        },
+        "200": {
+          "p50_ms": 738.591,
+          "p95_ms": 974.787,
+          "p99_ms": 975.402
+        }
+      },
+      "expected_forbidden_probes": 0,
+      "p50_ms": 118.481,
+      "p95_ms": 943.336,
+      "p99_ms": 974.787,
+      "max_ms": 975.402,
+      "arrival_model": "closed-loop bounded per-owner sequential requests; not fixed-rate open-loop",
+      "endpoint": "next_browser_proxy",
+      "resources": {
+        "service_rss_bytes_peak": 289472512,
+        "driver_rss_bytes_peak": 123858944,
+        "postgres_rss_bytes_peak": 626634752,
+        "postgres_connections_peak": 10,
+        "postgres_active_peak": 1,
+        "postgres_idle_in_transaction_peak": 8,
+        "postgres_waiting_peak": 8,
+        "api_established_tcp_connections_peak": 28,
+        "web_established_tcp_connections_peak": 64,
+        "samples": 3,
+        "sample_errors": 0,
+        "service_cpu_seconds": 1.21,
+        "driver_cpu_seconds": 0.55,
+        "postgres_cpu_seconds": 0.29,
+        "rss_measure": "sum of process RSS; shared PostgreSQL pages may be counted repeatedly",
+        "postgres_cpu_scope": "local PostgreSQL service including background processes",
+        "tcp_measure": "sampled IPv4 established server-side sockets by dedicated loopback port, including idle keep-alive; 250ms samples may miss shorter-lived peaks",
+        "cpu_measure": "per-PID tick deltas retained across samples; exited short-lived processes may lose at most the last sample interval"
+      },
+      "api_query_pool_delta": {
+        "query_count": 644,
+        "query_seconds": 5.677957,
+        "pool_wait_seconds": 4.110156,
+        "pool_checkouts": 28
+      },
+      "api_pool_max_wait_observed_seconds": 1.6593985589970544,
+      "api_pool_peak_checkouts_observed": 10,
+      "post_overload_recovery_probe": {
+        "status": 200,
+        "scope_and_identity_valid": true,
+        "wall_ms": 36.156,
+        "retries": 0,
+        "excluded_from_stage_throughput": true
+      }
+    }
+  ],
+  "client_setup_excluded": true,
+  "adaptive_abort": "stop stage after >=VU samples and >5% failures (minimum four)",
+  "limits": {
+    "external_provider_calls": 0,
+    "real_connected_whatsapp_accounts": 0,
+    "model_calls": 0,
+    "target_50000_concurrent": "NOT_RUN",
+    "dataset_cap_bytes": 524288000
+  },
+  "host": {
+    "logical_cpus": 5,
+    "cgroup_cpu_max": "400000 100000",
+    "cgroup_memory_max_bytes": "34359738368",
+    "disk_free_before_bytes": 29469384704
+  },
+  "software": {
+    "fastapi": "0.142.2",
+    "SQLAlchemy": "2.1.3",
+    "psycopg": "3.3.6",
+    "httpx": "0.28.1",
+    "uvicorn": "0.54.0"
+  },
+  "web_build": {
+    "build_id": "ti7jYo62NZf90MAf3iPoi",
+    "build_id_file_mtime_utc": "2026-10-07T18:03:47.660077+00:00",
+    "node_version": "v24.19.0",
+    "next_version": "16.3.8"
+  },
+  "source_files_sha256": {
+    "services/api/assistant/assistantui.py": "4bdb39520e3895855168e99c60708076477b660297e7131affac2bf98714692e",
+    "services/api/assistant/people.py": "9f87b0a1ce03c621daad578e8f91e960a2175c659473e2d096cd8f7fe843a5ed",
+    "services/api/assistant/request_security.py": "c94cbdb4c67a777ab24ceb88d5c516c660b9b61c2534e68c48ad8d7788404266",
+    "services/api/assistant/config.py": "521a90dda03cabfc339a078ff913b34cd2583c24234ebc3947ff36f7fc53ad7c",
+    "services/api/assistant/db.py": "cc2bb0f2a9d34dd4b655b426b7c14146b3f46fd4d90cff4b9bc54f051c71e75f",
+    "services/api/assistant/main.py": "8b96a08608582a643be4bbbcdb2cd118be16f8b181c3375fee895b8b60759b45",
+    "apps/web/app/api/[...path]/route.ts": "5b6be814ed0b7a68af364ad185b1acdd26f53a19d76e2daca6e6ea929eaead95",
+    "scripts/capacity_fixture.py": "479ecd4fe267c04181bfd4ad772c00c45feb5074637c55c0d487f6cd8ce5598c",
+    "scripts/capacity_http.py": "16f277191156d5bb9680a9a31f1c4288c11d0f8830d9326345537c6962337a1f"
+  },
+  "service_configuration": {
+    "request_limits_mode": "redis",
+    "request_max_inflight": 32,
+    "request_control_reserve": 4,
+    "request_thread_tokens": 48,
+    "request_rate_api": 600,
+    "request_rate_source_api": 6000,
+    "request_rate_global_api": 60000,
+    "request_rate_window_seconds": 60,
+    "request_rate_control": 120,
+    "request_rate_source_control": 120,
+    "request_rate_global_control": 6000,
+    "db_pool_size": 5,
+    "db_max_overflow": 5,
+    "db_pool_timeout_seconds": 3.0,
+    "db_statement_timeout_ms": 15000
+  },
+  "benchmark_overrides": {
+    "environment": "test",
+    "request_limits_mode": "redis",
+    "request_rate_namespace": "unique capacity namespace, default budget values retained",
+    "model_provider": "mock",
+    "enable_external_sends": false,
+    "session_secure": false,
+    "auth": "synthetic seeded browser sessions, no OAuth exchange",
+    "database": "disposable loopback PostgreSQL",
+    "allowed_origins": "single loopback Next fixture",
+    "source_identity": "actual socket peer 127.0.0.1; no signed synthetic proxy sources",
+    "api_processes": 1,
+    "web_processes": 1,
+    "tls": "loopback HTTP only; production TLS is not measured"
+  },
+  "dataset": {
+    "owners": 64,
+    "small_owner_chats": 12,
+    "large_owner_chats": 1200,
+    "messages_per_populated_chat": 3,
+    "postgres_database_bytes": 18776591,
+    "synthetic_cookie_sessions": 64
+  },
+  "bootstrap_query_profile": {
+    "queries": 23,
+    "database_seconds": 0.02416365800672793,
+    "wall_ms": 269.29,
+    "contacts_returned": 7
+  },
+  "large_inbox_query_profile": {
+    "queries": 23,
+    "database_seconds": 0.02475123300246196,
+    "wall_ms": 55.429,
+    "contacts_returned": 7
+  },
+  "large_inbox_pagination": [
+    {
+      "readable_offset": 0,
+      "route_profile": {
+        "queries": 23,
+        "database_seconds": 0.019353433010110166,
+        "wall_ms": 41.853,
+        "contacts_returned": 7
+      },
+      "plan_execution_ms": 1.193,
+      "plan_planning_ms": 0.811,
+      "query_has_sql_offset": false,
+      "plan_nodes": [
+        {
+          "Node Type": "Limit",
+          "Actual Rows": 31,
+          "Actual Loops": 1,
+          "Shared Hit Blocks": 101,
+          "Shared Read Blocks": 0
+        },
+        {
+          "Node Type": "Sort",
+          "Actual Rows": 31,
+          "Actual Loops": 1,
+          "Shared Hit Blocks": 101,
+          "Shared Read Blocks": 0
+        },
+        {
+          "Node Type": "Hash Join",
+          "Actual Rows": 1198,
+          "Actual Loops": 1,
+          "Shared Hit Blocks": 95,
+          "Shared Read Blocks": 0
+        },
+        {
+          "Node Type": "Seq Scan",
+          "Actual Rows": 1200,
+          "Actual Loops": 1,
+          "Rows Removed by Filter": 756,
+          "Shared Hit Blocks": 53,
+          "Shared Read Blocks": 0
+        },
+        {
+          "Node Type": "Hash",
+          "Actual Rows": 1198,
+          "Actual Loops": 1,
+          "Shared Hit Blocks": 42,
+          "Shared Read Blocks": 0
+        },
+        {
+          "Node Type": "Seq Scan",
+          "Actual Rows": 1198,
+          "Actual Loops": 1,
+          "Rows Removed by Filter": 758,
+          "Shared Hit Blocks": 42,
+          "Shared Read Blocks": 0
+        }
+      ]
+    },
+    {
+      "readable_offset": 599,
+      "route_profile": {
+        "queries": 23,
+        "database_seconds": 0.01940137200654135,
+        "wall_ms": 40.844,
+        "contacts_returned": 7
+      },
+      "plan_execution_ms": 0.937,
+      "plan_planning_ms": 0.466,
+      "query_has_sql_offset": false,
+      "plan_nodes": [
+        {
+          "Node Type": "Limit",
+          "Actual Rows": 31,
+          "Actual Loops": 1,
+          "Shared Hit Blocks": 101,
+          "Shared Read Blocks": 0
+        },
+        {
+          "Node Type": "Sort",
+          "Actual Rows": 31,
+          "Actual Loops": 1,
+          "Shared Hit Blocks": 101,
+          "Shared Read Blocks": 0
+        },
+        {
+          "Node Type": "Hash Join",
+          "Actual Rows": 599,
+          "Actual Loops": 1,
+          "Shared Hit Blocks": 95,
+          "Shared Read Blocks": 0
+        },
+        {
+          "Node Type": "Seq Scan",
+          "Actual Rows": 1198,
+          "Actual Loops": 1,
+          "Rows Removed by Filter": 758,
+          "Shared Hit Blocks": 42,
+          "Shared Read Blocks": 0
+        },
+        {
+          "Node Type": "Hash",
+          "Actual Rows": 599,
+          "Actual Loops": 1,
+          "Shared Hit Blocks": 53,
+          "Shared Read Blocks": 0
+        },
+        {
+          "Node Type": "Seq Scan",
+          "Actual Rows": 599,
+          "Actual Loops": 1,
+          "Rows Removed by Filter": 1357,
+          "Shared Hit Blocks": 53,
+          "Shared Read Blocks": 0
+        }
+      ]
+    },
+    {
+      "readable_offset": 1168,
+      "route_profile": {
+        "queries": 23,
+        "database_seconds": 0.018055261993140448,
+        "wall_ms": 38.371,
+        "contacts_returned": 7
+      },
+      "plan_execution_ms": 0.647,
+      "plan_planning_ms": 0.493,
+      "query_has_sql_offset": false,
+      "plan_nodes": [
+        {
+          "Node Type": "Limit",
+          "Actual Rows": 30,
+          "Actual Loops": 1,
+          "Shared Hit Blocks": 101,
+          "Shared Read Blocks": 0
+        },
+        {
+          "Node Type": "Sort",
+          "Actual Rows": 30,
+          "Actual Loops": 1,
+          "Shared Hit Blocks": 101,
+          "Shared Read Blocks": 0
+        },
+        {
+          "Node Type": "Hash Join",
+          "Actual Rows": 30,
+          "Actual Loops": 1,
+          "Shared Hit Blocks": 95,
+          "Shared Read Blocks": 0
+        },
+        {
+          "Node Type": "Seq Scan",
+          "Actual Rows": 1198,
+          "Actual Loops": 1,
+          "Rows Removed by Filter": 758,
+          "Shared Hit Blocks": 42,
+          "Shared Read Blocks": 0
+        },
+        {
+          "Node Type": "Hash",
+          "Actual Rows": 30,
+          "Actual Loops": 1,
+          "Shared Hit Blocks": 53,
+          "Shared Read Blocks": 0
+        },
+        {
+          "Node Type": "Seq Scan",
+          "Actual Rows": 30,
+          "Actual Loops": 1,
+          "Rows Removed by Filter": 1926,
+          "Shared Hit Blocks": 53,
+          "Shared Read Blocks": 0
+        }
+      ]
+    }
+  ],
+  "api_query_pool_metrics": {
+    "query_count": 11895,
+    "query_seconds": 105.53347880997171,
+    "pool_wait_seconds": 141.5622697190047,
+    "pool_wait_max_seconds": 1.6593985589970544,
+    "pool_checkouts": 699,
+    "checked_out": 0,
+    "checked_out_peak": 10,
+    "configured_pool_size": 5,
+    "configured_pool_max_overflow": 5,
+    "pool_status": "Pool size: 5  Connections in pool: 0 Current Overflow: -5 Current Checked out connections: 0"
+  },
+  "disposable_database_dropped": true,
+  "evidence_scope": "Exploratory evolving working-tree API with recorded hashes and preexisting Next build, not final exact-source launch release or50k certification."
+}

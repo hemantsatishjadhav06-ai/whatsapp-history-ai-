@@ -6,9 +6,9 @@ import { acquireProxyLease, leaseProxyBody } from './proxy-admission';
 
 // Native clients use bearer sessions. Browser sessions and provider callbacks
 // each have a separate boundary; none can reach internal service routes.
-const NATIVE_ROUTES = /^(?:auth\/(?:config|native\/(?:nonce|login|refresh|revoke|logout|google\/(?:start|exchange))|sessions(?:\/[A-Za-z0-9_-]+)?)|me|ui\/(?:bootstrap|updates|resolve)|(?:workspaces|connectors|conversations|drafts|messages|imports|inbox|tasks|memories|forward-routes|actions|jobs|schedules|scheduled-intents|contacts|people|integrations)(?:\/[A-Za-z0-9_.:@+-]+){0,3}|automation\/grants(?:\/[^/]+)?|assistant\/(?:commands|digest)|privacy\/(?:retention(?:\/sweep)?|model-processing)|pause-all|resume-all|activity|data-export|account-data)$/;
+const NATIVE_ROUTES = /^(?:auth\/(?:config|native\/(?:nonce|login|refresh|revoke|logout|google\/(?:start|exchange))|sessions(?:\/[A-Za-z0-9_-]+)?)|me|ui\/(?:bootstrap|updates|resolve)|(?:workspaces|connectors|conversations|drafts|messages|imports|inbox|tasks|memories|forward-routes|actions|jobs|schedules|scheduled-intents|contacts|people|integrations)(?:\/[A-Za-z0-9_.:@+-]+){0,3}|integrations\/whatsapp\/personal\/(?:config|status|start|pairing|chats(?:\/authorize)?|disconnect|authorship\/confirm)|automation\/grants(?:\/[^/]+)?|assistant\/(?:commands|digest)|privacy\/(?:retention(?:\/sweep)?|model-processing)|pause-all|resume-all|activity|data-export|account-data)$/;
 const PUBLIC_NATIVE_POSTS = new Set(['auth/native/nonce', 'auth/native/login', 'auth/native/refresh', 'auth/native/revoke', 'auth/native/google/start', 'auth/native/google/exchange']);
-const CONTROL = /^(?:pause-all|resume-all|auth\/native\/(?:logout|revoke)|conversations\/[^/]+\/(?:takeover|resume|control)|actions\/[^/]+\/cancel)$/;
+const CONTROL = /^(?:pause-all|resume-all|auth\/native\/(?:logout|revoke)|conversations\/[^/]+\/(?:takeover|resume|control)|actions\/[^/]+\/cancel|integrations\/whatsapp\/personal\/disconnect)$/;
 const SECURITY = { 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff', 'Referrer-Policy': 'no-referrer' };
 
 function unavailable(detail: string, status = 503) {
@@ -113,6 +113,10 @@ export async function nativeProxy(request: NextRequest, context: { params: Promi
   const route = path.join('/');
   if (!NATIVE_ROUTES.test(route)) return unavailable('This native service route is unavailable', 404);
   if (request.headers.has('origin') || request.headers.has('sec-fetch-site') || request.headers.has('cookie')) return unavailable('Use the browser session route for browser requests', 403);
+  if (route.startsWith('integrations/whatsapp/personal/')) {
+    const allowedMethod = /^(?:config|status|pairing|chats)$/.test(route.slice('integrations/whatsapp/personal/'.length)) ? 'GET' : 'POST';
+    if (request.method !== allowedMethod) return unavailable('Method unavailable', 405);
+  }
   const publicAuth = PUBLIC_NATIVE_POSTS.has(route);
   if ((publicAuth && request.method !== 'POST') || (route === 'auth/config' && request.method !== 'GET')) return unavailable('Method unavailable', 405);
   const authorization = request.headers.get('authorization');

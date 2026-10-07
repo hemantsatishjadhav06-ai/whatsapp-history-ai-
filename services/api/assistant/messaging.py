@@ -174,6 +174,8 @@ def invalidate_conversation(db: Session, conversation: Conversation, reason: str
           reason=reason, draft_count=len(drafts), schedule_count=len(intents))
     from .actions import invalidate_actions
     invalidate_actions(db, conversation, reason)
+    from .automatic_drafts import invalidate_automatic_drafts
+    invalidate_automatic_drafts(db, conversation.id, reason)
 
 
 def hold_workspace_schedules(db, workspace):
@@ -480,6 +482,9 @@ def _validate_current(db: Session, draft: Draft, settings, approved: bool = True
         if (not conversation.last_inbound_at or now() - aware(conversation.last_inbound_at) >= timedelta(hours=24)
                 or aware(conversation.last_inbound_at) > now()):
             raise HTTPException(403, "Approved templates required outside the customer-service window")
+    elif connector.provider == "whatsapp_personal":
+        from .whatsapp_personal import validate_personal_transport
+        validate_personal_transport(db, settings, connector, conversation)
     elif connector.provider != "mock":
         raise HTTPException(403, "Sending adapter unavailable")
     if connector.provider == "mock" and settings.environment == "production":
@@ -587,6 +592,9 @@ async def _transport_send(settings, provider: str, account_id: str, recipient: s
         if final_check:
             final_check()
         return "accepted", f"mock:{attempt_id}", None
+    if provider == "whatsapp_personal":
+        from .whatsapp_personal import send_text
+        return await send_text(settings, final_check)
     from .whatsapp_provider import graph_endpoint
     try:
         endpoint = graph_endpoint(settings.whatsapp_api_version, account_id, "messages")
@@ -681,12 +689,18 @@ async def dispatch_draft(session_factory, settings, draft_id: str, actor_id: str
             if draft is None or attempt is None:
                 raise HTTPException(409, "Dispatch ledger removed before submission")
             _validate_intent(db, draft, scheduled_intent_id)
-            _validate_current(db, draft, settings)
+            _, _, fresh_connector = _validate_current(db, draft, settings)
             reserve_action_budget(db, workspace_id, f"draft:{draft_id}", "SEND_TEXT")
             if draft.status != "dispatching" or attempt.status != "dispatching":
                 raise HTTPException(409, "Dispatch claim is no longer current")
             audit(db, draft.workspace_id, actor_id, "send.submit_started", attempt.id)
+            envelope = {"schema_version": 1, "workspace_id": draft.workspace_id,
+                        "connector_id": fresh_connector.id, "connector_fence": fresh_connector.fence,
+                        "account_id": fresh_connector.account_id, "conversation_id": draft.conversation_id,
+                        "recipient_id": draft.recipient_id, "draft_id": draft.id, "attempt_id": attempt.id,
+                        "payload_hash": draft.content_hash, "text": draft.text}
             db.commit()
+            return envelope
     try:
         outcome, provider_id, error_code = await _transport_send(
             settings, provider, account_id, recipient, text, attempt_id, final_check)
@@ -715,6 +729,12 @@ async def dispatch_draft(session_factory, settings, draft_id: str, actor_id: str
                     "provider_message_id": provider_id, "error_code": "ledger_removed_after_submit"}
         # A correlated webhook receipt may have arrived while the HTTP call was in flight.
         if attempt.status not in {"accepted", "delivered", "failed"}:
+            # Personal sessions commit a provider ID before socket submission. A
+            # timeout cannot erase that reference: later receipts and echoes need it.
+            if provider == "whatsapp_personal" and attempt.provider_message_id:
+                if provider_id and provider_id != attempt.provider_message_id:
+                    outcome, error_code = "uncertain", "personal_provider_reference_changed"
+                provider_id = attempt.provider_message_id
             attempt.status, attempt.provider_message_id, attempt.error_code = outcome, provider_id, error_code
             draft.status = outcome
         elif provider_id and not attempt.provider_message_id:
@@ -785,7 +805,11 @@ def reconcile_receipt(body: Receipt, db: Session = Depends(get_db)):
     ranks = {"dispatching": 0, "uncertain": 0, "accepted": 1, "failed": 2, "delivered": 3}
     if ranks.get(attempt.status, -1) < ranks[body.status]:
         attempt.status = body.status
+        attempt.error_code = "provider_delivery_failed" if body.status == "failed" else None
         db.get(Draft, attempt.draft_id).status = body.status
+        from .companion import settle_action_budget
+        settle_action_budget(db, attempt.workspace_id, f"draft:{attempt.draft_id}",
+                            "consumed" if body.status in {"accepted", "delivered"} else "released")
         audit(db, attempt.workspace_id, "connector", "send.receipt", attempt.id, status=body.status)
         db.commit()
     return attempt_payload(attempt)
@@ -907,7 +931,8 @@ async def process_due(session_factory, settings, intent_id: str | None = None) -
         query = select(ScheduledIntent).where(ScheduledIntent.status.in_(["scheduled", "held"]), ScheduledIntent.due_at <= now())
         if intent_id:
             query = query.where(ScheduledIntent.id == intent_id)
-        ids = list(db.scalars(query.with_only_columns(ScheduledIntent.id).order_by(ScheduledIntent.due_at).limit(100)))
+        ids = list(db.scalars(query.with_only_columns(ScheduledIntent.id).order_by(
+            ScheduledIntent.last_checked_at.asc().nulls_first(), ScheduledIntent.due_at, ScheduledIntent.id).limit(100)))
     results = []
     for selected_id in ids:
         with session_factory() as db:
@@ -917,8 +942,12 @@ async def process_due(session_factory, settings, intent_id: str | None = None) -
         with submit_guard(workspace_id), session_factory() as db:
             lock_workspace(db, workspace_id)
             intent = db.get(ScheduledIntent, selected_id)
-            if intent is None or intent.status not in {"scheduled", "held"}:
+            if intent is None or intent.status not in {"scheduled", "held"} or aware(intent.due_at) > now():
                 continue
+            checked = now()
+            if intent.last_checked_at is not None:
+                checked = max(checked, aware(intent.last_checked_at) + timedelta(microseconds=1))
+            intent.last_checked_at = checked
             if aware(intent.expires_at) <= now():
                 intent.status = "expired"
                 db.commit()
@@ -933,8 +962,10 @@ async def process_due(session_factory, settings, intent_id: str | None = None) -
             if intent.status == "held":
                 # Resume is an owner control that revalidates the saved exact
                 # approval. A worker cannot independently renew stale authority.
+                db.commit()
                 continue
             draft_id = intent.draft_id
+            db.commit()  # Persist rotation and release authority before transport preparation.
         try:
             result = await dispatch_draft(session_factory, settings, draft_id, scheduled_intent_id=selected_id)
             status = result["status"]

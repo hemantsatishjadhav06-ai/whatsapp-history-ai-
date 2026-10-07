@@ -238,10 +238,8 @@ def confirm_owner_authorship(body: ConfirmAuthorship, request: Request,
             "learning_requires_consent": True, "assistant_messages_confirmable": False}
 
 
-@router.post("/history-sync")
 @serialized_control
-def sync_business_history(body: SyncInput, request: Request,
-                          user=Depends(get_current_user), db=Depends(get_db)):
+def _claim_business_history(body: SyncInput, request: Request, user, db):
     settings = request.app.state.settings
     require_whatsapp_owner(settings, user)
     row = connector_for(db, user, body.connector_id)
@@ -264,7 +262,7 @@ def sync_business_history(body: SyncInput, request: Request,
         raise HTTPException(409, "Configured Business API resource is invalid") from None
     saved = row.capabilities.get("business_history_request")
     if isinstance(saved, dict):
-        return {**saved, "resubmitted": False, "history_sharing_verified": False}
+        return row.id, row.workspace_id, row.fence, endpoint, saved, True
     attempt = {"status": "submitting", "attempt_id": uid(), "requested_at": now().isoformat(),
                "provider_request_id": None}
     row.capabilities = {**row.capabilities, "business_history_request": attempt}
@@ -272,6 +270,43 @@ def sync_business_history(body: SyncInput, request: Request,
     # Persist before provider submission. A crash or timeout is an unknown outcome,
     # never permission to repeat Meta's once-per-onboarding synchronization request.
     db.commit()
+    return row.id, row.workspace_id, row.fence, endpoint, attempt, False
+
+
+@router.post("/history-sync")
+def sync_business_history(body: SyncInput, request: Request,
+                          user=Depends(get_current_user), db=Depends(get_db)):
+    settings = request.app.state.settings
+    connector_id, workspace_id, fence, endpoint, attempt, existing = _claim_business_history(
+        body=body, request=request, user=user, db=db)
+    if existing:
+        db.rollback()
+        return {**attempt, "resubmitted": False, "history_sharing_verified": False}
+
+    # Claim and final authority transactions are short. In particular the
+    # process-local owner-control guard must end before a slow provider call.
+    # Pausing, revoking chat access or disconnecting stays responsive during sync.
+    from .storage_authority import lock_workspace
+    from .messaging import submit_guard
+    with submit_guard(workspace_id):
+        lock_workspace(db, workspace_id)
+        db.expire_all()
+        row = db.get(Connector, connector_id)
+        eligible = db.scalar(select(Conversation.id).join(Permission).where(
+            Conversation.connector_id == connector_id, Conversation.workspace_id == workspace_id,
+            Permission.read.is_(True), Permission.retain.is_(True),
+            Permission.expires_at.is_(None) | (Permission.expires_at > now())).limit(1))
+        current = (row is not None and row.status == "connected" and row.fence == fence
+                   and row.account_id == settings.whatsapp_phone_number_id
+                   and row.lease_expires_at and aware(row.lease_expires_at) > now()
+                   and eligible is not None and whatsapp_owner_authorized(settings, user))
+        if not current:
+            attempt = {**attempt, "status": "cancelled", "error_code": "authority_changed"}
+            if row is not None:
+                row.capabilities = {**row.capabilities, "business_history_request": attempt}
+            db.commit()
+            return {**attempt, "resubmitted": False, "history_sharing_verified": False}
+        db.commit()
     try:
         result = httpx.post(endpoint,
                             headers={"Authorization": f"Bearer {settings.whatsapp_access_token}"},
@@ -289,9 +324,12 @@ def sync_business_history(body: SyncInput, request: Request,
             raise ValueError("Unknown provider acceptance")
     except (httpx.HTTPError, ValueError, TypeError):
         attempt = {**attempt, "status": "uncertain", "error_code": "provider_outcome_unknown"}
-    from .storage_authority import lock_workspace
-    lock_workspace(db, row.workspace_id)
-    db.refresh(row)
+    lock_workspace(db, workspace_id)
+    db.expire_all()
+    row = db.get(Connector, connector_id)
+    if row is None:
+        db.rollback()
+        return {**attempt, "resubmitted": False, "history_sharing_verified": False}
     row.capabilities = {**row.capabilities, "business_history_request": attempt}
     audit(db, row.workspace_id, user.id, "whatsapp.history_sync_result", row.id, status=attempt["status"])
     db.commit()

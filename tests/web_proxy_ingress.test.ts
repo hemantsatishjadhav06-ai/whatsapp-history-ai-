@@ -34,6 +34,27 @@ function setup(t: TestContext) {
 }
 const context = (path: string) => ({ params: Promise.resolve({ path: path.split('/') }) });
 
+test('native phone linking routes remain bearer-only and restrict pairing versus mutation methods', async t => {
+  const { sent, request } = setup(t); const headers = { Authorization: `Bearer ${token}` };
+  for (const suffix of ['config', 'status', 'pairing', 'chats']) {
+    const path = `integrations/whatsapp/personal/${suffix}`;
+    const result = await nativeProxy(request('/native-api/v1/' + path, { headers }), context('v1/' + path));
+    assert.equal(result.status, 200); await result.text();
+    assert.equal(result.headers.get('cache-control'), 'no-store');
+    assert.equal((await nativeProxy(request('/native-api/v1/' + path, { method: 'POST', body: '{}', headers }), context('v1/' + path))).status, 405);
+  }
+  for (const suffix of ['start', 'chats/authorize', 'authorship/confirm', 'disconnect']) {
+    const path = `integrations/whatsapp/personal/${suffix}`;
+    const result = await nativeProxy(request('/native-api/v1/' + path, { method: 'POST', body: '{}', headers }), context('v1/' + path));
+    assert.equal(result.status, 200); await result.text();
+    assert.equal((await nativeProxy(request('/native-api/v1/' + path, { headers }), context('v1/' + path))).status, 405);
+  }
+  const path = 'conversations/synthetic-chat/automatic-drafts';
+  const result = await nativeProxy(request('/native-api/v1/' + path, { method: 'PUT', body: '{"enabled":false,"expected_version":1}', headers }), context('v1/' + path));
+  assert.equal(result.status, 200); await result.text();
+  for (const outgoing of sent) { const value = new Headers(outgoing.init?.headers); assert.equal(value.get('authorization'), headers.Authorization); assert.equal(value.has('cookie'), false); }
+});
+
 test('native ingress forwards only native bearer authority with exact private route and no response cookies/CORS', async t => {
   const { sent, request } = setup(t);
   const response = await nativeProxy(request('/native-api/v1/me?owner=current', { headers: { Authorization: `Bearer ${token}`, 'X-Internal-Token': 'forged', 'X-CSRF-Token': 'forged', 'X-Milo-Rate-Source': 'forged' } }), context('v1/me'));

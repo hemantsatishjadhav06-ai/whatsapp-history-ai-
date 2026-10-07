@@ -1,4 +1,4 @@
-.PHONY: bootstrap dev test lint gateway-check image migrate infra infra-events infra-workflows worker registrar relay demo load-smoke actions jobs retention bridge-smoke web web-build web-test mobile mobile-export
+.PHONY: bootstrap dev test lint gateway-check qr-check qr-session image migrate infra infra-events infra-workflows worker registrar relay demo load-smoke actions jobs retention bridge-smoke web web-build web-test mobile mobile-export
 export UV_CACHE_DIR ?= $(CURDIR)/.local/uv-cache
 export UV_PYTHON_INSTALL_DIR ?= $(CURDIR)/.local/python
 export BUILDX_CONFIG ?= $(CURDIR)/.local/buildx
@@ -17,6 +17,12 @@ lint:
 
 gateway-check:
 	npm --prefix services/connector-gateway run check
+
+qr-check:
+	npm --prefix services/whatsapp-session run check
+
+qr-session:
+	npm --prefix services/whatsapp-session start
 
 image:
 	docker build -f services/api/Dockerfile -t relationship-assistant-api:local .
