@@ -9,7 +9,7 @@ from sqlalchemy import func, insert, select
 from assistant.auth_lifecycle import sweep_auth_metadata, sweep_browser_nonces
 from assistant.db import now, uid
 from assistant.mobile_auth import proof_challenge
-from assistant.mobile_models import NativeLoginChallenge, NativeSession
+from assistant.mobile_models import NativeLoginChallenge, NativeOAuthAttempt, NativeSession
 from assistant.models import LoginNonce, SessionRecord, Workspace
 
 
@@ -25,6 +25,9 @@ def _expired_row(model, owner_id):
         values.update(nonce_hash=uid())
     elif model is NativeLoginChallenge:
         values.update(nonce_hash=uid(), code_challenge="a" * 43, platform="ios", device_name="Synthetic device")
+    elif model is NativeOAuthAttempt:
+        values.update(state_hash=uid(), code_challenge="a" * 43, platform="ios", device_name="Synthetic device",
+                      google_nonce=uid(), google_verifier="a" * 43)
     else:
         values.update(user_id=owner_id, token_hash=uid(), platform="ios", device_name="Synthetic device",
                       refresh_token_hash=uid(), refresh_expires_at=now() - timedelta(minutes=1))
@@ -32,7 +35,7 @@ def _expired_row(model, owner_id):
 
 
 def test_global_auth_sweep_is_one_bounded_fair_page_and_repeatable(app, owner_client, chat):
-    models = (SessionRecord, LoginNonce, NativeLoginChallenge, NativeSession)
+    models = (SessionRecord, LoginNonce, NativeLoginChallenge, NativeSession, NativeOAuthAttempt)
     with app.state.session_factory() as db:
         owner_id = _owner_id(db, chat)
         for model in models:
@@ -41,15 +44,16 @@ def test_global_auth_sweep_is_one_bounded_fair_page_and_repeatable(app, owner_cl
         first = sweep_auth_metadata(db, batch_size=8)
         db.commit()
         assert first == {"browser_sessions_deleted": 2, "browser_nonces_deleted": 2,
-                         "native_challenges_deleted": 2, "native_sessions_deleted": 2,
+                         "native_challenges_deleted": 2, "native_sessions_deleted": 1,
+                         "native_oauth_attempts_deleted": 1,
                          "more_possible": True, "total_deleted": 8}
         removed = first["total_deleted"]
-        for _ in range(4):
+        for _ in range(5):
             page = sweep_auth_metadata(db, batch_size=8)
             db.commit()
             assert page["total_deleted"] <= 8
             removed += page["total_deleted"]
-        assert removed == 28
+        assert removed == 35
         assert sweep_auth_metadata(db, batch_size=8)["total_deleted"] == 0
         assert db.scalar(select(func.count()).select_from(SessionRecord)) == 1  # active owner browser session
         for model in models[1:]:

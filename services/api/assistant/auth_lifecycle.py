@@ -3,7 +3,7 @@
 from sqlalchemy import delete, or_, select
 
 from .db import now
-from .mobile_models import NativeLoginChallenge, NativeSession
+from .mobile_models import NativeLoginChallenge, NativeOAuthAttempt, NativeSession
 from .models import LoginNonce, SessionRecord
 
 
@@ -36,8 +36,15 @@ def sweep_native_challenges(db, *, batch_size=100):
     return removed
 
 
+def sweep_native_oauth_attempts(db, *, batch_size=100):
+    """Bound expired broker state without unbounded deletion on login requests."""
+    removed, _ = _delete_expired(db, NativeOAuthAttempt, NativeOAuthAttempt.expires_at <= now(),
+                                _batch_size(batch_size))
+    return removed
+
+
 def sweep_auth_metadata(db, batch_size=100):
-    """Delete at most batch_size expired records across all four auth tables.
+    """Delete at most batch_size expired records across all auth tables.
 
     Each category receives part of the remaining budget so a backlog of browser
     sessions cannot starve native challenges or device session expiration.
@@ -54,6 +61,7 @@ def sweep_auth_metadata(db, batch_size=100):
         ("browser_nonces_deleted", LoginNonce, LoginNonce.expires_at <= instant),
         ("native_challenges_deleted", NativeLoginChallenge, NativeLoginChallenge.expires_at <= instant),
         ("native_sessions_deleted", NativeSession, expired_native),
+        ("native_oauth_attempts_deleted", NativeOAuthAttempt, NativeOAuthAttempt.expires_at <= instant),
     )
     result = {name: 0 for name, _, _ in categories}
     result["more_possible"] = False

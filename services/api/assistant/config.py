@@ -15,6 +15,9 @@ class Settings(BaseSettings):
     google_client_id: str = ""
     google_android_client_id: str = ""
     google_ios_client_id: str = ""
+    google_client_secret: str = ""
+    google_native_redirect_uri: str = ""
+    google_native_app_redirect_uri: str = "milo://oauth"
     native_session_ttl_seconds: int = 3600
     native_refresh_ttl_seconds: int = 2592000
     allowed_origins: str = "http://localhost:3000"
@@ -85,6 +88,14 @@ class Settings(BaseSettings):
             raise ValueError("Native sessions must expire between five minutes and 24 hours")
         if not self.native_session_ttl_seconds <= self.native_refresh_ttl_seconds <= 2592000:
             raise ValueError("Native refresh sessions must expire within 30 days and after the access session")
+        if self.google_native_app_redirect_uri != "milo://oauth":
+            raise ValueError("Native sign-in handoff must use the registered Milo app redirect")
+        if self.google_native_redirect_uri:
+            from urllib.parse import urlsplit
+            callback = urlsplit(self.google_native_redirect_uri)
+            if (callback.scheme != "https" or not callback.hostname or callback.username or callback.password
+                    or callback.query or callback.fragment or callback.path != "/api/auth/native/google/callback"):
+                raise ValueError("Native Google callback must use an exact HTTPS application callback URL")
         if self.environment not in {"development", "test", "production"}:
             raise ValueError("Unknown environment")
         if self.whatsapp_authorized_owner_subject:

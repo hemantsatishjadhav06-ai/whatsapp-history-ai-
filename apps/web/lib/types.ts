@@ -1,3 +1,5 @@
+import type { MiloSnapshot } from '@milo/contracts';
+
 export type Section = 'home' | 'inbox' | 'actions' | 'memory' | 'rules' | 'connections' | 'activity' | 'settings' | 'more' | 'assistant';
 export type DataRecord = { id: string; [key: string]: unknown };
 export type Conversation = DataRecord & {
@@ -26,7 +28,8 @@ export type MiloState = {
 };
 export type MiloActions = {
   request<T = unknown>(method: string, path: string, body?: unknown): Promise<T>;
-  refresh(): Promise<void>; navigate(path: string): void; selectConversation(id: string): void;
+  refresh(): Promise<void>; confirmOwnerAnswer(value: unknown, stillSelected: () => boolean): Promise<MiloSnapshot>;
+  clearOwnerAnswerScope(): void; navigate(path: string): void; selectConversation(id: string): void;
   logout(): Promise<void>; setPaused(paused: boolean): Promise<void>;
   loadMore(): Promise<void>;
   ensureConversation(id: string): Promise<void>;

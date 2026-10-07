@@ -238,21 +238,50 @@ def verify_connector(connector_id: str, request: Request,
     if not s.whatsapp_phone_number_id or row.account_id != s.whatsapp_phone_number_id:
         raise HTTPException(409, "Configure this Business phone-number ID before verifying")
     try:
-        result = httpx.get(f"https://graph.facebook.com/{s.whatsapp_api_version}/{row.account_id}",
+        from .whatsapp_provider import graph_endpoint, normalize_phone
+        result = httpx.get(graph_endpoint(s.whatsapp_api_version, row.account_id),
                            headers={"Authorization": f"Bearer {s.whatsapp_access_token}"},
-                           params={"fields": "id,display_phone_number,verified_name"}, timeout=15)
+                           params={"fields": "id,display_phone_number,verified_name,is_on_biz_app,platform_type"},
+                           timeout=15, follow_redirects=False, trust_env=False)
         result.raise_for_status()
         identity = result.json()
-        if identity.get("id") != row.account_id:
+        if not isinstance(identity, dict) or identity.get("id") != row.account_id:
             raise ValueError("Identity mismatch")
     except (httpx.HTTPError, ValueError):
         raise HTTPException(502, "Business identity verification failed; inspect credentials and account access")
+    # The verified Graph lookup binds the device sender number. A caller-supplied
+    # owner label never proves the authorship of Business app history/echoes.
+    phone = None
+    candidate_phone = identity.get("display_phone_number")
+    if isinstance(candidate_phone, str):
+        try:
+            phone = normalize_phone(candidate_phone)
+            row.owner_sender_id = phone
+        except ValueError:
+            pass
+    coexistence = bool(phone and identity.get("is_on_biz_app") is True
+                       and identity.get("platform_type") == "CLOUD_API")
+    reconnect_review = (row.status == "disconnected" or (row.status == "connected" and
+                        (row.lease_expires_at is None or aware(row.lease_expires_at) <= now())))
+    if reconnect_review:
+        row.fence += 1
+        for conversation in db.scalars(select(Conversation).where(
+                Conversation.connector_id == row.id, Conversation.workspace_id == row.workspace_id)):
+            invalidate(db, conversation, "business_verification_gap")
+            conversation.control_state = "RECONNECT_REVIEW"
     row.status = "connected"
-    row.capabilities = {**row.capabilities, "live_receive": "supported", "send_text": "supported"}
+    row.capabilities = {**row.capabilities, "live_receive": "supported", "send_text": "supported",
+                        "business_app_coexistence": "supported" if coexistence else "unknown",
+                        "history_sync": "supported" if coexistence else "unsupported",
+                        "human_outgoing": "supported" if coexistence else "unsupported",
+                        "identity_verification": {"status": "verified", "checked_at": now().isoformat(),
+                                                  "live_delivery_verified": False}}
     row.lease_expires_at = now() + timedelta(hours=1)
     audit(db, row.workspace_id, user.id, "connector.verified", row.id)
     db.commit()
-    return public(row, "status", "account_id", "capabilities", "fence")
+    return {**public(row, "status", "account_id", "capabilities", "fence"),
+            "coexistence": coexistence, "live_delivery_verified": False,
+            "lease_expires_at": row.lease_expires_at, "reconnect_review_required": reconnect_review}
 
 
 @router.delete("/connectors/{connector_id}")
@@ -315,6 +344,9 @@ def set_permissions(conversation_id: str, body: PermissionInput,
     if not body.learn:
         db.execute(delete(StyleProfile).where(StyleProfile.conversation_id == row.id,
                                              StyleProfile.workspace_id == row.workspace_id))
+    if body.learn:
+        from .intelligence import refresh_style_from_messages
+        refresh_style_from_messages(db, row)
     audit(db, row.workspace_id, user.id, "permission.changed", row.id, version=grant.version)
     db.commit()
     return public(grant, "read", "retain", "learn", "draft", "send", "share", "version", "expires_at")
@@ -455,6 +487,8 @@ def commit_import(body: ImportInput, request: Request, user=Depends(get_current_
                             conversation_id=conv.id, message_id=msg.id, event_type="message.created", source_revision=1))
         count += 1
     invalidate(db, conv, "history_imported")
+    from .intelligence import refresh_style_from_messages
+    refresh_style_from_messages(db, conv)
     row = ImportRecord(workspace_id=conv.workspace_id, conversation_id=conv.id, source_hash=source_key,
                        owner_sender_label=body.owner_sender_label, timezone=body.timezone,
                        date_order=body.date_order, message_count=count,

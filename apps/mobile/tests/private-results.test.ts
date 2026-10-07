@@ -43,3 +43,28 @@ test('a no-change snapshot poll preserves a result while sign-out removes it',()
   assert.deepEqual(reconcilePrivateResponse(response,before,fresh),response);
   assert.equal(currentPrivateResult(entry,null),null);
 });
+
+test('a server-scoped owner answer survives its model-budget mutation but never a source/permission/owner change',()=>{
+  const before={...createDemoSnapshot(),snapshot_version:'before-model'};
+  const chat=before.conversations[0];chat.control_epoch=1;chat.revision=10;
+  chat.permissions={read:true,retain:true,learn:true,draft:true,send:false,share:false,version:4,expires_at:null};
+  const connection=before.connections.find(row=>row.id===chat.connector_id)!;connection.fence=2;
+  before.workspace.paused=false;
+  const answer={conversation_id:chat.id,audience:'owner_only',external_actions:false,text:'Owner answer',
+    authorization_context:{schema_version:1,owner_id:before.user.id,workspace_id:before.workspace.id,
+      conversation_id:chat.id,connector_id:connection.id,conversation_revision:10,control_epoch:1,
+      control_state:chat.control_state,permission_version:4,permissions:chat.permissions,permission_expires_at:null,
+      pause_generation:before.workspace.pause_generation,connector_fence:2,connector_status:connection.status,
+      memory_versions:{},expires_at:new Date(Date.now()+60000).toISOString()}};
+  const fresh={...before,snapshot_version:'after-model',budget:{id:'budget',usage:{token_units:2048}}};
+  assert.equal(reconcilePrivateResponse(answer,before,fresh),answer);
+  assert.equal(currentPrivateResult({value:answer,version:snapshotVersion(before)},fresh),answer);
+  const edited={...fresh,conversations:fresh.conversations.map(row=>({...row,revision:row.revision+1}))};
+  assert.equal(reconcilePrivateResponse(answer,before,edited),null);
+  assert.equal(currentPrivateResult({value:answer,version:snapshotVersion(before)},edited),null);
+  const changedOwner={...fresh,user:{...fresh.user,id:'new-owner'}};
+  assert.equal(reconcilePrivateResponse(answer,before,changedOwner),null);
+  assert.equal(currentPrivateResult({value:answer,version:snapshotVersion(before)},null),null);
+  // The narrower fence cannot bless an ordinary digest from an old generation.
+  assert.equal(reconcilePrivateResponse({summary:'Ordinary private digest'},before,fresh),null);
+});

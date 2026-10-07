@@ -1,4 +1,4 @@
-import type {MiloSnapshot} from '@milo/contracts';
+import {isOwnerAnswer,ownerAnswerIsCurrent,type MiloSnapshot} from '@milo/contracts';
 
 export type AuthorizedSnapshot=MiloSnapshot&{snapshot_version?:string};
 export type PrivateResult<T>={value:T;version:string};
@@ -13,6 +13,8 @@ export function snapshotVersion(snapshot:AuthorizedSnapshot|null):string {
 /** Never relabel an old private response with a newly authorized generation. */
 export function reconcilePrivateResponse<T>(value:T,before:AuthorizedSnapshot|null,fresh:AuthorizedSnapshot|null):T|null {
   if(!before||!fresh)return null;
+  if(isOwnerAnswer(value))return before.user.id===fresh.user.id&&before.workspace.id===fresh.workspace.id
+    &&ownerAnswerIsCurrent(value,fresh)?value:null;
   if(snapshotVersion(before)===snapshotVersion(fresh))return value;
   if(value&&typeof value==='object'&&'id' in value&&typeof value.id==='string'){
     const current=[...fresh.conversations,...fresh.actions,...fresh.memories,...fresh.styles,...fresh.drafts,
@@ -23,5 +25,6 @@ export function reconcilePrivateResponse<T>(value:T,before:AuthorizedSnapshot|nu
   return null;
 }
 export function currentPrivateResult<T>(entry:PrivateResult<T>|null,snapshot:AuthorizedSnapshot|null):T|null {
+  if(entry&&isOwnerAnswer(entry.value))return ownerAnswerIsCurrent(entry.value,snapshot)?entry.value:null;
   return entry&&entry.version===snapshotVersion(snapshot)?entry.value:null;
 }

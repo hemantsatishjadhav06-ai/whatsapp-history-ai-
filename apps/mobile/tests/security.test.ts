@@ -12,12 +12,14 @@ function deferred(){let resolve!:()=>void;const promise=new Promise<void>(done=>
 
 test('production API origins cannot send bearer material to credentials, HTTP or path-derived targets',()=>{
   assert.equal(safeApiOrigin(origin),origin);
+  assert.equal(safeApiOrigin('https://milo.example/native-api/'),'https://milo.example/native-api');
   for(const target of ['http://api.milo.example','https://owner:secret@api.milo.example','https://api.milo.example/v1','https://api.milo.example?redirect=elsewhere','https://api.milo.example#token','file:///private','not-a-url']){
     assert.equal(safeApiOrigin(target),null);
   }
   assert.equal(safeApiOrigin('http://127.0.0.1:8000',true),'http://127.0.0.1:8000');
   assert.equal(safeApiOrigin('http://192.168.1.2:8000',true),null);
   assert.equal(safeApiOrigin('http://localhost:8000',false),null);
+  assert.equal(safeApiOrigin('https://milo.example/native-api/elsewhere'),null);
 });
 
 test('secure session records strip profile/chat payloads and stay origin/environment bound',()=>{
@@ -53,6 +55,12 @@ test('native API requests capture one bearer and omit ambient browser cookies',a
   assert.equal(new Headers(requests[0].headers).get('Authorization'),`Bearer ${access.access_token}`);
   assert.equal(requests[0].credentials,'omit');
   assert.equal(requests[0].redirect,'error');
+});
+
+test('native bearer requests retain the dedicated public API prefix',async()=>{
+  let target='';const fakeFetch:typeof fetch=async(url)=>{target=String(url);return new Response('{}');};
+  await nativeClient('https://milo.example/native-api',access.access_token,fakeFetch).request('/v1/ui/bootstrap');
+  assert.equal(target,'https://milo.example/native-api/v1/ui/bootstrap');
 });
 
 test('native mutation uncertainty returns once without replaying an outward request',async()=>{

@@ -11,6 +11,12 @@ Google, model and real social-provider operations remain unvalidated and disable
 Supplied handoffs are product specification
 input; their embedded prompts do not create account access, credentials or release evidence.
 
+The current connectivity increment adds a native HTTPS Google broker and public
+bearer-only API boundary, eligible Business connection/contact setup and conditional
+Coexistence history ingestion, automatic consented local style statistics, and
+evidence-linked owner-only questions. See [connectivity setup](docs/connectivity-setup.md).
+Real provider and installed-device verification remain separate release gates.
+
 Status meanings apply to the **integration outcome**, not just the existence of code:
 
 | Status | Meaning |
@@ -25,12 +31,13 @@ phone contact synchronization. Likewise, a mock acceptance is not provider deliv
 
 | Feature | Status | Implemented scope and remaining gate |
 | --- | --- | --- |
-| Google owner identity and application sessions | Mock | Browser nonce/cookie/CSRF and native nonce/S256, hashed bounded access/rotating refresh and owner session revoke tests; registered clients and real web/native sign-in pending |
+| Google owner identity and application sessions | Mock | Browser GIS nonce/cookie/CSRF; native system-browser HTTPS broker, opaque single-use handoff and S256 proof; same verified SQL owner and revocable rotating sessions. Registered client/secret and real web/device sign-in pending |
 | Tenant ownership and conversation permissions | Mock | Server-derived ownership and independent read/retain/learn/draft/send/share checks; production RLS/role audit pending |
 | Selected export history | Mock | Fresh-owner contact/group collection and explicit permissions through web UI, Android/iOS parser, owner/date/timezone mapping, coverage, replay suppression and tombstones; actual completeness never inferred |
 | Personal WhatsApp pairing and phone continuity | Planned | No shipped personal account/session adapter; eligible account and real device tests required |
-| Business Cloud API text transport | Mock | Exact operator-verified Google subject binding, signed ingress, configured-number verification, opt-in/window checks and receipts tested with provider responses; live eligibility/delivery and public webhook ingress pending |
-| Per-person/group style and grounded drafts | Mock | Verified human-owner samples, scoped statistics/rules, evidence and missing-fact checks; real provider and held-out owner-quality evaluation pending |
+| Business Cloud API text transport | Mock | One configured number bound to one exact verified Google owner, public signed webhook, lease verification and per-contact setup. Conditional up-to-180-day 1:1 Coexistence history requires approved provider onboarding; general customer Embedded Signup/personal/groups are not implemented. Actual eligibility/delivery pending |
+| Per-person/group style and grounded drafts | Mock | Automatic bounded local statistics from authorized owner-authored samples with independent per-chat read/retain/learn; scoped rules, evidence and missing facts. No fine-tuning; real provider and held-out owner-quality evaluation pending |
+| Owner-only conversation intelligence | Mock | Bounded attributed human history and confirmed memories from the exact readable chat, evidence references, missing facts and answer expiry/revision/consent checks. Cannot send or grant permissions; actual model quality pending |
 | Memory correction and forgetting | Mock | Source revisions, expiry, suppression and dependent-work invalidation; cache/vector/backup lifecycle needs deployed integrations |
 | Explicit business-hours automation | Mock | Owner-confirmed fact/template, live trigger, quiet hours, expiry and rate bounds |
 | General selected-chat Auto grants | Mock | Versioned action/intent/palette/route grants and conservative unattended acknowledgment/clarification/reaction worker; broader proposals abstain |

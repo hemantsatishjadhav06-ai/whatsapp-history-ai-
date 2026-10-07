@@ -110,9 +110,10 @@ return 1
         path = canonical_path(scope["path"])
         if control:
             group, actor_limit = "control", settings.request_rate_control
-        elif path in {"/auth/nonce", "/auth/native/nonce"}:
+        elif path in {"/auth/nonce", "/auth/native/nonce", "/auth/native/google/start"}:
             group, actor_limit = "issue", settings.request_rate_auth_issues
-        elif path in {"/auth/google", "/auth/native/login", "/auth/native/refresh"}:
+        elif path in {"/auth/google", "/auth/native/login", "/auth/native/refresh",
+                      "/auth/native/google/callback", "/auth/native/google/exchange"}:
             group, actor_limit = "exchange", settings.request_rate_auth_exchanges
         else:
             group, actor_limit = "api", settings.request_rate_api
@@ -183,7 +184,7 @@ class RequestSecurityMiddleware:
             await self.app(scope, receive, send)
             return
         control = (scope["method"] not in {"GET", "HEAD", "OPTIONS"} and (
-            path in {"/pause-all", "/resume-all", "/auth/logout", "/auth/native/logout"}
+            path in {"/pause-all", "/resume-all", "/auth/logout", "/auth/native/logout", "/auth/native/revoke"}
             or path.startswith("/auth/sessions/")
             or (scope["method"] == "DELETE" and path.startswith("/memories/"))
             or (path.startswith("/conversations/") and path.rsplit("/", 1)[-1] in {"permissions", "resume", "takeover"})))

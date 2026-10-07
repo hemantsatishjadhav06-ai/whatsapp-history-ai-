@@ -12,8 +12,21 @@ npm run typecheck --workspace=@milo/mobile
 npm run dev --workspace=@milo/mobile
 ```
 
-Use [.env.example](.env.example) for public API/build configuration. Native Google
-client IDs come from the API's public config; there is no bundled client secret.
+Use [.env.example](.env.example) for public API/build configuration. The public API
+base is `https://web-production-bde60.up.railway.app/native-api`; the dedicated
+native proxy accepts app bearer sessions and excludes browser cookies. Google
+login opens the system browser through Milo's server broker, using a registered
+Web OAuth client and HTTPS callback. Only a short-lived proof-bound handoff returns
+to `milo://oauth`; Google credentials and the client secret stay off the app bundle
+and app URL. Installed iOS/Android Google client IDs are not required by this broker.
+
+The [Google, WhatsApp and intelligence setup](../../docs/connectivity-setup.md)
+documents operator configuration and real-account verification. Connections supports
+one eligible server-configured Business number for its exact verified Google owner,
+explicit contact permissions and reviewed owner writing. Conditional Coexistence
+history needs approved provider onboarding, prior history-sharing permission and
+per-contact consent. Personal linking and live groups remain unavailable; selected
+personal/group text exports remain supported.
 
 - [Implementation and remaining parity gaps](MOBILE_IMPLEMENTATION_STATUS.md)
 - [Actual cloud checks and unrun device matrix](NATIVE_DEVICE_TEST_REPORT.md)

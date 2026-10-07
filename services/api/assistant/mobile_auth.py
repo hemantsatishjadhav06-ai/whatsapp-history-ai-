@@ -80,6 +80,27 @@ def native_current_user(request, db):
     return user
 
 
+def create_native_session(claims, platform, device_name, request, response, db):
+    """One session format shared by the legacy identity exchange and HTTPS broker."""
+    name = claims.get("name")
+    name = (name.strip()[:120] if isinstance(name, str) else "Owner") or "Owner"
+    user = identity_user(db, "google:" + claims["sub"], claims["email"].lower(), name)
+    token = "na_" + secrets.token_urlsafe(32)
+    refresh = "nr_" + secrets.token_urlsafe(32)
+    expires = now() + timedelta(seconds=request.app.state.settings.native_session_ttl_seconds)
+    refresh_expires = now() + timedelta(seconds=request.app.state.settings.native_refresh_ttl_seconds)
+    session = NativeSession(user_id=user.id, token_hash=digest(token), platform=platform,
+                            device_name=device_name, expires_at=expires,
+                            refresh_token_hash=digest(refresh), refresh_expires_at=refresh_expires)
+    db.add(session)
+    db.flush()
+    db.commit()
+    response.headers["Cache-Control"] = "no-store"
+    return {"access_token": token, "token_type": "Bearer", "expires_at": expires.isoformat(),
+            "session_id": session.id, "user": user_payload(user), "refresh_supported": True,
+            "refresh_token": refresh, "refresh_expires_at": refresh_expires.isoformat()}
+
+
 @router.post("/auth/native/nonce")
 def native_nonce(body: NativeChallengeInput, request: Request, response: Response, db=Depends(get_db)):
     _native_request(request)
@@ -113,23 +134,7 @@ def native_login(body: NativeLoginInput, request: Request, response: Response, d
                           NativeLoginChallenge.expires_at > now()).execution_options(synchronize_session=False))
     if consumed.rowcount != 1:
         raise HTTPException(401, "Login nonce was already consumed or expired")
-    name = claims.get("name")
-    name = (name.strip()[:120] if isinstance(name, str) else "Owner") or "Owner"
-    user = identity_user(db, "google:" + claims["sub"], claims["email"].lower(), name)
-    token = "na_" + secrets.token_urlsafe(32)
-    refresh = "nr_" + secrets.token_urlsafe(32)
-    expires = now() + timedelta(seconds=request.app.state.settings.native_session_ttl_seconds)
-    refresh_expires = now() + timedelta(seconds=request.app.state.settings.native_refresh_ttl_seconds)
-    session = NativeSession(user_id=user.id, token_hash=digest(token), platform=challenge.platform,
-                            device_name=challenge.device_name, expires_at=expires,
-                            refresh_token_hash=digest(refresh), refresh_expires_at=refresh_expires)
-    db.add(session)
-    db.flush()
-    db.commit()
-    response.headers["Cache-Control"] = "no-store"
-    return {"access_token": token, "token_type": "Bearer", "expires_at": expires.isoformat(),
-            "session_id": session.id, "user": user_payload(user), "refresh_supported": True,
-            "refresh_token": refresh, "refresh_expires_at": refresh_expires.isoformat()}
+    return create_native_session(claims, challenge.platform, challenge.device_name, request, response, db)
 
 
 @router.post("/auth/native/refresh")
@@ -173,6 +178,14 @@ def native_logout(request: Request, user=Depends(get_current_user), db=Depends(g
     db.commit()
 
 
+@router.post("/auth/native/revoke", status_code=204)
+def native_revoke(body: NativeRefreshInput, request: Request, db=Depends(get_db)):
+    """Possession of the refresh secret can revoke a device after access expiry."""
+    _native_request(request)
+    db.execute(delete(NativeSession).where(NativeSession.refresh_token_hash == digest(body.refresh_token)))
+    db.commit()
+
+
 @router.get("/auth/sessions")
 def list_sessions(request: Request, user=Depends(get_current_user), db=Depends(get_db)):
     current = request.state.session_record
@@ -203,3 +216,7 @@ def revoke_session(session_id: str, request: Request, response: Response, user=D
                                httponly=True, samesite="lax")
     db.delete(row)
     db.commit()
+
+
+from .native_oauth import router as google_broker_router  # noqa: E402
+router.include_router(google_broker_router)

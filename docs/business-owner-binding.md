@@ -12,6 +12,13 @@ user ID, role, `google:` prefix or value submitted by a customer. Only that exac
 verified Google identity may create or verify the configured Business connector.
 All API and worker processes need the same binding, number ID and encryption key.
 
+Once the intended owner signs in, the authenticated read-only
+`/api/integrations/whatsapp/operator-identity?workspace_id=<their-workspace-id>`
+returns their verified raw `google_subject` without tokens. Development identities
+are rejected and foreign workspaces cannot be read. Native clients use the same
+route under `/native-api/v1` with their bearer session. Use the returned raw subject
+verbatim in protected operator settings. See [connectivity setup](connectivity-setup.md).
+
 The default binding is blank. Blank or different identity blocks new claims,
 verification and Business draft submission, and ignores signed webhook messages
 and receipts for already registered unauthorized workspaces. Existing rows are

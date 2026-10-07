@@ -1,7 +1,8 @@
 # Milo native development and release runbook
 
-Updated 7 October 2026. Cloud source/typecheck/export is verified. Signing,
-installed builds and store publication have not been performed.
+Updated 7 October 2026. Prior cloud source/typecheck/export evidence is recorded
+in the device report. Signing, installed builds and store publication have not
+been performed; implementation of the OAuth broker is not a live-device result.
 
 ## Reproduce cloud validation
 
@@ -31,13 +32,25 @@ web/static routes, not APK/IPA files. No reusable EAS credential is stored there
 
 Copy `.env.example` to an ignored local env file or configure build environment
 settings. Only `EXPO_PUBLIC_API_URL` and `EXPO_PUBLIC_MILO_ENV` are consumed. Use a
-trusted HTTPS origin without path/query/credentials; preview/production reject
-HTTP. `.invalid` in the example deliberately connects nothing. Installed-app
-Google IDs are retrieved from `/v1/auth/config`; configure the corresponding
-backend `GOOGLE_IOS_CLIENT_ID`/`GOOGLE_ANDROID_CLIENT_ID` and registered redirect
-in secure environment settings. Client IDs are public; client/provider/model
-secrets must never enter a mobile bundle. The configured scheme/path is
-`milo://oauth`; verify the actual native redirect against the provider before use.
+trusted HTTPS origin, optionally with the exact `/native-api` prefix, and no query,
+fragment or credentials; preview/production reject HTTP. The example points to
+`https://web-production-bde60.up.railway.app/native-api`, whose dedicated proxy
+accepts native bearer sessions and excludes browser cookies. An API URL does not
+enable Google or WhatsApp access by itself.
+
+Configure a **Web application** OAuth client and consent screen in the owner's
+Google Cloud project. Register Milo's public website JavaScript origin and the
+exact HTTPS redirect `https://web-production-bde60.up.railway.app/api/auth/native/google/callback`.
+Privately configure backend `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`,
+`GOOGLE_NATIVE_REDIRECT_URI` for that HTTPS callback and
+`GOOGLE_NATIVE_APP_REDIRECT_URI=milo://oauth`. The native app fetches availability
+from `/v1/auth/config`; the system browser sends Google only the registered HTTPS
+callback. Milo then returns a short-lived opaque handoff to the installed app,
+which exchanges it using its original S256 verifier. No Google code, ID/access
+token or client secret belongs in the custom-scheme URL or mobile bundle.
+`GOOGLE_IOS_CLIENT_ID` and `GOOGLE_ANDROID_CLIENT_ID` alone cannot enable this
+broker and are not required by its Web-client flow. Full registration details are
+in [connectivity setup](../../docs/connectivity-setup.md).
 
 `npm run dev --workspace=@milo/mobile` starts Metro for development. Expo Go is
 only a synthetic exploration aid and is not native integration evidence.
@@ -63,6 +76,15 @@ report, including concurrent web/native revoke/Forget, offline Pause, expired
 refresh, process kill, backup behavior, source authenticity and no duplicate
 submission. Enable only eligible tested transport capabilities. Speech, push and
 OS Contacts remain disabled until their own adapter/device evidence exists.
+Verify the same real Google account resolves to the same owner/workspace on web
+and installed iOS/Android builds. Test system-browser cancellation, the exact HTTPS
+callback and `milo://oauth` app handoff, expired/replayed handoffs, proof mismatch,
+session expiry and logout/revocation. For the operator-configured Business number,
+test signed incoming contact events and consent boundaries; conditional Coexistence
+history additionally requires approved onboarding, prior provider sharing consent
+and actual permitted-history arrival. Personal QR linking and live groups remain
+unsupported. Synthetic browser/API cases and Hermes export do not replace these
+installed-device or live-provider checks.
 Re-run the dependency audit and review unresolved Expo/RN build-tool advisories;
 no forced incompatible SDK downgrade or unchecked transitive override is approved.
 

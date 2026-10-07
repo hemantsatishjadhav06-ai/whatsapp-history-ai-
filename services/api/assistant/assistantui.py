@@ -37,13 +37,19 @@ router = APIRouter(tags=["UI bootstrap", "client configuration"])
 
 
 def auth_config(settings):
+    from .native_oauth import broker_configured
+    native_broker_ready = broker_configured(settings)
     return {"backend_configured": True, "google_configured": bool(settings.google_client_id),
             "client_id": settings.google_client_id or None,
             "google": {"client_id": settings.google_client_id or None,
                        "android_client_id": settings.google_android_client_id or None,
                        "ios_client_id": settings.google_ios_client_id or None,
                        "configured": bool(settings.google_client_id),
-                       "native_configured": bool(settings.google_android_client_id or settings.google_ios_client_id)},
+                       "native_configured": native_broker_ready,
+                       "native_broker_configured": native_broker_ready,
+                       "native_platforms": {"ios": native_broker_ready, "android": native_broker_ready},
+                       "native_flow": "https_google_broker_with_one_use_S256_handoff",
+                       "native_broker_live_verified": False},
             "browser_authentication": "http_only_cookie_with_csrf",
             "native_authentication": "revocable_bearer_with_google_nonce_and_S256_proof",
             "native_refresh_supported": True,

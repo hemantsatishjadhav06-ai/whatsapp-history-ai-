@@ -2866,6 +2866,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/auth/native/revoke": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Native Revoke
+         * @description Possession of the refresh secret can revoke a device after access expiry.
+         */
+        post: operations["native_revoke_auth_native_revoke_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/auth/sessions": {
         parameters: {
             query?: never;
@@ -2895,6 +2915,57 @@ export interface paths {
         post?: never;
         /** Revoke Session */
         delete: operations["revoke_session_auth_sessions__session_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/native/google/start": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Start Native Google */
+        post: operations["start_native_google_auth_native_google_start_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/native/google/callback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Native Google Callback */
+        get: operations["native_google_callback_auth_native_google_callback_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/native/google/exchange": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Finish Native Google */
+        post: operations["finish_native_google_auth_native_google_exchange_post"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -2968,6 +3039,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/auth/native/revoke": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Native Revoke
+         * @description Possession of the refresh secret can revoke a device after access expiry.
+         */
+        post: operations["native_revoke_v1_auth_native_revoke_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/auth/sessions": {
         parameters: {
             query?: never;
@@ -2997,6 +3088,57 @@ export interface paths {
         post?: never;
         /** Revoke Session */
         delete: operations["revoke_session_v1_auth_sessions__session_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/auth/native/google/start": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Start Native Google */
+        post: operations["start_native_google_v1_auth_native_google_start_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/auth/native/google/callback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Native Google Callback */
+        get: operations["native_google_callback_v1_auth_native_google_callback_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/auth/native/google/exchange": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Finish Native Google */
+        post: operations["finish_native_google_v1_auth_native_google_exchange_post"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -3212,6 +3354,226 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/integrations/whatsapp/operator-identity": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Own Operator Identity
+         * @description Let a signed-in owner identify themselves for manual deployment binding.
+         *
+         *     This reveals only the current owner's own stable Google subject. It does
+         *     not grant provider access, disclose the configured operator, or change the
+         *     deployment binding. Google tokens and application session secrets remain
+         *     private to their existing exchanges.
+         */
+        get: operations["own_operator_identity_integrations_whatsapp_operator_identity_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/integrations/whatsapp/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Connection Status */
+        get: operations["connection_status_integrations_whatsapp_status_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/integrations/whatsapp/connect": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Connect Business */
+        post: operations["connect_business_integrations_whatsapp_connect_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/integrations/whatsapp/contacts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Authorize Contact */
+        post: operations["authorize_contact_integrations_whatsapp_contacts_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/integrations/whatsapp/owner-authorship": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Confirm Owner Authorship */
+        post: operations["confirm_owner_authorship_integrations_whatsapp_owner_authorship_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/integrations/whatsapp/history-sync": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Sync Business History */
+        post: operations["sync_business_history_integrations_whatsapp_history_sync_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/integrations/whatsapp/operator-identity": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Own Operator Identity
+         * @description Let a signed-in owner identify themselves for manual deployment binding.
+         *
+         *     This reveals only the current owner's own stable Google subject. It does
+         *     not grant provider access, disclose the configured operator, or change the
+         *     deployment binding. Google tokens and application session secrets remain
+         *     private to their existing exchanges.
+         */
+        get: operations["own_operator_identity_v1_integrations_whatsapp_operator_identity_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/integrations/whatsapp/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Connection Status */
+        get: operations["connection_status_v1_integrations_whatsapp_status_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/integrations/whatsapp/connect": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Connect Business */
+        post: operations["connect_business_v1_integrations_whatsapp_connect_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/integrations/whatsapp/contacts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Authorize Contact */
+        post: operations["authorize_contact_v1_integrations_whatsapp_contacts_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/integrations/whatsapp/owner-authorship": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Confirm Owner Authorship */
+        post: operations["confirm_owner_authorship_v1_integrations_whatsapp_owner_authorship_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/integrations/whatsapp/history-sync": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Sync Business History */
+        post: operations["sync_business_history_v1_integrations_whatsapp_history_sync_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -3279,6 +3641,20 @@ export interface components {
              * @default 3600
              */
             expires_in_seconds: number;
+        };
+        /** AskMe */
+        AskMe: {
+            /** Workspace Id */
+            workspace_id: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            command: "ask_me";
+            /** Conversation Id */
+            conversation_id: string;
+            /** Question */
+            question: string;
         };
         /** AutomationGrant */
         AutomationGrant: {
@@ -3426,6 +3802,23 @@ export interface components {
              */
             limit: number;
         };
+        /** ConfirmAuthorship */
+        ConfirmAuthorship: {
+            /** Conversation Id */
+            conversation_id: string;
+            /** Message Ids */
+            message_ids: string[];
+            /**
+             * Confirm Authored By Owner
+             * @constant
+             */
+            confirm_authored_by_owner: true;
+        };
+        /** ConnectInput */
+        ConnectInput: {
+            /** Workspace Id */
+            workspace_id: string;
+        };
         /** ConnectorInput */
         ConnectorInput: {
             /** Workspace Id */
@@ -3450,21 +3843,6 @@ export interface components {
              * Format: date-time
              */
             expires_at: string;
-        };
-        /** ContactInput */
-        ContactInput: {
-            /** Conversation Id */
-            conversation_id: string;
-            /** Source Message Id */
-            source_message_id: string;
-            /**
-             * Destination
-             * @default assistant_local
-             * @enum {string}
-             */
-            destination: "assistant_local" | "whatsapp" | "google_contacts" | "phone_os";
-            /** Display Name */
-            display_name?: string | null;
         };
         /** ConversationInput */
         ConversationInput: {
@@ -3799,6 +4177,28 @@ export interface components {
             /** Code Challenge */
             code_challenge: string;
         };
+        /** NativeGoogleExchange */
+        NativeGoogleExchange: {
+            /** Handoff */
+            handoff: string;
+            /** Code Verifier */
+            code_verifier: string;
+        };
+        /** NativeGoogleStart */
+        NativeGoogleStart: {
+            /**
+             * Platform
+             * @enum {string}
+             */
+            platform: "ios" | "android";
+            /**
+             * Device Name
+             * @default My device
+             */
+            device_name: string;
+            /** Code Challenge */
+            code_challenge: string;
+        };
         /** NativeKey */
         NativeKey: {
             /** Id */
@@ -4043,6 +4443,11 @@ export interface components {
             /** Reviewed */
             reviewed?: boolean | null;
         };
+        /** SyncInput */
+        SyncInput: {
+            /** Connector Id */
+            connector_id: string;
+        };
         /** TaskCreate */
         TaskCreate: {
             /** Workspace Id */
@@ -4130,6 +4535,60 @@ export interface components {
              * @default
              */
             instruction: string;
+        };
+        /** ContactInput */
+        assistant__people__ContactInput: {
+            /** Conversation Id */
+            conversation_id: string;
+            /** Source Message Id */
+            source_message_id: string;
+            /**
+             * Destination
+             * @default assistant_local
+             * @enum {string}
+             */
+            destination: "assistant_local" | "whatsapp" | "google_contacts" | "phone_os";
+            /** Display Name */
+            display_name?: string | null;
+        };
+        /** ContactInput */
+        assistant__whatsapp__ContactInput: {
+            /** Connector Id */
+            connector_id: string;
+            /** Phone Number */
+            phone_number: string;
+            /** Title */
+            title: string;
+            /**
+             * Read
+             * @default false
+             */
+            read: boolean;
+            /**
+             * Retain
+             * @default false
+             */
+            retain: boolean;
+            /**
+             * Learn
+             * @default false
+             */
+            learn: boolean;
+            /**
+             * Draft
+             * @default false
+             */
+            draft: boolean;
+            /**
+             * Send
+             * @default false
+             */
+            send: boolean;
+            /**
+             * Recipient Opted In
+             * @default false
+             */
+            recipient_opted_in: boolean;
         };
     };
     responses: never;
@@ -9393,7 +9852,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["ContactInput"];
+                "application/json": components["schemas"]["assistant__people__ContactInput"];
             };
         };
         responses: {
@@ -9605,7 +10064,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["ContactInput"];
+                "application/json": components["schemas"]["assistant__people__ContactInput"];
             };
         };
         responses: {
@@ -9898,7 +10357,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["CatchMeUp"] | components["schemas"]["WriteWithMe"] | components["schemas"]["TeachMe"] | components["schemas"]["Pause"] | components["schemas"]["Resume"];
+                "application/json": components["schemas"]["CatchMeUp"] | components["schemas"]["WriteWithMe"] | components["schemas"]["AskMe"] | components["schemas"]["TeachMe"] | components["schemas"]["Pause"] | components["schemas"]["Resume"];
             };
         };
         responses: {
@@ -10064,7 +10523,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["CatchMeUp"] | components["schemas"]["WriteWithMe"] | components["schemas"]["TeachMe"] | components["schemas"]["Pause"] | components["schemas"]["Resume"];
+                "application/json": components["schemas"]["CatchMeUp"] | components["schemas"]["WriteWithMe"] | components["schemas"]["AskMe"] | components["schemas"]["TeachMe"] | components["schemas"]["Pause"] | components["schemas"]["Resume"];
             };
         };
         responses: {
@@ -10497,6 +10956,37 @@ export interface operations {
             };
         };
     };
+    native_revoke_auth_native_revoke_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NativeRefreshInput"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_sessions_auth_sessions_get: {
         parameters: {
             query?: never;
@@ -10534,6 +11024,105 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    start_native_google_auth_native_google_start_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NativeGoogleStart"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    native_google_callback_auth_native_google_callback_get: {
+        parameters: {
+            query: {
+                state: string;
+                code?: string | null;
+                error?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    finish_native_google_auth_native_google_exchange_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NativeGoogleExchange"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
             };
             /** @description Validation Error */
             422: {
@@ -10663,6 +11252,37 @@ export interface operations {
             };
         };
     };
+    native_revoke_v1_auth_native_revoke_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NativeRefreshInput"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_sessions_v1_auth_sessions_get: {
         parameters: {
             query?: never;
@@ -10700,6 +11320,105 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    start_native_google_v1_auth_native_google_start_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NativeGoogleStart"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    native_google_callback_v1_auth_native_google_callback_get: {
+        parameters: {
+            query: {
+                state: string;
+                code?: string | null;
+                error?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    finish_native_google_v1_auth_native_google_exchange_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NativeGoogleExchange"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
             };
             /** @description Validation Error */
             422: {
@@ -11044,6 +11763,394 @@ export interface operations {
         responses: {
             /** @description Successful Response */
             201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    own_operator_identity_integrations_whatsapp_operator_identity_get: {
+        parameters: {
+            query: {
+                workspace_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    connection_status_integrations_whatsapp_status_get: {
+        parameters: {
+            query: {
+                workspace_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    connect_business_integrations_whatsapp_connect_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConnectInput"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    authorize_contact_integrations_whatsapp_contacts_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["assistant__whatsapp__ContactInput"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    confirm_owner_authorship_integrations_whatsapp_owner_authorship_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConfirmAuthorship"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    sync_business_history_integrations_whatsapp_history_sync_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SyncInput"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    own_operator_identity_v1_integrations_whatsapp_operator_identity_get: {
+        parameters: {
+            query: {
+                workspace_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    connection_status_v1_integrations_whatsapp_status_get: {
+        parameters: {
+            query: {
+                workspace_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    connect_business_v1_integrations_whatsapp_connect_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConnectInput"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    authorize_contact_v1_integrations_whatsapp_contacts_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["assistant__whatsapp__ContactInput"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    confirm_owner_authorship_v1_integrations_whatsapp_owner_authorship_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConfirmAuthorship"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    sync_business_history_v1_integrations_whatsapp_history_sync_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SyncInput"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };

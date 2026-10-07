@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic';
 const ALLOWED = /^(?:auth\/(?:config|nonce|google|csrf|logout|sessions(?:\/[^/]+)?)|me|ui\/(?:bootstrap|updates|resolve)|(?:workspaces|connectors|conversations|drafts|messages|imports|inbox|tasks|memories|forward-routes|actions|jobs|schedules|scheduled-intents|contacts|people|integrations)(?:\/[A-Za-z0-9_.:@+-]+){0,3}|automation\/grants(?:\/[^/]+)?|assistant\/(?:commands|digest)|privacy\/(?:retention(?:\/sweep)?|model-processing)|pause-all|resume-all|activity|data-export|account-data)$/;
 const MAX_JSON_BODY_BYTES = 64 * 1024;
 const MAX_IMPORT_BODY_BYTES = 12 * 1024 * 1024;
-const CONTROL_ROUTES = /^(?:pause-all|resume-all|auth\/logout|conversations\/[^/]+\/control|actions\/[^/]+\/cancel)$/;
+const CONTROL_ROUTES = /^(?:pause-all|resume-all|auth\/logout|conversations\/[^/]+\/(?:control|takeover|resume)|actions\/[^/]+\/cancel)$/;
 
 function loopback(hostname: string) {
   return hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '[::1]' || hostname === '::1';
@@ -85,8 +85,9 @@ async function proxy(request: NextRequest, context: { params: Promise<{ path: st
   catch { return Response.json({ detail: 'Backend configuration is unavailable' }, { status: 503 }); }
   upstream.search = request.nextUrl.search;
   const isImport = route === 'imports' || route === 'imports/preview';
-  const isControl = (request.method === 'POST' && CONTROL_ROUTES.test(route)) || (request.method === 'DELETE'
-    && /^(?:automation\/grants\/[^/]+|connectors\/[^/]+|account-data)$/.test(route));
+  const isControl = (request.method === 'POST' && CONTROL_ROUTES.test(route))
+    || (request.method === 'PUT' && /^conversations\/[^/]+\/permissions$/.test(route))
+    || (request.method === 'DELETE' && /^(?:auth\/sessions\/[^/]+|memories\/[^/]+|automation\/grants\/[^/]+|connectors\/[^/]+|account-data)$/.test(route));
   const lease = acquireProxyLease(isControl, isImport);
   if (!lease) return Response.json({detail:'The web proxy is busy. This request was not sent to the backend.',reason_code:'PROXY_BUSY'},
     {status:503,headers:{'Retry-After':'1','Cache-Control':'no-store'}});

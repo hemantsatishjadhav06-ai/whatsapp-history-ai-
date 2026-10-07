@@ -103,13 +103,23 @@ Configure API, Jobs and Retention using Railway's protected runtime variables. A
 | `ALLOW_DEV_AUTH` | `false` |
 | `ALLOWED_ORIGINS` | The exact HTTPS web origin and other explicitly configured client origins |
 | `GOOGLE_CLIENT_ID` | The owner's configured Google OAuth application client ID |
-| `GOOGLE_ANDROID_CLIENT_ID`, `GOOGLE_IOS_CLIENT_ID` | Installed-app client IDs for each native platform that will be enabled |
+| `GOOGLE_CLIENT_SECRET` | Server-held secret for the registered Web OAuth client; required by the native HTTPS broker |
+| `GOOGLE_NATIVE_REDIRECT_URI` | `https://web-production-bde60.up.railway.app/api/auth/native/google/callback`, registered exactly with Google |
+| `GOOGLE_NATIVE_APP_REDIRECT_URI` | `milo://oauth`; only an opaque single-use handoff is returned here |
 | `MODEL_PROVIDER` | `disabled` until a verified model configuration is supplied |
 | `ENABLE_EXTERNAL_SENDS` | `false` until the provider account and send capability are verified |
 
 Keep secrets outside Git, image layers, build arguments and command output. API and all database workers must use the same encryption key; changing it without a migration makes existing encrypted data unreadable. Add the web HTTPS origin to Google OAuth's authorized origins. Publishing the frontend does not verify Google authentication, WhatsApp pairing, history sync or provider delivery.
 
-Native clients use a separately configured HTTPS API origin (`EXPO_PUBLIC_API_URL`) and the installed-app Google client IDs above. Keep their Expo redirect and Google application configuration aligned with the released app. These public client settings do not contain session or service credentials. Leave native sign-in unavailable until its provider configuration and a real device login have been verified.
+Native clients use `EXPO_PUBLIC_API_URL=https://web-production-bde60.up.railway.app/native-api`.
+The dedicated public proxy accepts native bearer sessions and rejects ambient browser
+cookies/origins; the API remains private. Google uses the registered HTTPS server
+broker callback and the app's original S256 proof. Do not ship the Google client
+secret or use an Android custom-scheme Google callback. Legacy native client IDs
+do not configure the broker. The signed Meta callback is also on public Web at
+`/api/webhooks/whatsapp`, with raw-byte HMAC verification. See
+[connectivity setup](connectivity-setup.md). Real Google/Meta and installed-device
+acceptance must pass before enabling their public operations.
 
 For separate browser source buckets, configure the same dedicated secret as Web `BACKEND_PROXY_KEY` and API `TRUSTED_PROXY_KEY`. Keep Web `TRUST_PROXY_HOPS=0` until Railway ingress behavior has been verified; this ignores requester forwarding headers. An enabled hop count must select a provider-verified forwarding suffix, never a client-supplied prefix. Until trusted source forwarding is configured, browser requests share the private Web peer's source bucket, which is conservative but restricts large cohorts. Use private database/Redis routing and remove unneeded public TCP proxies from newly provisioned data services.
 

@@ -7,17 +7,17 @@ account/adapter capability and current authority again.
 
 | Capability | Export-only | Mock development connector | Business Cloud adapter | Personal linked device |
 | --- | --- | --- | --- | --- |
-| Authorized text history | Owner-provided file | Synthetic | No general history sync implemented | Unknown; no adapter shipped |
+| Authorized text history | Owner-provided file, including selected personal/group exports | Synthetic | Conditional up-to-180-day 1:1 Business app Coexistence request and signed ingestion; approved onboarding/history sharing and per-contact consent required | Unsupported; no personal adapter shipped |
 | Observed import coverage | Supported locally | Synthetic records only | Live history coverage unknown | Unknown |
 | QR / pairing code | Unsupported | Unsupported | Unsupported by current adapter | Planned; unverified |
-| Primary-phone continuity | No device connection | Not applicable | Unknown; requires eligible coexistence test | Unknown |
-| Receive/edit/delete text | File snapshot only | Synthetic | Signed text webhook; edit/delete coverage needs provider test | Unknown |
+| Primary-phone continuity | No device connection | Not applicable | Eligible Coexistence detection implemented; actual phone continuity requires an account/device test | Unknown |
+| Receive/edit/delete text | File snapshot only | Synthetic | Signed Business contact text, app echoes and eligible history ingestion; individual contact read/retain gates; actual provider edit/delete coverage unverified | Unknown |
 | Ordinary text send | Unsupported | Synthetic acceptance | Implemented; actual eligible account/delivery unverified | Unknown |
 | Native quote | Unsupported: file has no native original | Synthetic authentic-text fixture; same-chat source required | Not enabled by current transport | Unknown |
 | Native reaction | Unsupported: file has no native original | Synthetic authentic-text fixture, verified habit and conservative semantics | Not enabled by current transport | Unknown |
 | Native forward | Unsupported: file has no native original | Synthetic authentic-text fixture and exact two-audience route | Not enabled by current transport | Unknown |
 | Delivery/read reconciliation | Unsupported | Synthetic correlated receipt | Receipt handling implemented; actual provider reconciliation unverified | Unknown |
-| Group read/send and membership | File may describe a group | Synthetic; separate group authority required | Current adapter restricted to contact text | Unknown |
+| Group read/send and membership | Authorized group text snapshot only | Synthetic; separate group authority required | Unsupported; live text and conditional history are restricted to individual contacts | Unsupported; no personal adapter shipped |
 | Assistant-local contact save | Text export cannot verify a live identity | Exact identity SQL save; no external write | Local SQL capability independent of external contact write | Local SQL capability requires trusted eligible identity/source |
 | WhatsApp contact write | Unsupported | No external write | Unavailable | Unknown; version-specific eligibility/device tests required |
 | Google Contacts write | Separate authorization required | No external write | Separate authorization required | Separate authorization required |
@@ -29,6 +29,17 @@ because no Baileys adapter is shipped. The existing Business adapter uses the co
 Graph API version, default `v23.0`; this is a configuration default, not a current eligibility
 or compatibility certification.
 
+The pilot binds one server-configured eligible Business number to one exact verified
+Google owner. Website/native clients cannot choose a server-held account, supply its
+access token or claim another owner's number. General multi-tenant Embedded Signup,
+tenant-specific provider asset grants and personal QR linking are not implemented.
+An existing approved provider Coexistence setup can enable a conditional history
+request during Meta's onboarding window. That request is claimed durably before
+submission; accepted, failed or uncertain outcomes are recorded and never blindly
+resubmitted. Provider acceptance does not establish recovered history or completeness.
+See [connectivity setup](connectivity-setup.md) for registration, permissions and
+the live verification steps.
+
 Evidence references: [QA report](QA_REPORT.md), backend `tests/test_webhooks.py`,
 `tests/test_messaging.py`, `tests/test_automation.py`, and
 `tests/test_native.py`, `tests/test_actions.py`, `tests/test_people.py`, and
@@ -38,6 +49,12 @@ duplicate suppression and forged-recipient rejection. The Node typecheck and 33 
 passed. This demonstrates service integration, without a provider operation.
 Account-specific native operation results remain unknown until they
 are measured on an explicitly permitted eligible test account.
+
+Current connectivity regression locations include `tests/test_native_oauth.py`,
+`tests/test_whatsapp_connection.py`, `tests/test_connected_intelligence.py`,
+`tests/browser/google-login.spec.ts` and `tests/browser/whatsapp-connection.spec.ts`.
+Their provider responses are synthetic fixtures; they do not establish live Google
+login, recovered WhatsApp history or recipient delivery.
 
 Before marking a real capability supported, record adapter version, account type/market,
 test date, test reference, actual source availability, recipient/audience restrictions,
@@ -49,12 +66,17 @@ information must not be shared with another customer through an owner forwarding
 
 | Capability | Implemented contract | Evidence / remaining boundary |
 | --- | --- | --- |
-| Web Google identity | Nonce-bound verified claim exchange, HttpOnly cookie and CSRF-protected mutations | Synthetic verification tests; registered real client/origin journey pending |
-| Native Google identity | iOS/Android audience, single-use nonce and S256 proof exchange | Synthetic verification tests; actual system OAuth/redirect/device journey pending |
+| Web Google identity | Google Identity Services, nonce-bound verified claim exchange, HttpOnly cookie and CSRF-protected mutations | Operator must register the actual Web client/origin; real Google-account journey remains unverified |
+| Native Google identity | System-browser OAuth through a server broker, registered HTTPS Google callback, short-lived opaque app handoff and original S256 verifier; same verified SQL owner as web | Google client secret remains server-side; actual installed system-browser/callback/device journey remains unverified |
+| Native public API | Dedicated bearer-only `/native-api` proxy to the private API | Browser cookies and internal service credentials are excluded; real installed-client network/session proof remains separate |
 | Native access and refresh | Hash-only secrets, bounded access, rotating single-use refresh and original <=30-day deadline | CAS/concurrency/expiry/revoke fixtures; installed SecureStore behavior separately unverified |
 | Security/device sessions | Owner-scoped `/auth/sessions` list/revoke plus native logout | Application session management; no APNs/FCM registration or push token system |
 | Authorized UI snapshot | `/ui/bootstrap`, default 30/max 100 readable conversation page with cursor, bounded resources | Scoped API fixture tests; full 10,000-chat/200,000-message UX not measured |
 | Safe deep-link lookup | Authenticated `/ui/resolve` checks exact object ownership/scope and has no side effect | Synthetic substitution/deleted-object negatives; installed links pending |
+| Business connection setup | Real server configuration/status, explicit number verification and bounded lease; exact owner-scoped contact setup in web/native | Each read/retain/learn/draft/send grant starts off; sending additionally needs opt-in and current authority; live delivery unverified |
+| Eligible Business history | Conditional Coexistence history request, explicit prior provider sharing consent and per-contact read/retain scope | Up to 180 days of eligible 1:1 history; groups unsupported; durable recorded request blocks blind retries and is not proof of history arrival |
+| Local voice learning | Bounded per-chat style statistics from consented, reviewed owner-authored examples; employee/assistant writing is not assumed to be owner writing | No model fine-tuning or automatic access to all account messages; real personalized-reply quality remains unverified |
+| Owner-only chat questions | Selected-chat evidence retrieval, source references, missing facts and bounded answer expiry/authority checks | Cannot send, grant permissions or create memory; writing/forwarding remain separate authorized flows |
 | Mobile recovery | Client fetches authorized snapshot and discards stale session responses | Native session/security helpers and all-platform export passed; no installed lifecycle, complete `/mobile/sync` resume/gap protocol or live provider recovery proof |
 | Voice/transcription | Type path and explicit unavailable state | No configured speech provider, ambient capture or verified native microphone integration |
 | Private push | Unavailable | Actual APNs/FCM, permissions, generic payloads and authenticated deep links need separate implementation/test |

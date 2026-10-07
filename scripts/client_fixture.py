@@ -1,5 +1,6 @@
 """Disposable loopback API for real browser integration tests; never deploy it."""
 
+import argparse
 import secrets
 import tempfile
 from datetime import UTC, datetime
@@ -58,14 +59,28 @@ def seed(application, settings):
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--port', type=int, default=8001)
+    parser.add_argument('--web-origin', action='append')
+    arguments = parser.parse_args()
+    if not 1024 <= arguments.port <= 65535:
+        parser.error('Use an unprivileged loopback port')
+    from urllib.parse import urlsplit
+    origins = arguments.web_origin or ['http://127.0.0.1:3000', 'http://localhost:3000']
+    for value in origins:
+        endpoint = urlsplit(value)
+        if (endpoint.scheme != 'http' or endpoint.hostname not in {'localhost', '127.0.0.1', '::1'}
+                or endpoint.path not in {'', '/'} or endpoint.username or endpoint.password
+                or endpoint.query or endpoint.fragment):
+            parser.error('Only exact loopback test origins are accepted')
     with tempfile.TemporaryDirectory(prefix="milo-browser-", dir="/tmp") as directory:
         settings = Settings(
             _env_file=None, environment="test", database_url=f"sqlite:///{Path(directory) / 'fixture.db'}",
             encryption_key=Fernet.generate_key().decode(), allow_dev_auth=True, session_secure=False,
             model_provider="mock", internal_service_token=secrets.token_urlsafe(32),
-            allowed_origins="http://127.0.0.1:3000,http://localhost:3000",
+            allowed_origins=','.join(origins),
         )
         app = create_app(settings)
         Base.metadata.create_all(app.state.engine)
         seed(app, settings)
-        uvicorn.run(app, host="127.0.0.1", port=8001, access_log=False)
+        uvicorn.run(app, host="127.0.0.1", port=arguments.port, access_log=False)

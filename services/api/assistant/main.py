@@ -74,9 +74,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             raise HTTPException(503, "Database schema or request-limit service is not ready")
         return {"status": "ok", "external_integrations": "not_validated"}
 
-    from . import actions, assistantui, auth, automation, companion, core, intelligence, jobs, lifecycle, messaging, mobile_auth, native, people, tasks, webhooks
+    from . import actions, assistantui, auth, automation, companion, core, intelligence, jobs, lifecycle, messaging, mobile_auth, native, people, tasks, webhooks, whatsapp
     for module in (auth, core, intelligence, messaging, tasks, webhooks, automation,
-                   native, actions, jobs, people, companion, lifecycle, mobile_auth, assistantui):
+                   native, actions, jobs, people, companion, lifecycle, mobile_auth, assistantui, whatsapp):
         application.include_router(module.router)
         application.include_router(module.router, prefix="/v1")
     return application

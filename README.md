@@ -1,12 +1,17 @@
 # Milo relationship assistant
 
 Live pilot: [Open Milo](https://web-production-bde60.up.railway.app).
-Hosted checks passed; Google sign-in, model generation and external sending remain
-disabled, and personal WhatsApp pairing is unavailable.
+The last verified hosted increment passed its acceptance checks with Google sign-in,
+model generation and external sending disabled. Current source adds the connectivity
+flows below; implementation alone does not establish a real Google login or WhatsApp
+delivery. Personal WhatsApp pairing remains unavailable.
 
-A WhatsApp-first communication assistant with Milo web and native clients. It imports authorized chat exports,
-builds inspectable writing-style previews for each conversation, keeps owner-reviewed
-memories with evidence, and supports scoped communication controls. Owner-invoked drafts
+A WhatsApp-first communication assistant with Milo web and native clients. It receives
+permitted Business contact messages through signed webhooks, requests eligible Business
+app history, and imports authorized chat exports. It builds inspectable local writing-style
+statistics for each conversation, keeps owner-reviewed memories with evidence, and supports
+scoped communication controls. Owner-only questions use the selected chat's evidence and
+cannot send a message or grant access. Owner-invoked drafts
 retain exact-content approval; selected-chat Auto work uses bounded one-time grants.
 Sending and scheduling use current SQL authority and durable attempt ledgers.
 
@@ -53,6 +58,10 @@ npm run dev
 Open port 3000 for the companion interface. Configure server-only `BACKEND_URL` to connect
 the same-origin `/api` proxy to the private API; Google identity still requires the registered
 client/origin configuration. Frontend environment values never supply WhatsApp/model keys.
+The [Google, WhatsApp and intelligence setup](docs/connectivity-setup.md) describes the
+registered browser origin, native HTTPS OAuth callback, server-held credentials and
+the eligible-account restrictions. The native app uses the public bearer-only
+`/native-api` proxy; browser cookies are not forwarded through that boundary.
 `npm run test:web` runs browser journeys; `npm run test:clients` tests shared contracts and
 `npm run test:proxy` checks the server-only browser boundary. `npm run test:privacy`
 checks private Tools result reconciliation. Real SQL browser cases need
@@ -87,15 +96,16 @@ process-local counters. Redis does not determine owner permissions.
 
 | Area | Backend scope |
 | --- | --- |
-| Identity | Google ID-token verification, nonce binding, revocable hashed sessions, CSRF checks; opt-in local development login |
+| Identity | Browser Google Identity Services with nonce-bound verified claims, HttpOnly sessions and CSRF; native system-browser HTTPS OAuth broker with S256 proof and an opaque app handoff; opt-in local development login |
+| Business connection | One server-configured eligible WhatsApp Business number bound to one exact verified Google owner; provider identity verification, bounded leases, signed public webhook and explicit contact setup |
 | Authorization | Workspace ownership and separate conversation read/retain/learn/draft/send/share permissions |
-| History | WhatsApp text-export parser, explicit owner/date/timezone mapping, import coverage, deterministic reimport deduplication |
-| Personalization | Owner-authored samples, per-conversation local style statistics and owner rules; evidence-backed candidate/confirmed memories |
+| History | Authorized personal/group text exports with explicit owner/date/timezone mapping and reimport deduplication; conditional Coexistence requests for up to 180 days of eligible 1:1 Business history, with a durable once-only claim |
+| Personalization | Explicitly reviewed owner-authored samples, independent per-chat read/retain/learn consent, local style statistics and owner rules; evidence-backed candidate/confirmed memories; no model fine-tuning |
 | Drafts | Disabled, synthetic mock, or configured structured model proposal; owner edit/reject and exact-hash approval |
 | Control | Pause all, conversation takeover/resume, permission versions, conversation revisions, connector fencing |
 | Bounded automation | Explicit business-hours fact/templates plus selected-chat action grants, conservative fresh-event policy, expiry/quiet hours and hourly budgets |
 | Native actions | Encrypted authentic-text originals, same-chat quote/reaction, two-audience native forward routes, immutable action/attempt ledger and current SQL bridge authority; mock operations |
-| Companion backend | Typed owner commands, deterministic scoped digest, exact local contacts, usage budgets and explicit retention sweeps; configured speech/native permission evidence remains separate |
+| Companion backend | Typed owner commands, scoped digest, evidence-linked owner-only questions with expiry/authority checks, exact local contacts, usage budgets and explicit retention sweeps; speech/native permission evidence remains separate |
 | Sending | Durable attempt ledger, mock transport, configured Business Cloud text transport, current-state checks and uncertain-outcome handling |
 | Scheduling | Exact-authorized proactive jobs, bounded daily/weekly recurrence with explicit DST policy, durable pause holds and local reminders; legacy draft SQL/Temporal timers retained |
 | Tasks and inbox | Owner-authored follow-ups with explicit dates, evidence/version checks, and authorized conversation previews/counts; no reminder notifications |
@@ -107,6 +117,16 @@ Milo adds Home, Inbox, Actions, Memory, Rules and utility routes, separate recip
 assistant controls, evidence-linked tools and explicit synthetic/unavailable states.
 Web and native share the versioned contracts/API, rather than owning separate permissions
 or delivery rules. Client acceptance and installed-device limitations are recorded separately.
+
+The Business connection is an operator-configured pilot. Each contact's read, retain,
+learn, draft and send choices start off; sending also requires recipient opt-in and
+current server authority. Approved provider Coexistence onboarding, history-sharing
+permission and exact contact consent are required before requesting earlier Business
+app messages. Outgoing employee messages are not assumed to be owner writing: the
+owner reviews individual examples before those examples can support learning.
+The product does not implement general multi-tenant Embedded Signup or personal QR
+linking. Personal and group history use selected text exports; live groups are unsupported.
+See the [connectivity setup](docs/connectivity-setup.md) before enabling real accounts.
 
 Current feature status is recorded in [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md).
 The handoff evidence pack includes [platform capabilities](docs/PLATFORM_CAPABILITY_MATRIX.md),

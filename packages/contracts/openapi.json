@@ -6722,7 +6722,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/ContactInput"
+                "$ref": "#/components/schemas/assistant__people__ContactInput"
               }
             }
           }
@@ -7007,7 +7007,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/ContactInput"
+                "$ref": "#/components/schemas/assistant__people__ContactInput"
               }
             }
           }
@@ -7507,6 +7507,9 @@
                     "$ref": "#/components/schemas/WriteWithMe"
                   },
                   {
+                    "$ref": "#/components/schemas/AskMe"
+                  },
+                  {
                     "$ref": "#/components/schemas/TeachMe"
                   },
                   {
@@ -7522,6 +7525,7 @@
                   "mapping": {
                     "catch_me_up": "#/components/schemas/CatchMeUp",
                     "write_with_me": "#/components/schemas/WriteWithMe",
+                    "ask_me": "#/components/schemas/AskMe",
                     "teach_me": "#/components/schemas/TeachMe",
                     "pause": "#/components/schemas/Pause",
                     "resume": "#/components/schemas/Resume"
@@ -7800,6 +7804,9 @@
                     "$ref": "#/components/schemas/WriteWithMe"
                   },
                   {
+                    "$ref": "#/components/schemas/AskMe"
+                  },
+                  {
                     "$ref": "#/components/schemas/TeachMe"
                   },
                   {
@@ -7815,6 +7822,7 @@
                   "mapping": {
                     "catch_me_up": "#/components/schemas/CatchMeUp",
                     "write_with_me": "#/components/schemas/WriteWithMe",
+                    "ask_me": "#/components/schemas/AskMe",
                     "teach_me": "#/components/schemas/TeachMe",
                     "pause": "#/components/schemas/Pause",
                     "resume": "#/components/schemas/Resume"
@@ -8334,6 +8342,42 @@
         }
       }
     },
+    "/auth/native/revoke": {
+      "post": {
+        "tags": [
+          "device authentication",
+          "sessions"
+        ],
+        "summary": "Native Revoke",
+        "description": "Possession of the refresh secret can revoke a device after access expiry.",
+        "operationId": "native_revoke_auth_native_revoke_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NativeRefreshInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/auth/sessions": {
       "get": {
         "tags": [
@@ -8376,6 +8420,166 @@
         "responses": {
           "204": {
             "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/native/google/start": {
+      "post": {
+        "tags": [
+          "device authentication",
+          "sessions",
+          "native Google HTTPS authentication"
+        ],
+        "summary": "Start Native Google",
+        "operationId": "start_native_google_auth_native_google_start_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NativeGoogleStart"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/native/google/callback": {
+      "get": {
+        "tags": [
+          "device authentication",
+          "sessions",
+          "native Google HTTPS authentication"
+        ],
+        "summary": "Native Google Callback",
+        "operationId": "native_google_callback_auth_native_google_callback_get",
+        "parameters": [
+          {
+            "name": "state",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 32,
+              "maxLength": 256,
+              "title": "State"
+            }
+          },
+          {
+            "name": "code",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 4096
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Code"
+            }
+          },
+          {
+            "name": "error",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 100
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Error"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/native/google/exchange": {
+      "post": {
+        "tags": [
+          "device authentication",
+          "sessions",
+          "native Google HTTPS authentication"
+        ],
+        "summary": "Finish Native Google",
+        "operationId": "finish_native_google_auth_native_google_exchange_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NativeGoogleExchange"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
           },
           "422": {
             "description": "Validation Error",
@@ -8525,6 +8729,42 @@
         }
       }
     },
+    "/v1/auth/native/revoke": {
+      "post": {
+        "tags": [
+          "device authentication",
+          "sessions"
+        ],
+        "summary": "Native Revoke",
+        "description": "Possession of the refresh secret can revoke a device after access expiry.",
+        "operationId": "native_revoke_v1_auth_native_revoke_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NativeRefreshInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/auth/sessions": {
       "get": {
         "tags": [
@@ -8567,6 +8807,166 @@
         "responses": {
           "204": {
             "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/auth/native/google/start": {
+      "post": {
+        "tags": [
+          "device authentication",
+          "sessions",
+          "native Google HTTPS authentication"
+        ],
+        "summary": "Start Native Google",
+        "operationId": "start_native_google_v1_auth_native_google_start_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NativeGoogleStart"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/auth/native/google/callback": {
+      "get": {
+        "tags": [
+          "device authentication",
+          "sessions",
+          "native Google HTTPS authentication"
+        ],
+        "summary": "Native Google Callback",
+        "operationId": "native_google_callback_v1_auth_native_google_callback_get",
+        "parameters": [
+          {
+            "name": "state",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 32,
+              "maxLength": 256,
+              "title": "State"
+            }
+          },
+          {
+            "name": "code",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 4096
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Code"
+            }
+          },
+          {
+            "name": "error",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 100
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Error"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/auth/native/google/exchange": {
+      "post": {
+        "tags": [
+          "device authentication",
+          "sessions",
+          "native Google HTTPS authentication"
+        ],
+        "summary": "Finish Native Google",
+        "operationId": "finish_native_google_v1_auth_native_google_exchange_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NativeGoogleExchange"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
           },
           "422": {
             "description": "Validation Error",
@@ -9156,6 +9556,480 @@
           }
         }
       }
+    },
+    "/integrations/whatsapp/operator-identity": {
+      "get": {
+        "tags": [
+          "whatsapp"
+        ],
+        "summary": "Own Operator Identity",
+        "description": "Let a signed-in owner identify themselves for manual deployment binding.\n\nThis reveals only the current owner's own stable Google subject. It does\nnot grant provider access, disclose the configured operator, or change the\ndeployment binding. Google tokens and application session secrets remain\nprivate to their existing exchanges.",
+        "operationId": "own_operator_identity_integrations_whatsapp_operator_identity_get",
+        "parameters": [
+          {
+            "name": "workspace_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Workspace Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/integrations/whatsapp/status": {
+      "get": {
+        "tags": [
+          "whatsapp"
+        ],
+        "summary": "Connection Status",
+        "operationId": "connection_status_integrations_whatsapp_status_get",
+        "parameters": [
+          {
+            "name": "workspace_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Workspace Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/integrations/whatsapp/connect": {
+      "post": {
+        "tags": [
+          "whatsapp"
+        ],
+        "summary": "Connect Business",
+        "operationId": "connect_business_integrations_whatsapp_connect_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConnectInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/integrations/whatsapp/contacts": {
+      "post": {
+        "tags": [
+          "whatsapp"
+        ],
+        "summary": "Authorize Contact",
+        "operationId": "authorize_contact_integrations_whatsapp_contacts_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/assistant__whatsapp__ContactInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/integrations/whatsapp/owner-authorship": {
+      "post": {
+        "tags": [
+          "whatsapp"
+        ],
+        "summary": "Confirm Owner Authorship",
+        "operationId": "confirm_owner_authorship_integrations_whatsapp_owner_authorship_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfirmAuthorship"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/integrations/whatsapp/history-sync": {
+      "post": {
+        "tags": [
+          "whatsapp"
+        ],
+        "summary": "Sync Business History",
+        "operationId": "sync_business_history_integrations_whatsapp_history_sync_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SyncInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/integrations/whatsapp/operator-identity": {
+      "get": {
+        "tags": [
+          "whatsapp"
+        ],
+        "summary": "Own Operator Identity",
+        "description": "Let a signed-in owner identify themselves for manual deployment binding.\n\nThis reveals only the current owner's own stable Google subject. It does\nnot grant provider access, disclose the configured operator, or change the\ndeployment binding. Google tokens and application session secrets remain\nprivate to their existing exchanges.",
+        "operationId": "own_operator_identity_v1_integrations_whatsapp_operator_identity_get",
+        "parameters": [
+          {
+            "name": "workspace_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Workspace Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/integrations/whatsapp/status": {
+      "get": {
+        "tags": [
+          "whatsapp"
+        ],
+        "summary": "Connection Status",
+        "operationId": "connection_status_v1_integrations_whatsapp_status_get",
+        "parameters": [
+          {
+            "name": "workspace_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Workspace Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/integrations/whatsapp/connect": {
+      "post": {
+        "tags": [
+          "whatsapp"
+        ],
+        "summary": "Connect Business",
+        "operationId": "connect_business_v1_integrations_whatsapp_connect_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConnectInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/integrations/whatsapp/contacts": {
+      "post": {
+        "tags": [
+          "whatsapp"
+        ],
+        "summary": "Authorize Contact",
+        "operationId": "authorize_contact_v1_integrations_whatsapp_contacts_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/assistant__whatsapp__ContactInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/integrations/whatsapp/owner-authorship": {
+      "post": {
+        "tags": [
+          "whatsapp"
+        ],
+        "summary": "Confirm Owner Authorship",
+        "operationId": "confirm_owner_authorship_v1_integrations_whatsapp_owner_authorship_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfirmAuthorship"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/integrations/whatsapp/history-sync": {
+      "post": {
+        "tags": [
+          "whatsapp"
+        ],
+        "summary": "Sync Business History",
+        "operationId": "sync_business_history_v1_integrations_whatsapp_history_sync_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SyncInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -9365,6 +10239,40 @@
           "content_hash"
         ],
         "title": "ApproveDraft"
+      },
+      "AskMe": {
+        "properties": {
+          "workspace_id": {
+            "type": "string",
+            "title": "Workspace Id"
+          },
+          "command": {
+            "type": "string",
+            "const": "ask_me",
+            "title": "Command"
+          },
+          "conversation_id": {
+            "type": "string",
+            "maxLength": 36,
+            "minLength": 1,
+            "title": "Conversation Id"
+          },
+          "question": {
+            "type": "string",
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Question"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "workspace_id",
+          "command",
+          "conversation_id",
+          "question"
+        ],
+        "title": "AskMe"
       },
       "AutomationGrant": {
         "properties": {
@@ -9773,6 +10681,50 @@
         ],
         "title": "CatchMeUp"
       },
+      "ConfirmAuthorship": {
+        "properties": {
+          "conversation_id": {
+            "type": "string",
+            "title": "Conversation Id"
+          },
+          "message_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 100,
+            "minItems": 1,
+            "title": "Message Ids"
+          },
+          "confirm_authored_by_owner": {
+            "type": "boolean",
+            "const": true,
+            "title": "Confirm Authored By Owner"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "conversation_id",
+          "message_ids",
+          "confirm_authored_by_owner"
+        ],
+        "title": "ConfirmAuthorship"
+      },
+      "ConnectInput": {
+        "properties": {
+          "workspace_id": {
+            "type": "string",
+            "title": "Workspace Id"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "workspace_id"
+        ],
+        "title": "ConnectInput"
+      },
       "ConnectorInput": {
         "properties": {
           "workspace_id": {
@@ -9830,49 +10782,6 @@
           "expires_at"
         ],
         "title": "ContactGrantInput"
-      },
-      "ContactInput": {
-        "properties": {
-          "conversation_id": {
-            "type": "string",
-            "title": "Conversation Id"
-          },
-          "source_message_id": {
-            "type": "string",
-            "title": "Source Message Id"
-          },
-          "destination": {
-            "type": "string",
-            "enum": [
-              "assistant_local",
-              "whatsapp",
-              "google_contacts",
-              "phone_os"
-            ],
-            "title": "Destination",
-            "default": "assistant_local"
-          },
-          "display_name": {
-            "anyOf": [
-              {
-                "type": "string",
-                "maxLength": 160,
-                "minLength": 1
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Display Name"
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "required": [
-          "conversation_id",
-          "source_message_id"
-        ],
-        "title": "ContactInput"
       },
       "ConversationInput": {
         "properties": {
@@ -10663,6 +11572,64 @@
         ],
         "title": "NativeChallengeInput"
       },
+      "NativeGoogleExchange": {
+        "properties": {
+          "handoff": {
+            "type": "string",
+            "maxLength": 256,
+            "minLength": 35,
+            "pattern": "^nh_[A-Za-z0-9_-]+$",
+            "title": "Handoff"
+          },
+          "code_verifier": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 43,
+            "pattern": "^[A-Za-z0-9._~-]+$",
+            "title": "Code Verifier"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "handoff",
+          "code_verifier"
+        ],
+        "title": "NativeGoogleExchange"
+      },
+      "NativeGoogleStart": {
+        "properties": {
+          "platform": {
+            "type": "string",
+            "enum": [
+              "ios",
+              "android"
+            ],
+            "title": "Platform"
+          },
+          "device_name": {
+            "type": "string",
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Device Name",
+            "default": "My device"
+          },
+          "code_challenge": {
+            "type": "string",
+            "maxLength": 43,
+            "minLength": 43,
+            "pattern": "^[A-Za-z0-9_-]{43}$",
+            "title": "Code Challenge"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "platform",
+          "code_challenge"
+        ],
+        "title": "NativeGoogleStart"
+      },
       "NativeKey": {
         "properties": {
           "id": {
@@ -11242,6 +12209,20 @@
         "type": "object",
         "title": "StyleEdit"
       },
+      "SyncInput": {
+        "properties": {
+          "connector_id": {
+            "type": "string",
+            "title": "Connector Id"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "connector_id"
+        ],
+        "title": "SyncInput"
+      },
       "TaskCreate": {
         "properties": {
           "workspace_id": {
@@ -11506,6 +12487,107 @@
           "conversation_id"
         ],
         "title": "WriteWithMe"
+      },
+      "assistant__people__ContactInput": {
+        "properties": {
+          "conversation_id": {
+            "type": "string",
+            "title": "Conversation Id"
+          },
+          "source_message_id": {
+            "type": "string",
+            "title": "Source Message Id"
+          },
+          "destination": {
+            "type": "string",
+            "enum": [
+              "assistant_local",
+              "whatsapp",
+              "google_contacts",
+              "phone_os"
+            ],
+            "title": "Destination",
+            "default": "assistant_local"
+          },
+          "display_name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 160,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Display Name"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "conversation_id",
+          "source_message_id"
+        ],
+        "title": "ContactInput"
+      },
+      "assistant__whatsapp__ContactInput": {
+        "properties": {
+          "connector_id": {
+            "type": "string",
+            "title": "Connector Id"
+          },
+          "phone_number": {
+            "type": "string",
+            "maxLength": 40,
+            "minLength": 6,
+            "title": "Phone Number"
+          },
+          "title": {
+            "type": "string",
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Title"
+          },
+          "read": {
+            "type": "boolean",
+            "title": "Read",
+            "default": false
+          },
+          "retain": {
+            "type": "boolean",
+            "title": "Retain",
+            "default": false
+          },
+          "learn": {
+            "type": "boolean",
+            "title": "Learn",
+            "default": false
+          },
+          "draft": {
+            "type": "boolean",
+            "title": "Draft",
+            "default": false
+          },
+          "send": {
+            "type": "boolean",
+            "title": "Send",
+            "default": false
+          },
+          "recipient_opted_in": {
+            "type": "boolean",
+            "title": "Recipient Opted In",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "connector_id",
+          "phone_number",
+          "title"
+        ],
+        "title": "ContactInput"
       }
     }
   }

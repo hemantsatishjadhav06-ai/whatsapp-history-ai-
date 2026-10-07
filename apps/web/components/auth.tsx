@@ -5,43 +5,73 @@ import { createClient } from '@milo/contracts';
 import { useMilo } from '@/lib/state';
 import { Icon, Milo } from './icons';
 import { ExportChatSetup } from './history-setup';
-
-declare global { interface Window { google?: { accounts: { id: {
-  initialize(options: { client_id: string; nonce: string; callback(response: { credential: string }): void }): void;
-  renderButton(element: HTMLElement, options: Record<string, string | number>): void;
-} } } } }
+import { loadGoogleIdentity } from '@/lib/google-signin';
 
 export function Login() {
-  const { actions, authenticate } = useMilo();
+  const { state, actions, authenticate, browserSessionPresent, browserSessionChecking, resumeBrowserSession } = useMilo();
   const holder = useRef<HTMLDivElement>(null);
+  const mounted = useRef(false);
   const [available, setAvailable] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [configured, setConfigured] = useState(false);
   const [error, setError] = useState('');
+  const [attempt, setAttempt] = useState(0);
+  useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
   useEffect(() => {
     let alive = true;
+    let exchanging = false;
+    let refreshTimer: number | undefined;
     const client = createClient({ baseUrl: '/api' });
+    if (browserSessionChecking) { setAvailable(false); setLoading(true); holder.current?.replaceChildren(); return; }
+    if (browserSessionPresent) { setAvailable(false); setLoading(false); holder.current?.replaceChildren(); return; }
     async function prepare() {
+      setLoading(true); setAvailable(false); setError(''); holder.current?.replaceChildren();
       try {
         const config = await client.request<{ google_configured: boolean; google_client_id?: string; client_id?: string }>('/auth/config');
+        if (!alive) return;
         const clientId = config.google_client_id ?? config.client_id;
+        setConfigured(Boolean(config.google_configured && clientId));
         if (!config.google_configured || !clientId) { if (alive) setLoading(false); return; }
+        const identity = await loadGoogleIdentity();
+        if (!alive) return;
+        // Obtain the five-minute server nonce after SDK loading, then refresh
+        // the visible button early. Old popup callbacks cannot exchange it.
         const { nonce } = await client.request<{ nonce: string }>('/auth/nonce');
-        await new Promise<void>((resolve, reject) => {
-          if (window.google) { resolve(); return; }
-          const script = document.createElement('script'); script.src = 'https://accounts.google.com/gsi/client'; script.async = true;
-          script.onload = () => resolve(); script.onerror = () => reject(new Error('Google sign-in could not load.')); document.head.appendChild(script);
-        });
-        if (!alive || !holder.current || !window.google) return;
-        window.google.accounts.id.initialize({ client_id: clientId, nonce, callback(response) {
-          setLoading(true); void authenticate(response.credential, nonce).catch(failure => { setError(failure instanceof Error ? failure.message : 'Sign-in was not confirmed.'); setLoading(false); });
+        if (!alive || !holder.current) return;
+        identity.initialize({ client_id: clientId, nonce, callback(response) {
+          if (!alive || exchanging) return;
+          exchanging = true; window.clearTimeout(refreshTimer);
+          setLoading(true); setAvailable(false); holder.current?.replaceChildren();
+          void authenticate(response.credential, nonce).catch(failure => {
+            if (!mounted.current) return;
+            setError(failure instanceof Error ? failure.message : 'Sign-in was not confirmed.'); setLoading(false);
+          });
         } });
-        window.google.accounts.id.renderButton(holder.current, { theme: 'outline', size: 'large', text: 'continue_with', shape: 'pill', width: 280 });
+        identity.renderButton(holder.current, { theme: 'outline', size: 'large', text: 'continue_with', shape: 'pill', width: 280 });
         setAvailable(true); setLoading(false);
+        refreshTimer = window.setTimeout(() => {
+          if (alive && !exchanging) setAttempt(previous => previous + 1);
+        }, 240_000);
       } catch (failure) { if (alive) { setError(failure instanceof Error ? failure.message : 'Sign-in is unavailable.'); setLoading(false); } }
     }
-    void prepare(); return () => { alive = false; };
-  }, [authenticate]);
-  return <div className="auth-page"><div className="auth-brand"><Milo size={52}/><span>milo</span></div><section className="auth-card"><Milo size={126}/><span className="eyebrow">A LITTLE LESS NOISE</span><h1>Your people.<br/>A little more presence.</h1><p>A companion for the conversations that matter, with you in control of every scope.</p><div ref={holder} className="google-holder"/>{!available && <button className="button google-button" disabled>{loading ? 'Checking sign-in…' : 'Google sign-in not configured'}</button>}{error && <p className="notice error" role="alert">{error}</p>}<button className="button secondary" onClick={() => actions.navigate('/')}>Explore the synthetic demo <Icon name="arrow" size={17}/></button><p className="fine-print">Google verifies your identity. It does not grant Gmail, Calendar, Contacts or WhatsApp access.</p></section><p className="auth-footnote"><Icon name="shield" size={16}/> Your scope. Your voice. Your call.</p></div>;
+    void prepare(); return () => { alive = false; window.clearTimeout(refreshTimer); holder.current?.replaceChildren(); };
+  }, [authenticate, attempt, browserSessionPresent, browserSessionChecking]);
+  async function resume() {
+    setLoading(true); setError('');
+    try { await resumeBrowserSession(); }
+    catch (failure) { if (mounted.current) { setError(failure instanceof Error ? failure.message : 'Your workspace is temporarily unavailable.'); setLoading(false); } }
+  }
+  async function signOut() {
+    setLoading(true); setError('');
+    try { await actions.logout(); }
+    catch (failure) {
+      if (mounted.current) {
+        setError(`Sign-out was not confirmed. ${failure instanceof Error ? failure.message : 'Retry signing out.'}`); setLoading(false);
+      }
+    }
+  }
+  const shownError = error || (browserSessionPresent ? state.error : '');
+  return <div className="auth-page"><div className="auth-brand"><Milo size={52}/><span>milo</span></div><section className="auth-card"><Milo size={126}/><span className="eyebrow">A LITTLE LESS NOISE</span><h1>Your people.<br/>A little more presence.</h1><p>A companion for the conversations that matter, with you in control of every scope.</p><div ref={holder} className="google-holder"/>{browserSessionPresent ? <><p role="status">You are signed in. Your private workspace is loaded separately.</p><button className="button google-button" disabled={loading} onClick={resume}>{loading ? 'Loading your workspace…' : 'Continue to your workspace'}</button><button className="button secondary" disabled={loading} onClick={signOut}>Sign out</button></> : !available && <button className="button google-button" disabled>{loading ? 'Checking sign-in…' : configured ? 'Google sign-in needs another attempt' : 'Google sign-in not configured'}</button>}{shownError && <p className="notice error" role="alert">{shownError}</p>}{!browserSessionPresent && error && <button className="button secondary" disabled={loading} onClick={() => setAttempt(previous => previous + 1)}>Retry Google sign-in</button>}<button className="button secondary" onClick={() => actions.navigate('/')}>{browserSessionPresent ? 'Return home' : 'Explore the synthetic demo'} <Icon name="arrow" size={17}/></button><p className="fine-print">Google verifies your identity. It does not grant Gmail, Calendar, Contacts or WhatsApp access.</p></section><p className="auth-footnote"><Icon name="shield" size={16}/> Your scope. Your voice. Your call.</p></div>;
 }
 
 export function Onboarding() {

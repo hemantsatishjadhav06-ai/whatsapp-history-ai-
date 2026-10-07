@@ -8,7 +8,7 @@ Milo, scoped history, Rules, reminders and privacy remain usable without them.
 | --- | --- | --- | --- |
 | API connectivity | Standard network access; HTTPS origin | Foreground scoped fetch; no background sender | Real network/foreground tests |
 | App session secrets | SecureStore/keychain/Keystore | Small token record; no biometric prompt configured | Installed storage/lock/backup checks |
-| Google identity | System browser; no Gmail/Calendar consent | Public platform client ID, PKCE/state/nonce; no embedded login WebView | Registered installed-app clients/redirect, live cancel/error test |
+| Google identity | System browser; no Gmail/Calendar consent | Registered HTTPS server broker, single-use state/nonce and proof-bound opaque app handoff; no embedded login WebView or bundled secret | Registered Web OAuth client and server-held secret; installed iOS/Android callback, cancellation, same-owner and revocation tests |
 | Microphone/transcription | Not requested; adapter unavailable | Talk disabled, no Listening indicator, typing available | Provider/region/retention ADR and native capture/Stop/Cancel/interruption tests |
 | Read-aloud/audio playback | Not implemented | No private automatic playback or call recording | Owner-triggered playback/Stop and private audio tests |
 | Notifications | Not requested; APNs/FCM unavailable | No pretend registration or private lock-screen payload | Contextual consent, managed credentials, scoped generic push/device routing |

@@ -60,15 +60,17 @@ export function AppProvider({children}: {children: React.ReactNode}) {
     if(refreshFlight.current)return refreshFlight.current;
     const current=session.current;const startedEpoch=guard.current.epoch;
     if(!current?.refresh_token||!apiOrigin||!recoverableSession(current,apiOrigin,environment)){await clearPrivateState();return null;}
-    const flight=(async()=>{try {
+    const flight=(async()=>{let issuedAccess:string|undefined;try {
       const result=await nativeClient(apiOrigin).request<Omit<StoredSession,'origin'|'environment'>>('/v1/auth/native/refresh',
         {method:'POST',body:{refresh_token:current.refresh_token}});
       const next=sessionRecord(result,apiOrigin,environment);
+      issuedAccess=next.access_token;
       if(!validStoredSession(next,apiOrigin,environment))throw new Error('The server returned an invalid renewed session');
       if(startedEpoch!==guard.current.epoch){await nativeClient(apiOrigin,next.access_token)
         .request('/v1/auth/native/logout',{method:'POST'}).catch(()=>{});return null;}
       await guard.current.enqueueStorage(()=>SecureStore.setItemAsync(tokenKey,JSON.stringify(next),{keychainAccessible:SecureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY}),startedEpoch);if(startedEpoch!==guard.current.epoch){await nativeClient(apiOrigin,next.access_token).request('/v1/auth/native/logout',{method:'POST'}).catch(()=>{});return null;}session.current=next;return next;
-    } catch(error){if(startedEpoch===guard.current.epoch)await clearPrivateState();throw error;}})();
+    } catch(error){if(issuedAccess)await nativeClient(apiOrigin,issuedAccess).request('/v1/auth/native/logout',{method:'POST'}).catch(()=>{});
+      if(startedEpoch===guard.current.epoch)await clearPrivateState();throw error;}})();
     refreshFlight.current=flight;try{return await flight;}finally{if(refreshFlight.current===flight)refreshFlight.current=null;}
   },[clearPrivateState]);
   const request = useCallback(async <T,>(path: string, options?: RequestOptions): Promise<T> => {
@@ -141,14 +143,18 @@ export function AppProvider({children}: {children: React.ReactNode}) {
     if(startedEpoch!==guard.current.epoch){await nativeClient(apiOrigin,value.access_token).request('/v1/auth/native/logout',{method:'POST'}).catch(()=>{});return;}
     const next=sessionRecord(value,apiOrigin,environment);
     if(!validStoredSession(next,apiOrigin,environment))throw new Error('The backend returned an invalid or expired session');
-    await guard.current.enqueueStorage(()=>SecureStore.setItemAsync(tokenKey,JSON.stringify(next),{keychainAccessible:SecureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY}),startedEpoch);
-    if(startedEpoch!==guard.current.epoch){await nativeClient(apiOrigin,next.access_token).request('/v1/auth/native/logout',{method:'POST'}).catch(()=>{});return;}
-    session.current=next;
-    try{const data=normalizeBootstrap(await nativeClient(apiOrigin,next.access_token).request('/v1/ui/bootstrap'));if(startedEpoch===guard.current.epoch){setSnapshot(data);setMode('live');setError(null);setLastUpdated(new Date().toISOString());}}
-    catch(error){if(startedEpoch===guard.current.epoch)await clearPrivateState();throw error;}
+    try{
+      await guard.current.enqueueStorage(()=>SecureStore.setItemAsync(tokenKey,JSON.stringify(next),{keychainAccessible:SecureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY}),startedEpoch);
+      if(startedEpoch!==guard.current.epoch){await nativeClient(apiOrigin,next.access_token).request('/v1/auth/native/logout',{method:'POST'}).catch(()=>{});return;}
+      session.current=next;
+      const data=normalizeBootstrap(await nativeClient(apiOrigin,next.access_token).request('/v1/ui/bootstrap'));if(startedEpoch===guard.current.epoch){setSnapshot(data);setMode('live');setError(null);setLastUpdated(new Date().toISOString());}}
+    catch(error){await nativeClient(apiOrigin,next.access_token).request('/v1/auth/native/logout',{method:'POST'}).catch(()=>{});
+      if(startedEpoch===guard.current.epoch)await clearPrivateState();throw error;}
   };
   const logout=async()=>{const current=session.current;const currentMode=mode;const removal=clearPrivateState();const startedEpoch=guard.current.epoch;await removal;
-    if(currentMode==='live'&&current&&apiOrigin){try{await nativeClient(apiOrigin,current.access_token).request('/v1/auth/native/logout',{method:'POST'});}
+    if(currentMode==='live'&&current&&apiOrigin){try{
+      if(current.refresh_token)await nativeClient(apiOrigin).request('/v1/auth/native/revoke',{method:'POST',body:{refresh_token:current.refresh_token}});
+      else await nativeClient(apiOrigin,current.access_token).request('/v1/auth/native/logout',{method:'POST'});}
       catch{if(guard.current.matches(startedEpoch))setError('Local data cleared. Server sign-out was not confirmed; revoke this device from another signed-in client.');}}
   };
   const pause=async(target:boolean)=>{
@@ -156,11 +162,10 @@ export function AppProvider({children}: {children: React.ReactNode}) {
     if(pendingPauseTarget!==target||!pauseKey.current)pauseKey.current=`native-control-${Date.now()}-${Math.random().toString(36).slice(2)}`;
     setPendingPauseTarget(target);setPausePending(true);
     const startedEpoch=guard.current.epoch;const workspaceId=snapshot.workspace.id;
-    try {const receipt=await request<{result:{paused:boolean;pause_generation:number}}>('/v1/assistant/commands',{method:'POST',
-      body:{command:target?'pause':'resume',workspace_id:snapshot.workspace.id},idempotencyKey:pauseKey.current});
-      if(receipt.result.paused!==target||typeof receipt.result.pause_generation!=='number')throw new Error('Control acknowledgement unavailable');
+    try {const receipt=await request<{paused:boolean;pause_generation:number}>(`/v1/${target?'pause':'resume'}-all?workspace_id=${encodeURIComponent(snapshot.workspace.id)}`,{method:'POST',idempotencyKey:pauseKey.current});
+      if(receipt.paused!==target||typeof receipt.pause_generation!=='number')throw new Error('Control acknowledgement unavailable');
       if(startedEpoch!==guard.current.epoch)return;
-      setSnapshot(previous=>previous?.workspace.id===workspaceId?{...previous,workspace:{...previous.workspace,paused:target,pause_generation:receipt.result.pause_generation}}:previous);
+      setSnapshot(previous=>previous?.workspace.id===workspaceId?{...previous,workspace:{...previous.workspace,paused:target,pause_generation:receipt.pause_generation}}:previous);
       setPausePending(false);setPendingPauseTarget(null);pauseKey.current=null;setOnline(true);await refresh();
     } catch(error){if(startedEpoch===guard.current.epoch){setOnline(false);setError(target?'Pause not confirmed; automation may still be active':'Resume not confirmed; fetch current server state before trying again');}throw error;}
   };

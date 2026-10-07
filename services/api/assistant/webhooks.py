@@ -18,6 +18,7 @@ from .access import audit
 from .db import aware, now
 from .models import Connector, Conversation, Draft, Permission, SendAttempt
 from .provider_authority import whatsapp_workspace_authorized
+from .whatsapp_provider import normalize_phone
 
 router = APIRouter(prefix="/webhooks", tags=["webhooks"])
 MAX_WEBHOOK_BYTES = 1_000_000
@@ -159,11 +160,15 @@ def _receipt(db, connector: Connector, status: dict) -> bool:
     return True
 
 
-def _message(db, connector: Connector, message: dict) -> bool:
+def _message(db, connector: Connector, message: dict, *, origin="live", direction="inbound", chat_id=None) -> bool:
     if message.get("type") != "text":
         return False
     provider_id = _string(message.get("id"), 180)
     sender_id = _string(message.get("from"), 160)
+    chat_id = chat_id or sender_id
+    if ((direction == "inbound" and sender_id != chat_id)
+            or (direction == "outbound" and sender_id != connector.owner_sender_id)):
+        return False
     timestamp = _timestamp(message.get("timestamp"))
     content = message.get("text")
     if not isinstance(content, dict):
@@ -178,7 +183,8 @@ def _message(db, connector: Connector, message: dict) -> bool:
     conversation = db.scalar(select(Conversation).where(
         Conversation.connector_id == connector.id,
         Conversation.workspace_id == connector.workspace_id,
-        Conversation.provider_chat_id == sender_id,
+        Conversation.provider_chat_id == chat_id,
+        Conversation.kind == "contact",
     ))
     if conversation is None or not _may_retain(db, conversation):
         return False
@@ -198,10 +204,12 @@ def _message(db, connector: Connector, message: dict) -> bool:
         account_id=connector.account_id,
         provider_message_id=provider_id,
         sender_id=sender_id,
-        direction="inbound",
-        origin="live",
+        direction=direction,
+        origin=origin,
         event_type="message.created",
-        author_kind="contact_human",
+        # A Business app echo proves an outgoing device message, not which human
+        # operator typed it. The authenticated owner reviews authorship separately.
+        author_kind="contact_human" if direction == "inbound" else "unknown_owner_outgoing",
         provider_timestamp=timestamp,
         content={"type": "text", "text": text},
         reply_to=reply_to,
@@ -211,9 +219,70 @@ def _message(db, connector: Connector, message: dict) -> bool:
     return result.get("status") in {"accepted", "duplicate"}
 
 
+def _coexistence_ready(connector: Connector, value: dict) -> bool:
+    if connector.capabilities.get("business_app_coexistence") != "supported":
+        return False
+    phone = value["metadata"].get("display_phone_number")
+    if not isinstance(phone, str):
+        return False
+    try:
+        return normalize_phone(phone) == connector.owner_sender_id
+    except ValueError:
+        return False
+
+
+def _history(db, connector: Connector, value: dict) -> tuple[int, int]:
+    accepted = ignored = 0
+    for chunk in _list(value.get("history")):
+        if not isinstance(chunk, dict):
+            raise _invalid()
+        errors = chunk.get("errors")
+        if errors is not None:
+            for error in _list(errors):
+                if not isinstance(error, dict):
+                    raise _invalid()
+                if error.get("code") == 2593109:
+                    connector.capabilities = {**connector.capabilities, "business_history_sharing": "declined"}
+            ignored += 1
+            continue
+        metadata = chunk.get("metadata")
+        if (not isinstance(metadata, dict) or type(metadata.get("phase")) is not int
+                or metadata["phase"] not in {0, 1, 2} or type(metadata.get("chunk_order")) is not int
+                or metadata["chunk_order"] < 0 or type(metadata.get("progress")) is not int
+                or not 0 <= metadata["progress"] <= 100):
+            raise _invalid()
+        for thread in _list(chunk.get("threads")):
+            if not isinstance(thread, dict):
+                raise _invalid()
+            chat_id = _string(thread.get("id"), 160)
+            for message in _list(thread.get("messages")):
+                if not isinstance(message, dict):
+                    raise _invalid()
+                direction = "outbound" if message.get("from") == connector.owner_sender_id else "inbound"
+                if _message(db, connector, message, origin="history", direction=direction, chat_id=chat_id):
+                    accepted += 1
+                else:
+                    ignored += 1
+        # This is an observed chunk's progress, not a completion guarantee:
+        # provider phases can be absent and chunks can arrive out of order.
+        connector.capabilities = {**connector.capabilities, "business_history_sharing": "observed",
+                                  "business_history_last_chunk": {
+                                      "phase": metadata["phase"], "chunk_order": metadata["chunk_order"],
+                                      "progress": metadata["progress"], "observed_at": now().isoformat(),
+                                      "completeness_verified": False}}
+    return accepted, ignored
+
+
 @router.post("/whatsapp")
 async def receive_whatsapp(request: Request):
     payload = await _verified_payload(request)
+    import anyio
+    # History chunks can contain many messages. SQL/crypto work belongs in the
+    # bounded request thread pool, keeping the event loop available for controls.
+    return await anyio.to_thread.run_sync(_receive_payload, payload, request)
+
+
+def _receive_payload(payload: dict, request: Request):
     if payload.get("object") != "whatsapp_business_account":
         return {"status": "acknowledged", "accepted": 0, "receipts": 0, "ignored": 1}
     accepted = receipts = ignored = 0
@@ -224,20 +293,21 @@ async def receive_whatsapp(request: Request):
         for change in _list(entry.get("changes")):
             if not isinstance(change, dict):
                 raise _invalid()
-            if change.get("field") != "messages":
+            field = change.get("field")
+            if field not in {"messages", "history", "smb_message_echoes"}:
                 ignored += 1
                 continue
             value = change.get("value")
             if not isinstance(value, dict) or not isinstance(value.get("metadata"), dict):
                 raise _invalid()
             account_id = _string(value["metadata"].get("phone_number_id"), 120)
-            values.append((account_id, value))
+            values.append((account_id, field, value))
 
     from .messaging import submit_guard
 
     with request.app.state.session_factory() as db:
         resolved = []
-        for account_id, value in values:
+        for account_id, field, value in values:
             connector = db.scalar(select(Connector).where(
                 Connector.provider == "whatsapp_cloud",
                 Connector.account_id == account_id,
@@ -247,15 +317,19 @@ async def receive_whatsapp(request: Request):
                     db, request.app.state.settings, connector.workspace_id):
                 ignored += 1
             else:
-                resolved.append((connector.id, connector.workspace_id, account_id, value))
+                resolved.append((connector.id, connector.workspace_id, account_id, field, value))
         # Drop the preliminary lookup transaction before waiting for guards.
         # All identifiers below came from SQL, never a supplied tenant field.
         db.rollback()
         with ExitStack() as guards:
-            for workspace_id in sorted({item[1] for item in resolved}):
+            ordered_workspaces = sorted({item[1] for item in resolved})
+            for workspace_id in ordered_workspaces:
                 guards.enter_context(submit_guard(workspace_id))
+            from .storage_authority import lock_workspace
+            for workspace_id in ordered_workspaces:
+                lock_workspace(db, workspace_id)
             db.expire_all()
-            for connector_id, workspace_id, account_id, value in resolved:
+            for connector_id, workspace_id, account_id, field, value in resolved:
                 # A connector can disconnect while this webhook waits for a
                 # local submit. Re-resolve its mapping under the held guards.
                 connector = db.scalar(select(Connector).where(
@@ -268,6 +342,24 @@ async def receive_whatsapp(request: Request):
                 if connector is None or not whatsapp_workspace_authorized(
                         db, request.app.state.settings, connector.workspace_id):
                     ignored += 1
+                    continue
+                if field in {"history", "smb_message_echoes"}:
+                    if not _coexistence_ready(connector, value):
+                        ignored += 1
+                        continue
+                    if field == "history":
+                        new_accepted, new_ignored = _history(db, connector, value)
+                        accepted += new_accepted
+                        ignored += new_ignored
+                    else:
+                        for message in _list(value.get("message_echoes")):
+                            if not isinstance(message, dict):
+                                raise _invalid()
+                            chat_id = _string(message.get("to"), 160)
+                            if _message(db, connector, message, direction="outbound", chat_id=chat_id):
+                                accepted += 1
+                            else:
+                                ignored += 1
                     continue
                 for message in _list(value.get("messages", [])):
                     if not isinstance(message, dict):

@@ -178,6 +178,43 @@ def test_nonce_rate_bucket_covers_aliases_and_ignores_unsigned_forwarded_identit
         assert db.scalar(select(func.count()).select_from(LoginNonce)) == 2
 
 
+def test_native_broker_start_shares_source_bound_auth_issue_limit(hardened_app):
+    from assistant.mobile_auth import proof_challenge
+    application = hardened_app(request_rate_auth_issues=2, google_client_secret="synthetic-secret",
+                               google_native_redirect_uri="https://milo.example/api/auth/native/google/callback")
+    with TestClient(application) as client:
+        assert client.get("/v1/auth/nonce").status_code == 200
+        body = {"platform": "android", "code_challenge": proof_challenge("a" * 43)}
+        assert client.post("/auth/native/google/start", json=body).status_code == 200
+        assert client.post("/v1/auth/native/google/start", json=body,
+                           headers={"Authorization": "Bearer rotating-forged-session"}).status_code == 429
+
+
+def test_native_callback_exchange_and_refresh_share_source_bound_auth_exchange_limit(hardened_app):
+    application = hardened_app(request_rate_auth_exchanges=2, google_client_secret="synthetic-secret",
+                               google_native_redirect_uri="https://milo.example/api/auth/native/google/callback")
+    with TestClient(application) as client:
+        assert client.get("/v1/auth/native/google/callback", params={"state": "a" * 43}).status_code == 401
+        assert client.post("/auth/native/google/exchange", json={"handoff": "nh_" + "a" * 43,
+                           "code_verifier": "a" * 43}).status_code == 401
+        assert client.post("/v1/auth/native/refresh", json={"refresh_token": "nr_" + "a" * 43}).status_code == 429
+
+
+def test_device_refresh_proof_revoke_retains_control_reserve_after_auth_and_api_exhaustion(hardened_app, monkeypatch):
+    from assistant.mobile_models import NativeSession
+    from test_mobile_auth import native_login
+    application = hardened_app(request_rate_auth_exchanges=1, request_rate_global_api=2)
+    with TestClient(application) as client:
+        native = native_login(client, application, monkeypatch)
+        for _ in range(2):
+            assert client.get("/v1/me").status_code == 401
+        assert client.get("/v1/me").status_code == 429
+        assert client.post("/v1/auth/native/refresh", json={"refresh_token": native["refresh_token"]}).status_code == 429
+        assert client.post("/v1/auth/native/revoke", json={"refresh_token": native["refresh_token"]}).status_code == 204
+    with application.state.session_factory() as db:
+        assert db.get(NativeSession, native["session_id"]) is None
+
+
 @pytest.mark.parametrize("credential_header", ["Authorization", "Cookie"])
 def test_rotating_unverified_session_values_cannot_bypass_source_admission(hardened_app, credential_header):
     application = hardened_app(request_rate_api=2, request_rate_source_api=2)

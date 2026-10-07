@@ -339,6 +339,9 @@ def ingest_event(db: Session, event: CanonicalEvent) -> dict:
     if event.event_type == "message.created" and not message.deleted:
         from .people import auto_save_contact
         auto_save_contact(db, conversation, message)
+    if message.author_kind == "human_owner":
+        from .intelligence import refresh_style_from_messages
+        refresh_style_from_messages(db, conversation)
     db.add(MessageEvent(workspace_id=connector.workspace_id, event_id=event_key,
                         conversation_id=conversation.id, message_id=message.id,
                         event_type=event.event_type, source_revision=event.source_revision))
@@ -584,9 +587,13 @@ async def _transport_send(settings, provider: str, account_id: str, recipient: s
         if final_check:
             final_check()
         return "accepted", f"mock:{attempt_id}", None
-    endpoint = f"https://graph.facebook.com/{settings.whatsapp_api_version}/{account_id}/messages"
+    from .whatsapp_provider import graph_endpoint
     try:
-        async with httpx.AsyncClient(timeout=httpx.Timeout(15), follow_redirects=False) as client:
+        endpoint = graph_endpoint(settings.whatsapp_api_version, account_id, "messages")
+    except ValueError:
+        return "failed", None, "provider_configuration_invalid"
+    try:
+        async with httpx.AsyncClient(timeout=httpx.Timeout(15), follow_redirects=False, trust_env=False) as client:
             # Client/TLS preparation precedes the latest-state check. There is no
             # queued asynchronous wait between this check and beginning submission.
             if final_check:
@@ -595,11 +602,16 @@ async def _transport_send(settings, provider: str, account_id: str, recipient: s
                                          headers={"Authorization": f"Bearer {settings.whatsapp_access_token}"},
                                          json={"messaging_product": "whatsapp", "recipient_type": "individual",
                                                "to": recipient, "type": "text", "text": {"body": text}})
-        if response.status_code >= 400:
+        if 400 <= response.status_code < 500:
             return "failed", None, f"provider_http_{response.status_code}"
+        if response.status_code != 200:
+            # A provider 5xx can follow acceptance. Redirects are never followed
+            # with the bearer token, and cannot establish delivery either.
+            return "uncertain", None, "transport_outcome_unknown"
         try:
             message_id = response.json()["messages"][0]["id"]
-            if not isinstance(message_id, str) or not 1 <= len(message_id) <= 180:
+            if (not isinstance(message_id, str) or not 1 <= len(message_id) <= 180
+                    or not message_id.startswith("wamid.")):
                 raise ValueError("Invalid provider reference")
         except (ValueError, KeyError, IndexError, TypeError):
             return "uncertain", None, "missing_provider_reference"

@@ -4,11 +4,11 @@ Commands are authenticated structured requests. Chat content and model output
 never become executable commands, recipients, integration scopes, or grants.
 """
 
-from datetime import timedelta
+from datetime import datetime, timedelta
 from typing import Annotated, Literal, Union
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 from sqlalchemy import func, select
 
 from .access import audit, conversation_for, permission_for, workspace_for
@@ -282,6 +282,19 @@ class WriteWithMe(Command):
     instruction: str = Field(default="", max_length=2000)
 
 
+class AskMe(Command):
+    command: Literal["ask_me"]
+    conversation_id: str = Field(min_length=1, max_length=36)
+    question: str = Field(min_length=1, max_length=2000)
+
+    @field_validator("question")
+    @classmethod
+    def nonempty_question(cls, value):
+        if not value.strip():
+            raise ValueError("An owner question is required")
+        return value.strip()
+
+
 class TeachMe(Command):
     command: Literal["teach_me"]
     conversation_id: str
@@ -300,7 +313,7 @@ class Resume(Command):
     conversation_id: str | None = None
 
 
-OwnerCommand = Annotated[Union[CatchMeUp, WriteWithMe, TeachMe, Pause, Resume], Field(discriminator="command")]
+OwnerCommand = Annotated[Union[CatchMeUp, WriteWithMe, AskMe, TeachMe, Pause, Resume], Field(discriminator="command")]
 
 
 @router.post("/assistant/commands")
@@ -316,6 +329,26 @@ def run_command(body: OwnerCommand, request: Request, user=Depends(get_current_u
     elif isinstance(body, WriteWithMe):
         from .intelligence import DraftRequest, create_draft
         result = create_draft(body.conversation_id, request, DraftRequest(instruction=body.instruction), db=db, user=user)
+    elif isinstance(body, AskMe):
+        from .intelligence import generate_scoped_result
+        proposal, model_version, snapshot, context_expiries = generate_scoped_result(
+            db, user, body.conversation_id, request.app.state.settings, body.question, purpose="owner_answer")
+        expires = [now() + timedelta(minutes=5), *context_expiries]
+        if snapshot["permission_expiry"]:
+            expires.append(datetime.fromisoformat(snapshot["permission_expiry"]))
+        authorization_context = {key: snapshot[key] for key in (
+            "owner_id", "workspace_id", "conversation_id", "connector_id", "conversation_revision",
+            "control_epoch", "control_state", "permission_version", "permissions", "pause_generation",
+            "connector_fence", "connector_status", "memory_versions")}
+        authorization_context.update(schema_version=1, permission_expires_at=snapshot["permission_expiry"],
+                                     expires_at=min(expires).isoformat())
+        result = {"conversation_id": body.conversation_id, "audience": "owner_only",
+                  "authorization_context": authorization_context,
+                  "text": proposal.text, "evidence_message_ids": proposal.evidence_message_ids,
+                  "missing_facts": proposal.missing_facts, "model_version": model_version,
+                  "generated_by_model": model_version != "mock-v1",
+                  "development_mock": model_version == "mock-v1", "external_actions": False,
+                  "quality_note": "Check cited evidence; model quality has not been evaluated."}
     elif isinstance(body, TeachMe):
         from .intelligence import MemoryCreate, create_memory
         result = create_memory(body.conversation_id, MemoryCreate(text=body.text,
