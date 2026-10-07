@@ -4,7 +4,34 @@ Updated 7 October 2026. This report distinguishes cloud validation from installe
 iOS/Android testing. No APK, AAB, IPA, development-client install, EAS build ID,
 TestFlight release or store approval was produced in this workspace.
 
-## Latest cloud rerun — 7 October 2026
+## Current connectivity release — 7 October 2026
+
+Application source `3336764b7846a62da07903d6a3ab123bc8650d1c` passed
+[CI run 37664307493](https://github.com/hemantsatishjadhav06-ai/whatsapp-history-ai-/actions/runs/37664307493).
+This is cloud source/export evidence. All installed-device rows below remain unrun.
+
+| Check | Current observed result |
+| --- | --- |
+| Native helper tests | 25 passed, no failures/skips; synthetic storage/network/provider fixtures |
+| Strict TypeScript | Mobile, Web and shared contracts passed |
+| Expo export | Android, iOS and Web export passed; 16 static routes, no signed binaries |
+| Google native flow | HTTPS server OAuth broker, opaque single-use handoff and S256 app proof implemented and tested with provider fixtures; real Google credentials and installed-device acceptance absent |
+| Public API | Bearer-only `/native-api` boundary tested; browser cookies/origins and internal routes rejected |
+| Session lifecycle | Rotation and refresh-proof revocation after access expiry covered in synthetic regressions; actual Keystore/Keychain behavior unverified |
+| Owner intelligence privacy | Current-source attribution, permission/revision/expiry reconciliation covered by CI; real model quality unverified |
+| Live deployment | API, Jobs, Retention and Web redeployed to Railway; 117 hosted checks passed, including 11 anonymous ingress checks. Hosted browser checks are not installed-native acceptance |
+
+The Google provider callback must use the registered HTTPS Web-client redirect at
+`/api/auth/native/google/callback`; only the opaque handoff returns to `milo://oauth`.
+Register the Web client ID/secret and test owner as described in
+[connectivity setup](../../docs/connectivity-setup.md). The deployment presently has
+no Google, Meta or model credentials. Eligible Business connection is one configured
+number bound to one verified Google owner; personal pairing/live groups and real
+native forward transport are unavailable. See the exact
+[connectivity release record](../../docs/benchmarks/connectivity-release-2026-10-07.json).
+
+## Previous hardening cloud rerun — 7 October 2026
+
 
 | Field | Observed value |
 | --- | --- |
@@ -12,13 +39,13 @@ TestFlight release or store approval was produced in this workspace.
 | Runtime | Expo 55.0.31 / React Native 0.83.10 / React 19.2.0 |
 | Execution | Cloud Linux, Node 24.19.0, npm 11.9.0 |
 | Owner/provider data | Synthetic fixtures and mocked transport only |
-| Unit run | 16 passed / 0 failed / 0 skipped; [latest test log](../../.local/hardening-native-tests.log) |
-| Strict TS | All three workspaces passed (`@milo/mobile`, `@milo/web`, `@milo/contracts`); [latest typecheck log](../../.local/hardening-workspace-typecheck.log) |
-| All-platform export | Android, iOS and web passed; [latest export log](../../.local/hardening-native-export.log) |
+| Unit run | 16 passed / 0 failed / 0 skipped; [previous test log](../../.local/hardening-native-tests.log) |
+| Strict TS | All three workspaces passed (`@milo/mobile`, `@milo/web`, `@milo/contracts`); [previous typecheck log](../../.local/hardening-workspace-typecheck.log) |
+| All-platform export | Android, iOS and web passed; [previous export log](../../.local/hardening-native-export.log) |
 | OS/device model | None attached; not a physical device or installed simulator |
 | Native build/signing ID | None |
 
-The latest checks ran under Node **24.19.0** after the dependency lock changed to
+These previous checks ran under Node **24.19.0** after the dependency lock changed to
 `tsx` **4.23.15** and workspace override `uuid` **11.1.1**. Native app source remains
 version **0.3.0**; Expo/React Native/React versions are unchanged. The checkout base
 was `4c9be7357bf2bb5df9cbcedce6dbd9ea090466a0` with uncommitted hardening changes.
@@ -34,7 +61,7 @@ filesystem write times on **7 October 2026**, recorded explicitly as UTC:
 | [All-workspace strict TypeScript](../../.local/hardening-workspace-typecheck.log), PASS | 09:35:21.949663707 | 641 | `f05cb772a5e021c2a5e4b329ca59644bb61197ecbba4919842857f1f8290e731` |
 | [Three-platform Expo export](../../.local/hardening-native-export.log), PASS | 09:37:58.584754687 | 2,220 | `c477b6eb5dbe63c91870f88f878a69e7f25bc6ab1b2be6a260ca795a66b1cfca` |
 
-Latest exported files, hashed directly after the rerun:
+Previous exported files, hashed directly after that rerun:
 
 | Target / local artifact | Bytes | SHA-256 | Comparison with prior export |
 | --- | ---: | --- | --- |
@@ -55,7 +82,7 @@ logs are ignored local outputs. Links to them refer to this workspace and do not
 make those artifacts available in a clean checkout; preserve redacted logs and
 artifact hashes with any future release evidence.
 
-The executed tests verify session origin/environment/token/expiry binding,
+The previous 16 executed tests verify session origin/environment/token/expiry binding,
 profile-data stripping, ordered secure-storage deletion/save, stale refresh writes,
 failed-storage recovery, owner/read-generation fencing, exact draft recipient
 isolation, captured bearer/no cookie fallback, no uncertain mutation retry,
@@ -64,7 +91,7 @@ memory Forget/permission edits, and old-response/new-snapshot reconciliation.
 They invoke runtime helpers with deterministic fake storage/network and synthetic
 data. They do not prove keychain/Keystore behavior or component interaction.
 
-## Prior cloud evidence — superseded for latest checks
+## Earlier cloud evidence — historical comparison baseline
 
 The prior run completed **7 October 2026 at 07:35:08 UTC**. Its unit and TypeScript
 logs completed at 07:34:38 and 07:34:50 UTC respectively, with 16 helper cases,
@@ -91,7 +118,7 @@ build graph. See the current [security review](../../docs/SECURITY_REVIEW.md).
 | Journey | iOS installed | Android installed | Blocking prerequisite |
 | --- | --- | --- | --- |
 | N0 tabs/details/Milo daily loop | NOT_RUN | NOT_RUN | Signed development build and chosen devices |
-| Google system-browser login/cancel/PKCE/nonce | NOT_RUN | NOT_RUN | Registered platform client IDs/redirect and test owner |
+| Google system-browser login/cancel/PKCE/nonce | NOT_RUN | NOT_RUN | Registered Web-client ID/secret and HTTPS broker callback, app handoff and test owner |
 | Access/refresh rotation, expired recovery/revoke | NOT_RUN | NOT_RUN | Live configured API and device storage inspection |
 | Eligible WhatsApp pairing/phone continuity | BLOCKED_EXTERNAL | BLOCKED_EXTERNAL | Tested supported transport/real eligible account |
 | No historical import sends | NOT_RUN | NOT_RUN | Installed client with selected test archive |

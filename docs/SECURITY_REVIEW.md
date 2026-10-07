@@ -1,14 +1,52 @@
 # Security review and live reply release boundaries
 
-Review date: 7 October 2026. Baseline source was published commit
-`4c9be7357bf2bb5df9cbcedce6dbd9ea090466a0`; the hardening reviewed below is a later
-working-tree increment. Reproductions used temporary SQLite databases, synthetic input,
-local ASGI requests and no provider calls. Severity describes plausible application
-impact, not a claim that a remote production exploit was observed.
+Review date: 7 October 2026. The latest bounded connectivity review applies to
+application source `3336764b7846a62da07903d6a3ab123bc8650d1c`, which passed
+[CI run 37664307493](https://github.com/hemantsatishjadhav06-ai/whatsapp-history-ai-/actions/runs/37664307493)
+and was redeployed to Railway. The original hardening findings below were reproduced
+from baseline `4c9be7357bf2bb5df9cbcedce6dbd9ea090466a0` and subsequent source;
+those historical counts retain their original scope. Reproductions use temporary
+SQL databases, synthetic identities/provider responses and local requests unless
+explicitly identified as actual hosted infrastructure. Severity describes plausible
+application impact, not an observed remote production exploit.
 
-This is a bounded code review and regression record. A dependency audit reports known
-advisories for its exact graph. Neither that audit nor passing tests proves that every
-vulnerability has been found, or that a 50,000-account service is production-ready.
+Passing tests and dependency audits do not prove that every vulnerability has been
+found or establish 50,000-user production readiness. Real Google, Meta and model
+credentials are absent, model generation/external sends are disabled, and actual
+account/device/provider security acceptance remains open.
+
+## Current connectivity boundaries and exact-source evidence
+
+| Boundary | Current control and verified scope | Remaining gate |
+| --- | --- | --- |
+| Browser Google login | Nonce-bound verified claims, bounded/retryable GIS loading, restoration-first flow, stale/duplicate callback guards and logout/recovery regressions | Registered client/origin and real-owner web login |
+| Native Google broker | Fixed-provider verified HTTPS exchange, Google and app S256 proof, bounded encrypted single-use state/handoff, atomic exchange and rotating native sessions; refresh-proof revocation works after access expiry | Registered Web-client ID/secret and HTTPS callback; installed system-browser/Keystore/Keychain acceptance |
+| Public native API | Bearer-only allowlist, no cookie fallback, browser-origin/fetch-metadata denials, internal/dev-route exclusion, bounded bodies and admission | Device and actual edge/source-forwarding acceptance; `TRUST_PROXY_HOPS=0` remains until verified |
+| Meta public ingress and owner binding | Raw-body HMAC, one configured number bound to exact verified Google subject, per-contact default-deny consent and recipient opt-in; signed history/echo deduplication and durable once-only history request | Eligible live Business account/provider onboarding, history-sharing authorization and actual receipts |
+| Owner authorship and learning | Individually reviewed human-owner examples, independent read/retain/learn grants, scoped bounded local statistics and source/retention checks | Held-out owner preference/grounding and actual-account authorship observations; no fine-tuning |
+| Owner-only intelligence | Exact-chat attributed human history and confirmed memories, evidence/missing facts, five-minute bounded contexts, before/after authority and client permission/revision/source/expiry reconciliation | Real model quality/billing; no answer can send or grant access |
+| Hosted pilot | All 117 checks passed: 40 HTTP, 11 negative connectivity ingress and 66 anonymous/synthetic Chromium checks; TLS verification enabled, no persistent browser writes/provider calls | Managed restore, direct SQL/Redis inspection, runtime AOF, installed devices and live outward operations |
+
+Exact-source CI passed 844 PostgreSQL cases, 831 SQLite cases with 13 PostgreSQL-only
+skips, 122 browser cases without retries, 40 contracts, 47 proxy, seven privacy and
+25 native helpers. Nine-revision serialized PostgreSQL startup and real local Redis
+fail-closed/shared-counter checks passed. Four non-root image acceptances, six worker
+entrypoints, full scans and SBOMs passed. Railway rebuilt the Git-verified source;
+provider image bytes are not proven identical to those CI images.
+
+| Current audit scope | Findings | Gate interpretation |
+| --- | --- | --- |
+| API images, standard and Railway | 265 rows each: two critical, 53 high, 108 medium, 101 low, one unknown; 264 Debian rows plus one medium vendored Rust row | Zero fixable HIGH/CRITICAL gate rows; unfixed full-report rows remain |
+| Web images, standard and Railway | 236 Debian rows each: one critical, 50 high, 103 medium, 81 low, one unknown | Zero fixable HIGH/CRITICAL gate rows; unfixed full-report rows remain |
+| Native production graph | 29 affected nodes: 21 high, eight moderate; four reviewed base advisories | Residual advisory exposure, not a count of distinct exploitable defects |
+| Selected Web production / gateway graphs | Zero known advisories | Exact selected graphs only |
+| Python production | Zero known advisories across 48 packages | Exact lock and audit database snapshot only |
+
+These are scan-time advisory results, not a vulnerability-free certification.
+The [connectivity release record](benchmarks/connectivity-release-2026-10-07.json)
+records source/build IDs and the full-scan/gate distinction. Personal QR/session
+pairing, live groups, general multi-customer Embedded Signup and live native forward
+transport remain unavailable; those gaps cannot be closed by adding credentials alone.
 
 ## Findings and remediation evidence
 
@@ -77,7 +115,7 @@ actor lease. Forwarded identity requires the explicitly configured signed proxy 
 | Requested outcome | Actual implementation | Missing implementation or independent evidence |
 | --- | --- | --- |
 | Connect a personal WhatsApp account, synchronize history and preserve the primary phone | Export ingestion and connector contracts exist; no personal-session adapter is shipped | Pairing/session persistence, history/echo/membership/expiry observation, reconnect/fence ownership and real phone coexistence are implementation and live-account gates; credentials alone cannot enable them |
-| Receive/send eligible WhatsApp Business text | Signed webhook and separately gated legacy Business Cloud text adapter exist | Configured eligible number, live verification, opt-in/service-window and actual accepted/delivered/receipt trials; supported account scope remains contact text |
+| Receive/send eligible WhatsApp Business text | Public signed webhook, exact verified owner-bound single-number connection/contact consent and separately gated Business Cloud text adapter exist; conditional eligible 1:1 Coexistence history request/ingestion is implemented | Configured eligible number/owner, live verification/provider onboarding/history sharing, opt-in/service-window and actual accepted/delivered/receipt trials; supported live scope remains contact text |
 | General unattended personalized replies | General action contracts and SQL ledger exist; default planner emits conservative fixed acknowledgments, suitable learned-habit reactions and one meeting clarification | The current generic action lane rejects non-mock providers and blocks production dispatch. A real adapter plus evaluated scoped planner is required; this is not a credentials-only gap |
 | Learn how the owner talks to each person/group | Verified human-owner style statistics, scoped rules and evidence-backed memories are implemented | Held-out owner preference, factual grounding and language/group/no-history quality have not been measured. Static fixture success is not personalized voice quality |
 | Generate owner-invoked replies | Configured structured model proposal exists; default disabled/mock modes are explicit, proposals remain unsent and require exact owner review | Actual model-provider configuration/billing and held-out evaluation. Evidence-reference validation checks scope and provenance, not semantic truth of every generated claim |
@@ -101,9 +139,9 @@ provider eligibility and outward phone observation need independent evidence. Ma
 volume encryption and application field encryption are different controls. Metadata is
 not uniformly encrypted, and there is no completed production RLS or restore certification.
 
-The final release record must use current source/build identities and new results rather
-than inherit the previous 533-case backend, 62-browser or small ingestion smoke as proof
-of this increment. See [QA](QA_REPORT.md), [capacity](LOAD_TEST_REPORT.md),
+The current release record uses source `3336764b`, its exact CI/build identities and new
+hosted results. Previous 533-case backend, 62-browser, restore and load records remain
+evidence for their original source/workload only. See [QA](QA_REPORT.md), [capacity](LOAD_TEST_REPORT.md),
 [security lifecycle](SECURITY_AND_DATA_LIFECYCLE.md),
 [platform evidence](PLATFORM_CAPABILITY_MATRIX.md) and
 [reconciliation](RELIABILITY_AND_RECONCILIATION.md).

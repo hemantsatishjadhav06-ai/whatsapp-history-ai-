@@ -4,45 +4,64 @@ The repository includes deployable web, API, Jobs and Retention containers, plus
 
 ## Current provider result
 
-On 7 October 2026, workspace-scoped Bearer authentication succeeded. A dedicated
-Milo project/environment and Web, API, Jobs and Retention services were created.
-PostgreSQL 18.6 and Redis 8.2.10 deployments reported success with startup
-readiness verified from filtered logs, private routing and
-ready persistent volumes at `/var/lib/postgresql/data` and `/data` respectively.
-The live pilot is [Milo](https://web-production-bde60.up.railway.app).
-API Python build/pre-deploy migrations, Jobs/Retention schema startup and public
-SQL/Redis dependency readiness passed; Retention reported zero-item sweeps.
-At 15:20 UTC, all six services reported successful deployments and running
-instances, with both persistent volumes ready.
-All 106 hosted checks passed: 40 HTTP and 66 Chromium checks across ten surfaces
-on desktop, Pixel 7 and 320px layouts. Twenty accessibility audits found zero
-violations on tested surfaces; this is not WCAG certification. Browser review
-and digest checks were synthetic, without external calls or persistent writes.
+Application source `3336764b7846a62da07903d6a3ab123bc8650d1c` passed
+[CI run 37664307493](https://github.com/hemantsatishjadhav06-ai/whatsapp-history-ai-/actions/runs/37664307493)
+and was redeployed on 7 October 2026 through official Railway CLI 5.63.3 from a
+clean **295-file export**, with every file hash verified against Git. The live pilot
+is [Milo](https://web-production-bde60.up.railway.app). At 18:22 UTC all six services
+reported successful deployments and running instances, and both persistent volumes
+were ready. API pre-deploy migration and Jobs/Retention exact-schema startup gates
+completed for the nine-revision source head `3f7829c4bd10`. Public readiness verifies
+private SQL and shared Redis availability; Retention reported bounded sweeps.
 
-The initial `72df83c` API build failed on unsupported Docker bind/secret mounts.
-The mount-free `Dockerfile.web.railway` and `services/api/Dockerfile.railway`
-passed [CI run 37638332729](https://github.com/hemantsatishjadhav06-ai/whatsapp-history-ai-/actions/runs/37638332729)
-for deployed application source `8b1ee2da798aab53464e45842fbb455ffedaa98b`:
-747 PostgreSQL cases, 734 SQLite cases with 13 skips, 70 browser cases, four image gates and full
-scans. Fixable HIGH/CRITICAL gates passed while unfixed image advisories remain;
-[QA](QA_REPORT.md) records the scan counts and boundaries.
+| Role | Accepted replacement deployment |
+| --- | --- |
+| API | `7a55e9e7-d406-4957-934c-df0daab7ad46` |
+| Jobs | `279f39b0-096c-4b17-a8fb-df4159d51443` |
+| Retention | `a0bde525-5399-4092-b2a4-abf669da3a47` |
+| Web | `e513951f-17c6-496e-8d2d-22b659c03813` |
 
-An earlier API build produced the Web image despite the stored API Dockerfile
-setting and variable, then failed its migration command. Explicit legacy role
-configuration was rejected as deprecated. The legacy Web manifest has moved
-from the repository root to `infra/railway-web.json`; new services use current
-explicit service settings and Dockerfile variables. The correction passed CI and
-the official CLI deployed all four application services from a clean export with
-266 file hashes verified against Git. Provider Git-source/direct Git archive
-attempts failed; the CLI's actual upload-byte checksum was not measured.
-Native Git metadata is absent, so public `release_commit: null` is expected.
-[Hosted release evidence](benchmarks/railway-hosted-release-2026-10-07.json) records
-the source and acceptance scope. Keep source autodeploy off.
+All **117 hosted checks passed: 40 HTTP, 11 connectivity ingress and 66 Chromium**
+across ten desktop/Pixel 7/320px surfaces. Twenty accessibility audits found zero
+violations in those surfaces; this is not WCAG certification. Checks used anonymous
+or synthetic content, made no provider calls or persistent browser writes, and
+retained TLS verification. Current CI passed 844 PostgreSQL, 831 SQLite with 13
+PostgreSQL-only skips, 122 browser cases without retries, 40 contracts, 47 proxy,
+seven privacy and 25 native helpers, plus four image gates and full scans. Fixable
+HIGH/CRITICAL gates passed while unfixed image/native advisories remain; see [QA](QA_REPORT.md).
 
-Google sign-in remains unconfigured, model generation and external sends are
-disabled, and personal WhatsApp pairing is unavailable. Live replies, installed
-device integration, direct SQL/Redis inspection, Redis runtime AOF state,
-managed recovery and 50,000-user capacity remain unverified.
+Native provider Git metadata is absent, so public `release_commit: null` is expected.
+The CLI's accepted upload-byte checksum was not measured; the local Git archive hash
+must not be substituted for it. Railway rebuild bytes are not proven identical to
+CI image bytes. [Connectivity release evidence](benchmarks/connectivity-release-2026-10-07.json)
+records current source, accepted deployments and acceptance boundaries. Keep source
+autodeploy off; a documentation-only commit does not change deployed application bytes.
+
+The existing PostgreSQL 18.6 and Redis 8.2.10 services retain private routing and
+ready volumes at `/var/lib/postgresql/data` and `/data`. Volume readiness and schema
+startup gates do not establish direct remote SQL/Redis inspection, runtime AOF state
+or managed recovery; those checks remain unrun. All pilot roles remain at one replica.
+
+Google, Meta and model credentials are absent. Browser/native Google sign-in and
+eligible Business connectivity need the protected configuration and actual account
+trials in [connectivity setup](connectivity-setup.md). The Business pilot supports
+one configured number bound to one verified Google owner, with per-contact consent;
+conditional up-to-180-day 1:1 Coexistence history is implemented but live-unverified.
+General multi-customer Embedded Signup, personal QR pairing and live groups are not
+implemented. Model generation and external sends remain disabled. Real replies,
+receipts, installed-device integration and 50,000-user capacity remain unverified.
+
+### Previous deployment evidence
+
+The earlier source `8b1ee2da798aab53464e45842fbb455ffedaa98b` passed
+[run 37638332729](https://github.com/hemantsatishjadhav06-ai/whatsapp-history-ai-/actions/runs/37638332729)
+and a 266-file verified export was deployed, with 106 hosted checks. Its
+[previous hosted record](benchmarks/railway-hosted-release-2026-10-07.json) remains
+historical evidence. The initial `72df83c` API build failed on unsupported bind/secret
+Docker mounts, and a later attempt selected Web settings for API. Mount-free
+Dockerfiles and moving the legacy root Web manifest to `infra/railway-web.json`
+resolved those failures. New services use explicit current service settings and
+Dockerfile variables; legacy role configuration was rejected as deprecated.
 
 ## Service configuration
 
@@ -198,4 +217,4 @@ The 50,000-user target remains an unmeasured release gate. Distinguish idle brow
 
 `uv run --frozen python scripts/railway_runtime_smoke.py` checks the manifest startup in its own empty test container: non-root execution, runtime `PORT`, both IP families, configured admission, real HTTP overload rejection/recovery and shutdown. The configuration smoke used 72 HTTP probes for a 64-connection limit, observed HTTP 503 under overload, recovered after release and shut down cleanly. It is not a 50,000-user test or an authenticated Railway deployment.
 
-On 2026-10-07, this runtime smoke passed against the rebuilt API image `sha256:b9f6c1a528f96decd6761ad74260936ab6e20450163e25c114cdb3526628a89c`: 10 of 72 probes received the configured overload response, readiness recovered to 200, and shutdown exited 0 in 0.655 seconds. Separate disposable containers also ran `/app/.venv/bin/python -m assistant.lifecycle --once` and `/app/.venv/bin/python -m assistant.actions --once`; each exited 0 as UID 10001 after applying all eight migrations to `86b7bbad6fc1`. Each had its own empty SQLite database, no network, disabled providers, and verified matches for seven frozen API source modules. These worker checks verify entrypoints and schema compatibility, rather than cleanup throughput, populated-database behavior or live delivery. The official Railway CLI 5.63.3 separately parsed both worker manifests in an offline configuration-migration dry run, with one replica each; neither check created a Railway service.
+In the previous eight-migration 2026-10-07 hardening record, this runtime smoke passed against the rebuilt API image `sha256:b9f6c1a528f96decd6761ad74260936ab6e20450163e25c114cdb3526628a89c`: 10 of 72 probes received the configured overload response, readiness recovered to 200, and shutdown exited 0 in 0.655 seconds. Separate disposable containers also ran `/app/.venv/bin/python -m assistant.lifecycle --once` and `/app/.venv/bin/python -m assistant.actions --once`; each exited 0 as UID 10001 after applying all eight migrations to `86b7bbad6fc1`. Each had its own empty SQLite database, no network, disabled providers, and verified matches for seven frozen API source modules. These worker checks verify entrypoints and schema compatibility, rather than cleanup throughput, populated-database behavior or live delivery. The official Railway CLI 5.63.3 separately parsed both worker manifests in an offline configuration-migration dry run, with one replica each; neither check created a Railway service.

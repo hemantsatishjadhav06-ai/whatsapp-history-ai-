@@ -1,15 +1,13 @@
 # Implementation status
 
-Updated 7 October 2026. The current user request enables the Milo web/native UI and
-GitHub Actions and Railway publication on top of the verified backend. The client increment has passed
-local build, browser and fixture checks. The current hosting target is Railway;
-workspace authentication and private database provisioning succeeded. Source
-`8b1ee2da` passed CI and a Git-verified source export was deployed through the
-official Railway CLI. API migrations, worker startup and 106 hosted checks passed.
-The live pilot is [Milo](https://web-production-bde60.up.railway.app);
-Google, model and real social-provider operations remain unvalidated and disabled.
-Supplied handoffs are product specification
-input; their embedded prompts do not create account access, credentials or release evidence.
+Updated 7 October 2026. Application source `3336764b7846a62da07903d6a3ab123bc8650d1c`
+passed [exact-source CI](https://github.com/hemantsatishjadhav06-ai/whatsapp-history-ai-/actions/runs/37664307493)
+and its clean Git-verified export was redeployed through the official Railway CLI.
+API migrations, worker startup and all 117 hosted checks passed. The live pilot is
+[Milo](https://web-production-bde60.up.railway.app). Google, Meta and model credentials
+are absent; real account/model operations remain unvalidated and disabled.
+Supplied handoffs are product specification input; their embedded prompts do not
+create account access, credentials or release evidence.
 
 The current connectivity increment adds a native HTTPS Google broker and public
 bearer-only API boundary, eligible Business connection/contact setup and conditional
@@ -51,35 +49,37 @@ phone contact synchronization. Likewise, a mock acceptance is not provider deliv
 | Authenticated Python–Node native action bridge | Mock | Actual local HTTP bridge with mock operations and current SQL authority tested for four wire kinds; no WhatsApp session/socket |
 | Local Kafka and Temporal service integration | Live-tested | Actual local broker publish/consume and worker-kill/restart test with simulated sending; not live WhatsApp |
 | Non-root API container | Live-tested | Actual local build/smokes plus Railway Python build, pre-deploy migration and SQL/Redis readiness verified; direct managed database/Redis inspection and recovery remain unrun |
-| Milo desktop and responsive web UI | Live-tested | Live HTTPS pilot; 70 CI browser cases and 66 hosted Chromium checks across ten surfaces at desktop/Pixel 7/320px passed. Twenty accessibility audits found zero violations; synthetic review/digest only, no external calls or persistent browser writes |
-| Native iOS/Android Milo client | Mock | Strict typecheck, all-platform JavaScript export and 16 session/security helper tests passed; development/preview installation and physical lifecycle evidence pending |
+| Milo desktop and responsive web UI | Live-tested | Live HTTPS pilot; 122 CI browser cases without retries and 66 hosted Chromium checks across ten surfaces at desktop/Pixel 7/320px passed. Twenty accessibility audits found zero violations; synthetic review/digest only, no external calls or persistent browser writes |
+| Native iOS/Android Milo client | Mock | Strict typecheck, all-platform JavaScript export and 25 session/security helper tests passed; development/preview installation and physical lifecycle evidence pending |
 | Microphone/speech, private push and OS Contacts | Planned | Contextual permissions and destination contracts required; real provider/device capabilities separately gated |
 | Calendar, Gmail, other social channels and meetings | Planned | Independent service grants, adapters and acceptance gates required |
 | 50,000 connected customer accounts | Planned | 8/24-user HTTP stages passed; paced128/burst64 failed availability and recovered. No target-scale session, event, model or subscriber proof |
 | Production release | Planned | Provider eligibility, real personalization, privacy/security audit, deployment/recovery and capacity evidence pending |
-| GitHub Actions validation and release automation | Live-tested | Run 37638332729 passed for `8b1ee2da`: 747 PostgreSQL, 734 SQLite/13 skips, 70 browser cases, four image gates and full scans; fixable HIGH/CRITICAL gates passed while unfixed advisories remain. Application changes require new exact-source CI |
+| GitHub Actions validation and release automation | Live-tested | Run 37664307493 passed for `3336764b`: 844 PostgreSQL, 831 SQLite/13 skips, 122 browser cases, 40 contracts, 47 proxy, seven privacy, 25 native helpers, four image gates and full scans; fixable HIGH/CRITICAL gates passed while unfixed advisories remain. Application changes require new exact-source CI |
 | Render new-project infrastructure | Planned | Paid private-data/API/worker Blueprint and public Web; protected stable keys, exact origins and service selectors are required; no hosted URL yet |
 | Railway infrastructure | Live-tested | Valid workspace Bearer authentication; PostgreSQL 18.6/Redis 8.2.10 private services and persistent volumes ready; API migration/schema and shared-limit readiness passed. Managed restore, direct SQL/Redis inspection and Redis runtime AOF state remain unverified |
-| Railway application deployment | Live-tested | Tested `8b1ee2da` source export verified against Git for 266 files; official CLI upload deployed API/Jobs/Retention/Web. API migration and worker schema startup succeeded; 106 hosted checks passed at the live URL. Native Git metadata is absent, so `release_commit` is null |
+| Railway application deployment | Live-tested | Tested `3336764b` source export verified against Git for 295 files; official CLI upload redeployed API/Jobs/Retention/Web. API migration and worker schema startup succeeded at nine-revision head `3f7829c4bd10`; 117 hosted checks passed (40 HTTP, 11 connectivity ingress, 66 Chromium). Native Git metadata is absent, so `release_commit` is null |
 
-The prior recorded local full backend runs passed **734 SQLite cases with 13 PostgreSQL-only
-skips in 241.05 seconds** and **747 PostgreSQL cases without skips/errors in 635.17
-seconds**, each with five Starlette/httpx and Alembic deprecation warnings. Eight Alembic
-revisions through `86b7bbad6fc1` are implemented and applied with local PostgreSQL
-schema alignment. Client evidence includes **20 shared contract tests**, **seven
-Tools privacy tests**, **16 native helper tests**, **70 browser cases**, strict
-workspace typechecks, production web build and all-platform Expo export. The
-current proxy counts and immutable container identities are in [QA](docs/QA_REPORT.md).
-The gateway rerun passed **33 tests**. These runs do not establish installed-device
-or live-provider outcomes.
+The current exact-source CI passed **844 PostgreSQL cases** and **831 SQLite cases
+with 13 PostgreSQL-only skips**, plus **122 browser cases** without retries,
+**40 shared contracts**, **47 proxy**, **seven privacy** and **25 native helper** cases.
+Strict workspace typechecks, production Web build, all-platform Expo export and
+33 gateway cases passed. Nine Alembic revisions through `3f7829c4bd10` passed local
+PostgreSQL alignment and CI two-process serialized migration, repeat-upgrade and
+worker-wait checks. Four image acceptances and six worker entrypoints passed with
+synthetic identities and zero external provider calls. See the new
+[connectivity release record](docs/benchmarks/connectivity-release-2026-10-07.json).
 
-Real shared Redis limits passed across two independent clients, including overload
-and outage rejection. An encrypted PostgreSQL restore preserved **5,001 messages
-and 37 tables**, exact durable state, suppression, held jobs and replay behavior.
-The current source bounds lists, synchronous export/erase, auth cleanup and request
-admission; short PostgreSQL workspace locks protect SQL races without holding the
-lock during provider/model network work. Large asynchronous erasure and production
-storage/key custody remain open.
+The previous local full runs passed 734 SQLite cases with 13 skips in 241.05 seconds
+and 747 PostgreSQL cases in 635.17 seconds at the earlier eight-revision head
+`86b7bbad6fc1`. That earlier recovery drill preserved 5,001 messages and 37 tables,
+with exact durable state, suppression, held jobs and replay behavior. It was not
+repeated against the managed deployment or this source. Current CI separately
+verified real shared Redis counters and fail-closed outage behavior; those checks
+are not a 50,000-user throughput result. The source bounds lists, synchronous
+export/erase, auth cleanup and request admission; short PostgreSQL workspace locks
+protect SQL races without holding a lock during provider/model network work.
+Large asynchronous erasure and production storage/key custody remain open.
 
 The prior backend increment passed 495 SQLite cases, 495 distinct PostgreSQL cases across
 two commands and 33 Node gateway tests, plus non-root image, HTTP bridge and actual local
@@ -97,7 +97,7 @@ acceptance. These checks do not establish real social replies or target capacity
 See [QA report](docs/QA_REPORT.md) and [platform matrix](docs/PLATFORM_CAPABILITY_MATRIX.md)
 for exact evidence and release boundaries.
 The saved installer and startup instructions cover frozen Python and both npm locks,
-local service health and eight migrations. Non-root API 0.3.0 and web image evidence
+local service health and nine migrations through `3f7829c4bd10`. Non-root API 0.3.0 and web image evidence
 is recorded separately in QA, with zero provider calls. Current Python and selected
 web production audits report zero known advisories; the full workspace graph retains
 29 affected dependency nodes (21 high, eight moderate), and container advisories

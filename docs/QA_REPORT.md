@@ -6,7 +6,80 @@ listed as actual local or hosted infrastructure. No real Google, model or WhatsA
 has been exercised. The current request enables Milo web/native and deployment acceptance;
 client results below are separate from backend and installed-device results.
 
-## 7 October Railway deployment follow-up
+## Current connectivity release — 7 October 2026
+
+The live pilot is [Milo](https://web-production-bde60.up.railway.app).
+Application source `3336764b7846a62da07903d6a3ab123bc8650d1c` passed
+[GitHub run 37664307493](https://github.com/hemantsatishjadhav06-ai/whatsapp-history-ai-/actions/runs/37664307493).
+The official Railway CLI redeployed a clean export of that source to API, Jobs,
+Retention and Web. All four replacement deployments reported `SUCCESS`; all six
+services had a running instance and both persistent volumes were ready.
+The new [connectivity release evidence](benchmarks/connectivity-release-2026-10-07.json)
+records this source independently of the earlier release below.
+
+| Exact-source check | Result | Scope |
+| --- | --- | --- |
+| PostgreSQL backend | 844 passed, no skips/failures/errors; 372.746s | Disposable CI PostgreSQL database |
+| SQLite backend | 831 passed, 13 PostgreSQL-only skips, no failures/errors; 184.517s | Disposable CI databases |
+| Browser journeys | 122 passed; no skips/failures/flaky cases; retries disabled | Desktop/mobile-web, synthetic identities and provider fixtures |
+| Shared contracts / proxy / privacy / native helpers | 40 / 47 / 7 / 25 passed | No physical-device or real-provider acceptance |
+| Typecheck / Web build / Expo export / gateway | Passed; 33 gateway cases, 16 Expo static routes | Android/iOS/Web JavaScript export, no installed or signed app |
+| Four non-root images | HTTP acceptance, six worker entrypoints, full scans and SBOMs passed | Standard and Railway API/Web images; synthetic workflow, zero provider calls |
+| PostgreSQL startup | Nine revisions to `3f7829c4bd10`; two locked migrators applied nine then zero; repeat zero, worker waiter passed | Actual cross-process migration lock; temporary database removed |
+| Shared Redis | Source/actor/nonce/global/control limits, bounded hashed counters and fail-closed outage passed | Two independent limiters and real local Redis; no 50,000-user measurement |
+| Railway API/worker startup | Pre-deploy migration completed; API ready, Jobs/Retention exact-head gates completed | Nine-revision head follows verified source plus startup gates; no direct remote SQL query |
+| Hosted HTTP | 40 passed | Source export hashes, public assets/security headers, private SQL/Redis readiness, disabled/unconfigured states and denials |
+| Hosted connectivity ingress | 11 passed | Public native bearer boundary, cookie/origin/internal-route denials, unsigned Meta webhook and malformed OAuth callback rejection |
+| Hosted Chromium | 66 passed, no failed checks | Ten desktop/Pixel 7/320px surfaces; 20 accessibility audits with zero violations; anonymous/synthetic content |
+
+All **117 hosted checks passed: 40 HTTP + 11 connectivity ingress + 66 Chromium**.
+The hosted Chromium rerun is recorded at `2026-10-07T18:45:41.911Z` with certificate
+verification enabled. Its initial cloud-runner attempt could not initialize the
+existing NSS trust database because filesystem access was read-only (`SEC_ERROR_READ_ONLY`,
+-8126), then failed certificate validation before reaching the application. Normal
+NSS initialization with approved filesystem access resolved the runner issue;
+no certificate bypass, `HOME` change, user browser profile or private-key inspection
+was used. Anonymous `/me` 401 console messages were expected. Browser checks blocked
+network writes, made no external provider calls and performed no persistent browser
+writes. The accessibility result applies to these surfaces, not WCAG certification.
+
+Every one of the **295 exported file hashes** matched Git before the official CLI
+upload. The Git export archive hash identifies that local archive, not the CLI's
+accepted upload bytes, whose checksum was not measured. Railway rebuilt the source;
+its image bytes were not proven identical to CI images. Native provider Git commit
+metadata is absent, so public `release_commit: null` is expected and was not forged.
+API pre-deploy and worker startup gates completed; Retention reported bounded sweeps.
+Volume readiness is not backup/recovery evidence. Direct remote SQL/Redis inspection,
+Redis runtime AOF state and managed restore remain unrun.
+
+The native HTTPS Google broker, browser login recovery, exact verified owner binding,
+signed Business ingress/contact consent, conditional Coexistence history, reviewed
+owner authorship, automatic bounded local style statistics and owner-only questions
+were exercised with synthetic provider responses. Owner answers use attributed human
+messages and confirmed memories from the selected authorized chat, with source,
+permission/revision and expiry reconciliation; they cannot send or grant access.
+Selected-chat permission changes and chats outside the first snapshot page are covered.
+This is bounded local personalization and retrieval, not complete account-history
+access or model fine-tuning.
+
+Google, Meta and model credentials are absent from the pilot. Real Google login,
+actual eligible 1:1 Business history/echo, model quality, provider sends/forwards and
+accepted/delivered receipts remain unverified. Business connectivity is one configured
+number bound to one verified Google owner; general customer Embedded Signup,
+personal QR pairing and live groups are not implemented. Authorized personal/group
+exports remain supported. Installed-device, store distribution, managed recovery
+and 50,000-user tests were not run. The Render deployment job was skipped.
+
+Security gates report **zero fixable HIGH/CRITICAL rows** for all four CI images,
+while full API scans retain **265 rows (two critical, 53 high)** and full Web scans
+**236 rows (one critical, 50 high)**. The native graph retains **29 affected nodes
+(21 high, eight moderate)** from four reviewed base advisories. Selected Web/gateway
+production and Python production audits report zero known advisories; the Python
+report covers 48 packages. These exact-scope results do not establish that the
+product is vulnerability-free. See [security review](SECURITY_REVIEW.md).
+
+## Previous Railway deployment follow-up — source `8b1ee2da`
+
 
 The live pilot is [Milo](https://web-production-bde60.up.railway.app). All
 **106 hosted checks passed: 40 HTTP and 66 Chromium checks** across ten surfaces
@@ -77,7 +150,7 @@ for earlier source `8ea6d57633ef993241fe2af0b5f036d9d3f22d33`. That run passed
 747 PostgreSQL cases, 734 SQLite cases with 13 PostgreSQL-only skips, 70 browser
 cases, all four cold image builds, HTTP/worker smokes and full security scans.
 
-The latest `8b1ee2da` CI run reports these Railway image findings:
+The previous `8b1ee2da` CI run reports these Railway image findings:
 
 | Railway image scan | Reported findings | Critical | High | Fixable HIGH/CRITICAL gate |
 | --- | --- | --- | --- | --- |
@@ -124,7 +197,7 @@ cold image builds, HTTP/worker smoke checks and security gates. Deployment was
 skipped. Source `72df83c1cc05e4b3c707c1bf7747b3f90c369af7` subsequently passed
 GitHub validation, but its Railway API build failed as recorded above. The newer
 `8ea6d576` run and its failed provider outcome are historical; `8b1ee2da` is the
-tested application source for the successful hosted pilot recorded above.
+tested application source for the previous hosted pilot recorded in this section.
 
 ## 7 October Render and fresh-owner increment
 

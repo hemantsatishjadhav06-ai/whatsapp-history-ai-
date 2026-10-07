@@ -1,0 +1,2393 @@
+{
+  "report_created_at": "2026-10-07T18:49:40.576341+00:00",
+  "release_status": "Tested application source redeployed; provider activation and real-user acceptance pending",
+  "live_url": "https://web-production-bde60.up.railway.app",
+  "tested_application_commit": "3336764b7846a62da07903d6a3ab123bc8650d1c",
+  "evidence_docs_commit": "This report is published in a later documentation-only commit; application source and deployment remain the tested commit above.",
+  "implemented_connectivity": [
+    "Browser Google sign-in loader, nonce, session restoration, expiry and revocation fixes.",
+    "Native HTTPS Google OAuth broker using server state, nonce, PKCE and an expiring single-use app handoff; rotating sessions and refresh-proof revocation.",
+    "Public bearer-only native API ingress, HTTPS OAuth callback and signature-checked WhatsApp webhook ingress to the private backend.",
+    "Server-configured WhatsApp Business number restricted to its exact verified Google owner, expiring connection authority and separate per-chat read/retain/learn/draft/send consent.",
+    "Conditional eligible Business Coexistence history adapter, deduplicated signed history/echo ingestion and explicit owner-authorship review.",
+    "Automatic bounded per-chat style refresh from consented human-owner messages and recent/relevant retrieval with retention filtering.",
+    "Owner-only contextual questions and cited answers, with authority checks before and after generation and on subsequent display.",
+    "Fresh web/native private-result reconciliation, including permission-change races and chats beyond the first bootstrap page."
+  ],
+  "source_upload": {
+    "source_commit": "3336764b7846a62da07903d6a3ab123bc8650d1c",
+    "tracked_files": 295,
+    "root_legacy_config_absent": true,
+    "archive_sha256": "db89fe64e49a9045971e69d62e5acd9d59854fc72f483e6748f6c2e34595e115",
+    "archive_bytes": 795999,
+    "archive_is_cli_payload": false,
+    "file_sha256": {
+      ".dockerignore": "e01544a43acaa9a0420a5ebf776a675fbed73d3e03a1e7d320d27f90f7e4042b",
+      ".env.example": "3a43d9b80e8f7217e5d836d5ff2395ceab9436c65a2b6f7b9bc1b1b771139598",
+      ".env.web.example": "f973c12c008e3625fc744f1d4a1082f346e67f2461e733c360d1464d678ac88a",
+      ".github/workflows/backend.yml": "4a6cfd6a7c2b36d3c43c6334371c2f6171fa91832318755a7a6a20cfb77e1b91",
+      ".github/workflows/clients.yml": "873f0585edc57b89366f5d3f77f940b5718bf81ebe276a23b68b198a97b8d3da",
+      ".github/workflows/containers.yml": "e328678cc1ba27ea1bf8e9cfb1d143453b9d2ef43d03dccbe5ae8f365a140016",
+      ".github/workflows/render-release.yml": "f6479d44082d98bc833f661acba202805b824d38beeec9e7cc28c9f816fda51c",
+      ".github/workflows/security.yml": "b159159d33652659430eb77690e213e7ebfc938f345dbbf45d018d2bd2b21b46",
+      ".gitignore": "ad730d58407ab0444be0da411963884f69440aca55707914ddf472b116583d5c",
+      "Dockerfile.web": "05cc2642156bfee66c82d2ab6fa3230978c23cfe46e8ba4b91a25d1c982639e7",
+      "Dockerfile.web.railway": "975ae407676df845c315c92d866ccdc07a75d4829419ad2789772566cca340b0",
+      "IMPLEMENTATION_STATUS.md": "1749ad46347c7745bc456bf815e5443c69158568bb1582e8a1a3fadc0f518311",
+      "Makefile": "b34192d67f9df4f46e832e22abb9c236b204e44dee3375598892f5a935eeb78f",
+      "README.md": "abb840e3c8f6c5f2d373f1337450ec265f2ddc6d4ca579654d570c3baa554881",
+      "alembic.ini": "070daac2b8b7a2eac73a750c9d20f2a3033335ab602348d1c8627f106009d647",
+      "apps/mobile/.env.example": "919ccae825cc4821c133b7a573da83b9cb6d60b081c61fde9ca46ebc19bd041e",
+      "apps/mobile/MOBILE_IMPLEMENTATION_STATUS.md": "078bbc527ce5536cba058ee741b7f41447b8a533e1015b0b6a3b9b0a7ec0e4ce",
+      "apps/mobile/MOBILE_PERMISSIONS_MATRIX.md": "0f87686b7dd1626c27a7f6dd8fdce7f14935352229bd860b31b9cb75fc4b7011",
+      "apps/mobile/MOBILE_RELEASE_RUNBOOK.md": "53a14bc2a9bf70ab0aeaf78f489e21e3eb3290819e6371ee855a8b9ceded6aaa",
+      "apps/mobile/MOBILE_SECURITY_STORAGE.md": "0e3194e6b92eaf311dd623a87ffc24371a2582f1b37117789fc4c5bcccebcdb6",
+      "apps/mobile/NATIVE_DEVICE_TEST_REPORT.md": "e712b71ab83a6e4c07a8ffd2141ae6a15bf858fae289770cdc7bad69422b17be",
+      "apps/mobile/README.md": "0eba83c401dd5ba630b7824ac3357ccaee29142d9833326318b3d05e7c65ee84",
+      "apps/mobile/app.json": "d1d56f7d26c8e288f50286fd3ac1d4b709611edd78f46a2a0e9c642b4cf04ffe",
+      "apps/mobile/app/(tabs)/_layout.tsx": "52ea3873859d262cfcbdf46696ac79109ebbcfabc39aaee72c09ff2cc17a6ead",
+      "apps/mobile/app/(tabs)/actions.tsx": "9a141fe12eb8249efdbd6ab159c81cf459d4697a15fc24b8609076340d4094ca",
+      "apps/mobile/app/(tabs)/inbox.tsx": "244deef199a228d2b772c74bd6cf08e9549423fc1ecc45c8d8c22bf21882bf57",
+      "apps/mobile/app/(tabs)/index.tsx": "cf1b4e06be650b0549cc1b7a89a92001b73bc8c1ade76457773c1e16fecb0386",
+      "apps/mobile/app/(tabs)/memory.tsx": "338e8227a4a952c821d3e3565a86f5122f10fe079251326edf9d8a239b03624f",
+      "apps/mobile/app/(tabs)/more.tsx": "b930f09e0943410ebb75b9a018191c1af0af5c86c5f925176d7dea7b4c6976b3",
+      "apps/mobile/app/+native-intent.tsx": "9a788b4eab7f21fb7e749419e0ebeffa242803dd6773815bb89c2203d962ce58",
+      "apps/mobile/app/_layout.tsx": "0c85924d9f246ad3335f3c6de4878b368a143f8a408074c2f335c14829ceeb91",
+      "apps/mobile/app/assistant.tsx": "e5e3f1bb055a96dae267417084bac37e0bb05a15f7c4db72ad053c576b0b6ece",
+      "apps/mobile/app/detail/[kind]/[id].tsx": "fce186edad5dbb725e9a49355ac82711b01d0c889478dd3c14c15e26f6e494e3",
+      "apps/mobile/app/sign-in.tsx": "140936879a6ba156b03cca5cb5f7a7e8d72b8f6e0f0aabea8634e8e96f77f5ae",
+      "apps/mobile/app/tools/[tool].tsx": "0ab2d78ee97a5e404c26dcbd4a5c37a7d87fcf19efa875df0ff34c662cec1fc1",
+      "apps/mobile/components/ui.tsx": "c0636b8e1caabdf618ec53bfa78ea24330b34124c5bde1eb31a8f39ac4afd04b",
+      "apps/mobile/components/whatsapp-connection.tsx": "f32efc458e75b19fe33e358d264b983360e3b88dcfd66a00d8f946e88183dd6c",
+      "apps/mobile/eas.json": "a6d73d7f7382815dd7d9ee50144ab38fbb4c972faf5decb37898b8a7aadd2c28",
+      "apps/mobile/expo-env.d.ts": "57d45be957186273b21383b09f6a6aa3ca599b28d1fb742fb3edfac464504b90",
+      "apps/mobile/lib/native-api.ts": "a08c4dab29f40941abcae9be11da2bd5d91f5b67cfeb34c30243289fede08e2b",
+      "apps/mobile/lib/native-oauth.ts": "def2547d758d87a826d408423d68ba9ded4a81320d1a50307665a34017c26050",
+      "apps/mobile/lib/private-results.ts": "44a5dc5b2a88050da43a5c5865520a0e248ceac5c9c39dda68abe90aeee9a042",
+      "apps/mobile/lib/security.ts": "a7584ebf035241c51fd731d5c469ecb926bbbc04c3c3759e071aa3cbe7314b7c",
+      "apps/mobile/lib/session-guard.ts": "8dc6c506aad0bec5e8299dd5ee9d65de23c6867c8ad23928e7b2cdab316c6b5f",
+      "apps/mobile/lib/state.tsx": "5e33be4b9d5ba80b8b64232adf82fd25f567c221484892230ba82bf23629afe7",
+      "apps/mobile/lib/use-private-result.ts": "753da9b78c9d30fa89036e0d9d32c75dfdbc0823aaa8dcd6439d043ba764d1df",
+      "apps/mobile/metro.config.cjs": "1b801de05c908cc3d91b95d8e4f271e0bcb43c63cf40339f9813f3fbf73cc72c",
+      "apps/mobile/package.json": "7f3f640e8733b04fcc14b5b5c49caaaa9f244dbca1c24b3ebf564903fcffc4e5",
+      "apps/mobile/tests/native-oauth.test.ts": "67109bb60b5306d28d405cadda167eef4ac5c6091ea1af0707f306de0010c3f6",
+      "apps/mobile/tests/private-results.test.ts": "1dc517dbb7f6a2310c645117606356c2e6a3e09100dd0e097e9ac132902317d7",
+      "apps/mobile/tests/security.test.ts": "debf3efb141579ab468bee6ec80ed25b6308271672a457c7a92eeb222b4333e6",
+      "apps/mobile/tsconfig.json": "22e974459ecdffad484268a4c0fba7fc5c322a9ddae6d945f91bafe94ad06b0e",
+      "apps/web/app/[[...path]]/page.tsx": "d7c07cbccf87e8ce96b063c893f40903f0f1875019d0e1a6c27a5e99d990b637",
+      "apps/web/app/api/[...path]/route.ts": "5b6be814ed0b7a68af364ad185b1acdd26f53a19d76e2daca6e6ea929eaead95",
+      "apps/web/app/api/auth/native/google/callback/route.ts": "1cb8ae4dc7c71afedca39c1516985e09879901de6939c662b3105f525309a350",
+      "apps/web/app/api/webhooks/whatsapp/route.ts": "d5b2943cc9f5286c92b7142546d4f121d03fd0f54b52fb96c4946561f17e0e18",
+      "apps/web/app/globals.css": "f7caf1ae9e046c14e4517a7f0a8f2376aac7b3b3684e097e5ef636cc878ab7fd",
+      "apps/web/app/healthz/route.ts": "c83ffabdf69f95223823e68d6f8e74230fe5ff53e81a2e50859f3cecbd537269",
+      "apps/web/app/layout.tsx": "08b0d4459640c1710a79b4309f2863ad531b392b7bb8167ef24c03baa0f28223",
+      "apps/web/app/native-api/[...path]/route.ts": "d708906abf4cc27bcbe28e74f5d9bf037d7638259ef230bc18bd267c4f1921b8",
+      "apps/web/app/readyz/route.ts": "a75a6e50b3e9205b80f66c39be078522ba7eb0c0a3de7ef4cb47faaea28c8ade",
+      "apps/web/components/app.tsx": "e4029f0e89b8557e8740b48d795f1b6fd794500bbb3ffc7e56647975b47bf56b",
+      "apps/web/components/assistant.tsx": "e973ca01b76a88bd70c3cf15572af9d36b39ff2ab71f2300f2c4acd8af648a97",
+      "apps/web/components/auth.tsx": "3463bd5aeb5d635e8a887b08744db423f94d5febe6aa84173171bc58542b9a6f",
+      "apps/web/components/history-setup.tsx": "31899862aa54bb76288a26d3e593c301af8592cba4688980327a5cceed109507",
+      "apps/web/components/home.tsx": "c3c37b5094266affd5f79a6d4c78457e195c47358ec6ccb503cf5b16eed59088",
+      "apps/web/components/icons.tsx": "aa7bcc1c21ebd4831465492669044de8c8010bae3cc2e60274f85353c89bed66",
+      "apps/web/components/inbox.tsx": "e860a192687abd4b9a4c5c20e0cb85f9c2ebbd1606f7cfadfc09128a32c39c6a",
+      "apps/web/components/tools.module.css": "6d2f72fea9f8720c35706a58236bdddd33961296a8116c3362faec6c54814533",
+      "apps/web/components/tools.tsx": "11001c886594078f73694126b22e8dddc1eec9f31db608439f59655957310b05",
+      "apps/web/components/whatsapp-connection.tsx": "a571fe99b16a288c4c73521083db584b53fbdae255f416f75eb91e7325f10993",
+      "apps/web/lib/google-signin.ts": "dda360c1186035a7563e0e62b85a9a701f2b3609c2b98c1206971f83fa387432",
+      "apps/web/lib/history-confirmation.ts": "bdd3e0fb3f6ed7a5ec17c1ae17fe4bc074ab20930181b6156739df8cb405ee0c",
+      "apps/web/lib/proxy-admission.ts": "71b4643a04679ebbe92fdb757f2e6ef6ce20a0d700ddd5a0065c7546c88cb9d1",
+      "apps/web/lib/proxy-body.ts": "1cdedc871dca003765f8c91786190f3fd342c766318441804922aabf2f68ef37",
+      "apps/web/lib/public-ingress.ts": "2dc439fa637ed86208b84f746329b3da1f9e9dd7709327176edfd6ca5ce9f96d",
+      "apps/web/lib/state.tsx": "d246a5aeeab3e9ec62690704e8da75e111cf58858ab32502cf9b0d7762cd4a7f",
+      "apps/web/lib/tool-privacy.ts": "a6c075b75f3da910e3dbd735a18a477abec475103a43249e1dd9ce5c3ee7e969",
+      "apps/web/lib/types.ts": "1bc9e3493d772c37f3ebf12640e017f225375c490ed476910f3f3622f81e6ea4",
+      "apps/web/next-env.d.ts": "1862ac4bbbc5192d4bf562161df66ea547ed3e67173100656ab606ae9797db2b",
+      "apps/web/next.config.ts": "06a318474f77197d7ef0a5cace686ec9e6c8e813955c0674e68af345cea5f11d",
+      "apps/web/package.json": "3bc26fe68989079851291803700b889db018e5886cee6fae4d06001078e16c93",
+      "apps/web/public/milo.svg": "30ce954461668effa8a63e5550753b8bb8e0fe2e2d371d67624dde3257cbd255",
+      "apps/web/tsconfig.json": "0f6225320db3d34bf2bdbc884b4217d1ca3f32c10bde0dc569f3f531a7321b19",
+      "db/migrations/env.py": "2ec5e1b3a18e41a81e7049f7d336b954429105043e408fde262207576743bc74",
+      "db/migrations/script.py.mako": "bebf1e4b7644243b9651d99b0c085ee1297a3d089c400fd8d8cc87b6f920e3f3",
+      "db/migrations/versions/05439876fc2e_bounded_rotating_native_refresh_sessions.py": "b0cfc80c67e18d8706ba713620efb898e3a6173218f340d3abc7143c034ebd68",
+      "db/migrations/versions/05968846b410_bounded_verified_fact_automation.py": "d9b545a8c654f7b206d637556be131510163821da7d364201ccf940c294704ae",
+      "db/migrations/versions/2c71848ffaec_native_actions_contacts_jobs_and_.py": "eddc3af79f6156190d710c9694df752a7676afeb82c6bbe3e82e7b5bbb7e806b",
+      "db/migrations/versions/3f7829c4bd10_native_https_google_oauth_broker.py": "bfb29b95d9b7961b425b215e55ebf050585a3159d54176dd11e77717543ce616",
+      "db/migrations/versions/62a08d908c78_bound_draft_context_to_memory_expiry.py": "1a749bf959d7f905a5a9d867594c209a9978c378149cf65783a64ee82609d424",
+      "db/migrations/versions/776b8a3e1f52_native_google_proof_challenges_and_.py": "39fe736bfbe3b41fa52c1b59d6d1a00da217cd0f06a03147fb55b54537e883ab",
+      "db/migrations/versions/86b7bbad6fc1_bounded_auth_expiry_indexes.py": "6222d62ba35df65c3d7248921ce199e2822ecebb7ef7c18273e771d7a95338b9",
+      "db/migrations/versions/95f566068880_encrypted_owner_context_and_durable_.py": "091c0b12514eb4e38c55b10756fc1e035becf7c8d748aa42f72292c63786db6d",
+      "db/migrations/versions/bdb23cd7706f_initial_tenant_scoped_assistant_schema.py": "7b128a1f00676bff0eb8c92c35e0297a13a995138d2fb0ce98a8db96a10b285b",
+      "docs/DEPLOYMENT_RUNBOOK.md": "1f23716687fe53807761cf0983db0b77bca58ae90f58ac0885d549a26c16d75e",
+      "docs/LOAD_TEST_REPORT.md": "85f4f8976de06aef81c60a84659a491e6ea68f26f0d1d245b4f82445643e4884",
+      "docs/MOBILE_PARITY_REPORT.md": "d9bab83ed8ce0030f19b0f36e78d9866dbf23da87c4d39a70943e97b4fa9d783",
+      "docs/MODEL_EVALUATION.md": "e917ac0caebb1a0275aea22793f478884bf241f6e208e0e7bd5ab34ad8209269",
+      "docs/PLATFORM_CAPABILITY_MATRIX.md": "91fea8da76065d8404161acac53571a075fd50d388a3e4ae8dffa85164c9e484",
+      "docs/QA_REPORT.md": "8ab14166c76001c85364df085f291268a78127d3a17a0ac274cd15031d30b58d",
+      "docs/RELIABILITY_AND_RECONCILIATION.md": "d9ff24449f53c0fcb19d303c44c205846ae66bb5b9fc6830f537e237d6dadde0",
+      "docs/SECURITY_AND_DATA_LIFECYCLE.md": "394981cb0e71bf015c07006aa287e3ef89aaca26c556378b083bc189af47294a",
+      "docs/SECURITY_REVIEW.md": "7e9073cd3f81cf02c573e3bb64e8ec9a6cec08d878fe2b8097f06352312c8cc7",
+      "docs/TEST_PLAN.md": "c9ba97e0a045519125b7c8747901590990f7482eed8bb4eb80a9ea46c98365fa",
+      "docs/architecture.md": "d4621221b65a7685988c00d424e2c2b6cb7acf21c2efd2e04ab6bf5faa3a2c0d",
+      "docs/auth-expiry-profile.md": "2aaceaeb393e7ec0d6a3fe4f91c0b26053bd5dd34bfd9604d50de145da196c3f",
+      "docs/benchmarks/hardening-regressions.json": "c9239b183350e3e90f6e1e7bafa6030b2eb2a70480dde216d12c8bc839b61d32",
+      "docs/benchmarks/http-baseline.json": "494765ca24b8b1a63aadeeef6f34dcf2e311b6a8c5f48f04568fa7cdb9b3864d",
+      "docs/benchmarks/http-burst-64.json": "5aaa5e59627280b0ac7cf51d2e8869f7d092285723b0bbcb1ec56bf9821a71fd",
+      "docs/benchmarks/http-paced-128.json": "534b1ee4268842641e8df5849d0622965aeb698b09e25afb7fa7089d15f46ae8",
+      "docs/benchmarks/http-prefetch-8-24.json": "eb7465d5529d929d16e73dd9d97ad960217247e79c904260c70b3c3a935b58f8",
+      "docs/benchmarks/railway-hosted-release-2026-10-07.json": "617f8a3b9788ecff0e1944d1fd38999cbd54dd42aee8dec5e5da98a017631b66",
+      "docs/benchmarks/render-blueprint-schema-validation.json": "9b871e510501775dca94ff4930fdd660bfd7b20199304d19832e77104c89cc01",
+      "docs/benchmarks/render-release-regressions.json": "9b6b5deaa2338537292cfe3c478c50b341fad3e50dd0b083e476465ffd048266",
+      "docs/benchmarks/target-50000.json": "b86ada95c5647720f60949307cc9304f1703b03c65515041dc28a5f273c8fa96",
+      "docs/business-owner-binding.md": "acd9309eea65da459b8949879c503c0c1d400adffa0c5c62376d1b82738ae0e3",
+      "docs/capabilities.md": "f9e3ecdde0c26dc0daada8acd8422307b5ee61738810df552ed7862975fb4967",
+      "docs/connectivity-setup.md": "6a5b07dad5b182c6c3ab3965c9d92579797b21bc2dae6934a9272ffcb82048fc",
+      "docs/decisions/0001-backend-first.md": "70d5399f59418ab6d1085fb1dc82efe9f81dd88fcfd396cbe4ac553175993961",
+      "docs/decisions/0002-pilot-gateway.md": "db1d66d6ca57e61a35ba621cf59350449477e5f50115b30f2b8b38dbca289456",
+      "docs/dependency-audit.md": "2dc4dd2ad776101ffebe879e58f87339c7748312bfab3f6121cab98354ee5264",
+      "docs/deployment.md": "f8fcd18b94e7696fb2049659e06198636a8453cbe4646c325f6784012b453112",
+      "docs/github-actions.md": "bcd65a07cf80adc0128c74a6a32f0f216e4e8307f38a9a1a349d1ea77db49ccd",
+      "docs/load-test-results.md": "d0a65bd8e619854260bc1f4539e1d3cf7a30e9feeda3905e37f2f370814b381e",
+      "docs/local-development.md": "32431b8b12c6682ae404c01d1659666b8a4a636a61c18bca6189ecbd09d916f6",
+      "docs/privacy-retention.md": "60771678d5822996fbc15d2a8d9f415fd5895e8e2da66acf29cf0e95b3ccf78d",
+      "docs/product-spec.md": "23203eacc4ad96403dc72244087b1a3014080cbedba3dcf9ef16647c058b1b6a",
+      "docs/railway.md": "a02f84c2fd0247fea832e0b66dd8db55020258e01d770b0f81358a05ddc4ebe1",
+      "docs/readiness.md": "f4d637bd647e23d57ca62cdd2157023469bbbd6017927c27b570d3074e40c69f",
+      "docs/render-container-validation.md": "5d94284df1042ab43af02214d535b8428296f4ac5fc92b60d0288674042a1c23",
+      "docs/render-startup-smoke.md": "93dc2373d3c0bf831351d69eef24f522d1d796ed579f9115e45e38d456aaf6f3",
+      "docs/render.md": "d325bf42920ba3570743b8d9ebfba9329377b806b50862eff823442dff74da80",
+      "docs/request-limits-smoke.md": "a6736f4469cd271762cd9ad9d40ae29d4e82e61ae5db5027809bb34d4d54fbed",
+      "docs/runbooks.md": "f3370147532e9768db02db61ef7d756921bd00758bc6f1bb4786b28e9a1f6b14",
+      "docs/storage-admission.md": "3877567e1808185f05cf8fa28c0e4efc8494d484645777eed81a1520a98a4d7e",
+      "infra/compose.yaml": "f9e53f5384571f12118cf8eb0f734dcfd00485aa57240c0a942d6737a65e2c5b",
+      "infra/railway-actions.json": "3cddb4bf0be9ec485348a2a3b9f7a4ce8fd959b6292130ba6282a9b0756ca547",
+      "infra/railway-api.json": "dd9971639f6b719e4ad0dc4ba8d6e527adadbd5c21d5adce966f9829e986fac5",
+      "infra/railway-jobs.json": "0c50fc5c5d26a03f19b2ff6fff715e9130e0fb7c8b5ed4fa70a79c1e259bd07f",
+      "infra/railway-retention.json": "371e5083ffd57a817afbe7d06e3178c00deff17af4edbd9aead0cf556b3ce861",
+      "infra/railway-service-settings.json": "bb4649913583201cfc08e578924736569ccb306e4add52faf195c0a50f02db0c",
+      "infra/railway-service-update.graphql": "aa9f3b6608059996ea94e2c43b6d7b41df85f44c8eaf4ef24f08f2d2ac658567",
+      "infra/railway-web.json": "0740ddcff5d75b7036aa003bd1c21efc6d02d44c04acef3f97556429ca65d95d",
+      "package-lock.json": "5b0c619a9ee93813779e30a4863a692dccbe295e077fad37fcbf0c2c0ade2e26",
+      "package.json": "96cd276604992cb29828dacd080e2c8d019480fcf7dc45167f1be2cbcef1c918",
+      "packages/contracts/canonical-event.schema.json": "63003a88dd49a6f3294c0f8a98017e8572eb74105c78f95f3777674686914f26",
+      "packages/contracts/demo.ts": "7729333dac7f72e82eb8267d9e3a7afba0b97a35b82e1b2b108d0c5e382febc7",
+      "packages/contracts/domain.ts": "1a1eb9d1a58c14166bab0a2381af8770b471fd9956659d5338140ec4bfd8f919",
+      "packages/contracts/format.ts": "7a4076d0724d25ee45724542d69ddea82746e72992bc8c6124d098999b9a6d63",
+      "packages/contracts/generated/api.ts": "921ba6ce89ec362ac9514cae49cbc1b29f9b222940fca792c2186494b15d1164",
+      "packages/contracts/index.ts": "3b2f1e0bf27d2727c4d21e6d65c9107db2c8dbe248a92be9157f9390881306a3",
+      "packages/contracts/openapi.json": "bedd35be5ccb7f25205a7705103f84b901bc02d9d966297b6b0113764d9b0930",
+      "packages/contracts/owner-answer.ts": "61d21fd09b0f683a7b3bd579b0ce8441603a2d229ff7ba287be5647c181ffefb",
+      "packages/contracts/package.json": "f6ed7290e0d00dd28f584e792db4cc79c01a143a22785e710b73f2a2416db684",
+      "packages/contracts/sdk.ts": "b4db4697973535668c9e3470b80d8bd16eceb2a1d8ee7f4be921c79bc104ee03",
+      "packages/contracts/tests/demo.test.ts": "3ffddd591e6591f508a49a5fbda6e07c2470fc14bcc829c3af5accd90406b74e",
+      "packages/contracts/tests/owner-answer.test.ts": "7b6209d3ba4abe1fed3dda6076335eb3e3f536d175d6acb604d70360c378a991",
+      "packages/contracts/tokens.ts": "4b5d1f720ad032f90ae18497e5cb86a1d2f5a21353ba3656f15ae8cd8c0dbaea",
+      "packages/contracts/tsconfig.json": "96e1c49bca4a6ab2b3665a19b8f8abd39f1053129169f2be2da6bfbb5dbad97f",
+      "playwright.config.ts": "2b27dc295115d8f4329c4124b27811763939d23b7e7173b3bf79851987dc2e11",
+      "pyproject.toml": "e340d874662146e810977ed520db55673c145f29619327ee3ef096db2d0b9a12",
+      "render.yaml": "8a56467defa851933adec46ce259d9768ca950b66e3b2c0eb6b69739c62edb46",
+      "scripts/bridge_smoke.py": "e3a30c7897cec688f0f9e822f21f6f2950e5cbf4559cc1a930f38007b96c5ec4",
+      "scripts/capacity_distributed.py": "324591abbe238bd16216816787e84e770083c4d97ddc133089d2f244fc9952c7",
+      "scripts/capacity_fixture.py": "479ecd4fe267c04181bfd4ad772c00c45feb5074637c55c0d487f6cd8ce5598c",
+      "scripts/capacity_http.py": "16f277191156d5bb9680a9a31f1c4288c11d0f8830d9326345537c6962337a1f",
+      "scripts/client_fixture.py": "86a79a680e457b1fa1f758f39de0d361ceae77cba7b7cc6b057197aab39b5d0a",
+      "scripts/container_config_check.py": "8e2c888567d7b309aa773924e6d758f32d9551c8626b8d45ecf9dc8f20d09f66",
+      "scripts/container_smoke.py": "3ace2cdb1589bf4b3a61d7453fadf44e2062c0fedfc61fec019a6e0cb8607444",
+      "scripts/demo.py": "07972266ac7e4e7cc33368bf96bdfaa28ef47cf80e7b06c44a5141a5aa94c20b",
+      "scripts/dev-bootstrap.sh": "5b1e2029855f266b87e0898485a72ca56efe728710c28113c62dc6b05e2e20b9",
+      "scripts/export_contracts.py": "0d535d6a4e2ff3251124bcc28a9b11c6dd9a406b74b51f000c01b1699a953810",
+      "scripts/http_smoke.py": "e28721cc8807985ba537c004a6a551d15fba039a5c19d07f2893ffc49e3d1513",
+      "scripts/integration_smoke.py": "b8750edb04abc88830d65437ee72983dcaf92cf3b031857ef9dbaad26cd91389",
+      "scripts/load_smoke.py": "92e2922dc7fa28379888e11482e5e56035938d7d913679fc2392cb45733f9284",
+      "scripts/public_connectivity_smoke.py": "448e400d24fd8d09d1ebeed3403ee2cb268b34f1988e33c2f3751618bde1ba59",
+      "scripts/railway_runtime_smoke.py": "eb87bd962e5a3f1602c4ef5f699239151a6bb77276082cd588e509609e957791",
+      "scripts/render_release.py": "6c49b7ac17cd4fcfd909a35da5846589027dbcedce1e5da271b3a6f13a46f3ea",
+      "scripts/render_schema_check.py": "53e7bcc57f4d62e1bce45751efba9f09412e27ab4503aecd4a485f9d87a557d0",
+      "scripts/render_startup_smoke.py": "a80b696fd867d7b87eb2974e7c62694c4278f781a1c3ece41578222b5749356f",
+      "scripts/request_limits_smoke.py": "9ebe0b7e08207bb3404b0fa811961976150941b3fdcc1d9a3844a03b8f1abdb3",
+      "scripts/storage_reliability.py": "42fedadb632e1b3b5624e99a2799f7355bc21da81634b91906a5938c41cabbc5",
+      "scripts/web_container_smoke.py": "f1ec092bac69cd83c0bfe9d6773177f06b98da05d4bb76a8ec695ffcc0a619cf",
+      "services/api/Dockerfile": "fea4cef18d83eebcfa52b3aa8711e3e25ce39a29358c95c83f96b05c9059506b",
+      "services/api/Dockerfile.railway": "adc4df94c65ea87232689eda66f94a96a8cee70105256568acda6f8caa8bdc61",
+      "services/api/assistant/__init__.py": "42b1a10adf21ed8c5c206dab7c44919c9849f28d2581ad223bf61bef530813c4",
+      "services/api/assistant/access.py": "7c79d7311f04f82aca5561af134b9308e104e90893ceb67ed6d38303f247417b",
+      "services/api/assistant/action_models.py": "60014b1a1eda63f5771ac22ac1c3abf2609ec12c0bd7499e0f9f4c296c68d4a9",
+      "services/api/assistant/actions.py": "dd98697d8f58805836d792b2d7a2a73b5975d8853e1fe0989ce9f16346e3514e",
+      "services/api/assistant/assistantui.py": "4bdb39520e3895855168e99c60708076477b660297e7131affac2bf98714692e",
+      "services/api/assistant/auth.py": "193b8d3ae010d7d067240220bfba9c3f3b23822eed4091f1fbb024f021fd4615",
+      "services/api/assistant/auth_lifecycle.py": "cf32ad04ff0e212a772bc2f1fc16ab4d6da428bb1a09aadd5120066cc6a09d34",
+      "services/api/assistant/automation.py": "9d3244b34a561b1bd0d3fea83718c82f2f4a6ff0eebfc602e87890e679a91c56",
+      "services/api/assistant/bridge.py": "08a4824f5864241cec11ff8cc25c8ff9791b4bf886b6bc23f14eef2055075d4f",
+      "services/api/assistant/companion.py": "98dfb07826307cb751f03fd181ed2484267368f964245dfea38af2c9af6349a0",
+      "services/api/assistant/config.py": "521a90dda03cabfc339a078ff913b34cd2583c24234ebc3947ff36f7fc53ad7c",
+      "services/api/assistant/core.py": "7736be36aafb343c6b197519f5685a9f5f777f60f9e36639024ec1f61c2ed6fe",
+      "services/api/assistant/db.py": "cc2bb0f2a9d34dd4b655b426b7c14146b3f46fd4d90cff4b9bc54f051c71e75f",
+      "services/api/assistant/google_certificates.py": "9ee4155e3c6361f4b30ecb1a41ac5b53f5ee7b4988fcf344c43ce364fd7f3fe0",
+      "services/api/assistant/importer.py": "58ad648573107304cb288069690c61bc1e9e627298fa1a0f1afd8703470e3e97",
+      "services/api/assistant/intelligence.py": "3eca974d1770db73d8c9c8b72837f6ad80e907dadf3ce515f5df4082983f1796",
+      "services/api/assistant/jobs.py": "fbde7753f2d52beffdb442495d0267a5020ac1d577b8f61ef7bc3e986d3e7343",
+      "services/api/assistant/jobs_models.py": "11c7a6065c50e2d1c9f0d538443bfe744f578489b16dc0225da1fc9092933dd2",
+      "services/api/assistant/lifecycle.py": "fa86f47dceffb0c6e1bafc878df156ff758e6893b6f0ed24e924a0e3a1772021",
+      "services/api/assistant/lifecycle_models.py": "a9b1e7e7b70efad40c9d7a77536d6582c7ceb5333f181334847b58ef4e2a424b",
+      "services/api/assistant/main.py": "8b96a08608582a643be4bbbcdb2cd118be16f8b181c3375fee895b8b60759b45",
+      "services/api/assistant/messaging.py": "61349a56e5598b7a4f875b948a057e4ca3c320e58d54ac0bd46e8f71cc74757d",
+      "services/api/assistant/mobile_auth.py": "dd0e8a00cea5294af2c2f091031c42855c0a3674c09006788aa7fa2e3a04e257",
+      "services/api/assistant/mobile_models.py": "67cf61b579d79f1c7ccdca2c142c7d6febaee81c6b8edf0df96952bf6dcdf6fe",
+      "services/api/assistant/models.py": "019fdfc167bcf2784a13cc130b44793500f3c2534f9b7e1ca0be8a1c62b7cff3",
+      "services/api/assistant/native.py": "4777cb157d0d131c593e9a4d75edc61eb42d66df3e5d3307b7f49133ce2d678a",
+      "services/api/assistant/native_models.py": "764afb6a4a30137707e5838c65c571a3c352da411bdd3498b2031bfaba80f210",
+      "services/api/assistant/native_oauth.py": "f2de7a772d78e8b9300f56c0d38e50e640a05ffbd0610d23e7daca3c13109c88",
+      "services/api/assistant/people.py": "9f87b0a1ce03c621daad578e8f91e960a2175c659473e2d096cd8f7fe843a5ed",
+      "services/api/assistant/people_models.py": "55dc13c31617ed40f9e6e58b9fe9d6dc24aaa12ee25f8d5a8efd008e4d1a7315",
+      "services/api/assistant/provider_authority.py": "d39bfe695ddc15c38879e73829dd384c8a755d3f7b625ad9e6528fc30e7c1734",
+      "services/api/assistant/relay.py": "3721bed475b56e9adcf076dc8e386537e94ca459844a1c3a2c930602a4222522",
+      "services/api/assistant/render_entrypoint.py": "956849a6792ffda66ed14495b0126990a258dea57f2ad78d6a93dcf13bb77a67",
+      "services/api/assistant/request_security.py": "c94cbdb4c67a777ab24ceb88d5c516c660b9b61c2534e68c48ad8d7788404266",
+      "services/api/assistant/storage_authority.py": "44063f57d2c15df9a2cba662b1cfb733ea611911b051c8e3d87388ab92b7fd47",
+      "services/api/assistant/tasks.py": "12c70f7ef03ddfdec7c6337c0ef8f6de17b3d05f974e66ef96ea7571a3a285a2",
+      "services/api/assistant/webhooks.py": "8ab4fa70fd2ff870051239913983c7211a2930099b0d88c5332967bb3ad9dd28",
+      "services/api/assistant/whatsapp.py": "12732544c6eefbd475fd393d0eb1ee5636e21a1b7616a7cb19f52f51e7a47def",
+      "services/api/assistant/whatsapp_provider.py": "d39cabbae7cbee3ee922a4ef6246595dc9ec999777c78f37d501467f3795eff4",
+      "services/api/assistant/workflows.py": "f6684befebb011b7b3955b5561bbd3e09054c768b5b52540565457856ea6a23a",
+      "services/connector-gateway/README.md": "d01e536e312e919c9d8ef130c5d8411b19284b16d40a655728b05d6aa9f124c7",
+      "services/connector-gateway/package-lock.json": "01e15bb780231fbb790b63359475a3d9c352d1a5b86115590b8b79b79c5e1006",
+      "services/connector-gateway/package.json": "314096a9b61d951fd2b85b7eecdc4a760ca537969113f6c81d6ebdbae35eed59",
+      "services/connector-gateway/src/action-adapter.ts": "3cf2c53228a3ff41f69535f9745c8412cccefcbecb69c45fbb2d56abd29f5d13",
+      "services/connector-gateway/src/action-contract.ts": "bd627229fa34370d522c61ac662fabd48fbdba8b50a4a59b0a97cc3b7c276513",
+      "services/connector-gateway/src/bridge-server.ts": "339f3c09a0783d0c65ae35c8d887c199d05ff199e540f4190768a018863a939f",
+      "services/connector-gateway/src/contract.ts": "3ec36f5fa36cadfc57e8a646521e3c3e5da8ffe045117293e3e3940be3f3a533",
+      "services/connector-gateway/src/mock-adapter.ts": "12a3b3e735ac7f71ed867aaa849ba0491debeb110117d58bf313a480fea81c1c",
+      "services/connector-gateway/src/permits.ts": "0217bcc2cfa8533521344a387ef5062a57b06b1657992acd4e4b3e19cf68da2f",
+      "services/connector-gateway/src/start.ts": "92e48c90e792a41e31638836a02932a2a709bb9cdc3ce630d68483c5c4903058",
+      "services/connector-gateway/src/validation.ts": "485c1b554d7cbd6b0987b88defbaa004b29f6af8ccacbba736d0e21a47dd3114",
+      "services/connector-gateway/tests/action-bridge.test.ts": "1d24713c0349baf1841240c4083192778139d4ad66e00425d172dadd615112d4",
+      "services/connector-gateway/tests/contract.test.ts": "7bb13644a86e6302702ee2f70cc47fb35c2eca7690b4cb39a975957e415752c5",
+      "services/connector-gateway/tests/mock-adapter.test.ts": "f5d7195f414270c3233c8f2171ae6bfbc1a46e326cccc8a22860c3257a24d202",
+      "services/connector-gateway/tsconfig.json": "f6916669c677e6c75c1bb36a56c5bbf50659c4a6f56555b02fe880ece58a78db",
+      "tests/browser/assistant-privacy.spec.ts": "31cc16312314c19e1f17f70d0de758d231a6e386c19093e632de761aa8abe472",
+      "tests/browser/backend.spec.ts": "6b79b18acf6be0674f09406ba3be37c64e31e443fedc39844159701139bb7a0e",
+      "tests/browser/google-login.spec.ts": "bf8647cbc9c2f732ae73329919e3b6eea31afc073b0cbfed8cd9e448aa725c6c",
+      "tests/browser/history-onboarding.spec.ts": "e8de039fdb304a755655ea1cec9925bd6128d649550833e522a55d52c0facab3",
+      "tests/browser/milo.spec.ts": "569a40561f299f0a9d06fe3d4fceb4344258adfe0c53216584d51c20caa06362",
+      "tests/browser/operations.spec.ts": "cabac0bdf7f8304034914686cadd4abcfb5a764d2b6d81cb34103faca1a8550f",
+      "tests/browser/owner-intelligence.spec.ts": "28ff92a759d37c1e57bac736cc7286a83f91c97af8109480c7851ef847ceb95f",
+      "tests/browser/tools-privacy.spec.ts": "21fcceb896c1e3bd6bdccca5d63fec06ac179b988f92ca8cc4896aafedec275c",
+      "tests/browser/whatsapp-connection.spec.ts": "bbe66c8b52435947849e07e0a4c31002cb08382105ec9d680c2e5b40a4b318c5",
+      "tests/conftest.py": "e04858145ffa5f174cfd10ed9533c900a8eb70f3d45eee38d44741da68c26e47",
+      "tests/test_actions.py": "2b9e32b8ec347c1d7aa5c7ebd844bbede86b844cddc28bd53d329b6ebf94a8f0",
+      "tests/test_assistantui.py": "91fa4140cb907507897d07f67b90cb85a6e19ea07591343a71ef875d98069ef6",
+      "tests/test_auth.py": "c6b37218b7ebca10bb4c5c624c0fedf0d9962a33ba6363f722d929d6206ec878",
+      "tests/test_auth_lifecycle.py": "b5c2e5764ff6bb4b9e9542ef5f9d1ab8736cdce414f4f5e988f75ff2a6f3bbf9",
+      "tests/test_automation.py": "60aa7f098a3e0db20c518b81383bfc2b342a4a50de259f2680de9523d23714fa",
+      "tests/test_bootstrap_capacity.py": "4d4db23f02b6e034d3ad72c871a22a0ce859246b86806f4eb128f3ddb650c65d",
+      "tests/test_bridge.py": "2069ef6e6e19ff9eaa43c7afc5f2ab694e8bef581aef1e9d3ecfad94b0df55df",
+      "tests/test_business_owner_binding.py": "a1052575f7aadb0710d7753e22d0cf332fca561e203e2cebe735944d7cea4b5b",
+      "tests/test_capacity_harness.py": "af6f6734eb94238e1cae3fa145af18e1c81be62a07797971f39716512c505b84",
+      "tests/test_companion.py": "6b81f44e8c19ee212f11b022a7277a2d04b614bd9a1989867f434920fb51b882",
+      "tests/test_connected_intelligence.py": "ee4db1616ef6c587f2920b48b7445a0666203e72e375a3d9c7938c7e8c87f1ce",
+      "tests/test_core.py": "98a23f7839688818cb9302688ab7d1936f4e57c879415a41bc34ae94dd89485e",
+      "tests/test_core_limits.py": "2b69ede3c8a250fae21ff6878e47094216706ea3c1d49dba780ce89278a9e4ec",
+      "tests/test_google_certificates.py": "ed4de473ffd594a759ee1cb516484f5de230830b6efc0f5a4af5f1ef058a417c",
+      "tests/test_importer.py": "9864408598eba3d2bfdc6356ecb46052127254b6663c8ff59c55453de32498bb",
+      "tests/test_intelligence.py": "70ad5a977e390e2b67c0daaa95bae8a2e6a545d28f4c0385e0d90ceb69bfdbae",
+      "tests/test_jobs.py": "183cbab620697de916303ac1633de0a4c17593bb5ca7f04069ce4b8211f0cff8",
+      "tests/test_lifecycle.py": "a40b4e1e7a36b6a40e307d0cbae2721b532c6d883b2fb07a1856e8e4048ea38c",
+      "tests/test_messaging.py": "70718438563907f8bf44488bfc74bc5b5b06943b670699e6f3516e8f437c94bf",
+      "tests/test_migrations.py": "b8e82591b17703055834de91b07022967a306eeb400192cb6340759a844a72de",
+      "tests/test_mobile_auth.py": "c87bb7be99a251e62205edc4ed761e1c8a8e5466564de0088d84cac8b4f2bc3b",
+      "tests/test_model_budget.py": "540f69a9d29efcf3d2b3015ace46f2d8b928aabd5d4ba4286d25bc0926c87817",
+      "tests/test_native.py": "9ae2da352716a1a096a382c7c9b02961087f3f11bf0ca2a3432b70e49de5adab",
+      "tests/test_native_oauth.py": "12abba7e328a2a4f43242621e4184c6aed951019b752a53b49fa7638ff518533",
+      "tests/test_outbox_workers.py": "d3558860b41f399d3eb16de1cb0f286e7f76ff82b9314cecb445044cb71824a6",
+      "tests/test_owner_answer_history.py": "78ebf0d2d6fa2828f9449f1d53bad1c215446a5af765a03063f0c012ff8ae287",
+      "tests/test_people.py": "35d10a7bd8a4bf3e7322dc73838fe79fb9864a14eb1e2e6ff0e3bc0c3673ea9e",
+      "tests/test_public_connectivity_smoke.py": "6c24e83e0a3465c02d09fc9f9161ee4419173d1d324c290870dbf77ec50980bf",
+      "tests/test_render_entrypoint.py": "c46da8a9c02e4b0452c3e64cabeffc419b46d4a47c4b57fb40c7c183fb6a4cb2",
+      "tests/test_render_release.py": "a78613fba7a852c4f62c6a71387001a7eed0e898d501f81cd7db7d55ec72aa5a",
+      "tests/test_request_hardening.py": "48423fb97635edc805a9df207dade0f1a59fc273e084da862e1489a866e24b0b",
+      "tests/test_security_integration.py": "7d30b4024a095cdc4ba8e3dcfa14f62a7c223a99f12d5aa1e997d7c68090a024",
+      "tests/test_storage_pg.py": "df47513d8dd7e064a9454c86afd0f30d3a13dbfecc8255a42ed81fd5c892fd0f",
+      "tests/test_storage_races.py": "31db2873d0de353b8784279f8a1275012f0ac03d9d4e4dd41644a16fd51fb1cf",
+      "tests/test_tasks.py": "26ac78687479759ccf3d631455e2256df7bbd4bf4b053e95e47a08c98fa86165",
+      "tests/test_webhooks.py": "60dae7fd35a6ee5d80bf1ab5eaf52853e50bd4b82f288c2e5fb8cbbc79907234",
+      "tests/test_whatsapp_connection.py": "017801718921732c36dcd9b1789cdabc2ecd08f85a3f6642c2d5833dc44ee17e",
+      "tests/test_whatsapp_operator_identity.py": "a444c0ecc44d8b4cd6d69a6f4e2f647f62c9a1b91c275f8cb423be4901a90c9c",
+      "tests/web_proxy.test.ts": "e06fc02b50a7cc2b1a2ee5357e832b87da05b0a822b061f0ebf33836a79f0623",
+      "tests/web_proxy_admission.test.ts": "6dfee18d7720334c7d608efb7c809cb3264f9b9865c578eb957590ccc3e30c49",
+      "tests/web_proxy_ingress.test.ts": "32975082c187d36b7fc847be9d817d0541732a65ba1db90b0b40ed6df1d98353",
+      "tests/web_proxy_readiness.test.ts": "1af3ab4dc18454983a5a5186829840fc7c4ad50a4afa8208f50dc9c0656dfb1e",
+      "tests/web_tool_privacy.test.ts": "5529da9e4c09bbe155963fed7fc272622e1d90f304a894dae44d03c7d2f9c306",
+      "uv.lock": "bdf2dfd2c25213832964053a1ccb0f5fe754785ad54213c0e594ac64a299147c"
+    }
+  },
+  "source_upload_method": {
+    "cli_version": "5.63.3",
+    "method": "Official Railway CLI uploaded a clean Git export for API, Jobs, Retention and Web.",
+    "all_295_export_file_hashes_match_git": true,
+    "git_metadata_included": false,
+    "ignored_environment_secrets_or_local_artifacts_included": false,
+    "archive_hash_scope": "Hash of the local Git-export archive only; it is not a checksum of the payload accepted by Railway CLI.",
+    "accepted_cli_payload_checksum_measured": false,
+    "native_provider_git_commit_metadata": null,
+    "readyz_release_commit": null,
+    "provider_rebuilt_images_identical_to_ci_images_proven": false,
+    "deployment_ids_match_accepted_cli_uploads": true
+  },
+  "github_ci": {
+    "run_id": 37664307493,
+    "head_sha": "3336764b7846a62da07903d6a3ab123bc8650d1c",
+    "run_url": "https://github.com/hemantsatishjadhav06-ai/whatsapp-history-ai-/actions/runs/37664307493",
+    "status": "completed",
+    "conclusion": "success",
+    "observed_at": "2026-10-07T18:17:12.022300+00:00",
+    "jobs": [
+      {
+        "name": "backend / postgres",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "name": "backend / test",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "name": "containers / configuration",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "name": "clients / clients",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "name": "containers / accept",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "name": "evidence",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "name": "deploy",
+        "status": "completed",
+        "conclusion": "skipped"
+      }
+    ],
+    "sqlite": {
+      "available": true,
+      "tests": 844,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 13,
+      "passed": 831,
+      "elapsed_seconds": 184.517
+    },
+    "postgres": {
+      "available": true,
+      "tests": 844,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "passed": 844,
+      "elapsed_seconds": 372.746
+    },
+    "clients": {
+      "contracts": {
+        "available": true,
+        "tests": 40,
+        "pass": 40,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      },
+      "proxy": {
+        "available": true,
+        "tests": 47,
+        "pass": 47,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      },
+      "privacy": {
+        "available": true,
+        "tests": 7,
+        "pass": 7,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      },
+      "native": {
+        "available": true,
+        "tests": 25,
+        "pass": 25,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      }
+    },
+    "browser": {
+      "available": true,
+      "passed": 122,
+      "failed": 0,
+      "skipped": 0,
+      "flaky": 0,
+      "retries_disabled_command": true
+    },
+    "postgres_startup": {
+      "passed": true,
+      "synthetic_only": true,
+      "external_provider_calls": 0,
+      "model_calls": 0,
+      "actual_heads": [
+        "3f7829c4bd10"
+      ],
+      "expected_heads": [
+        "3f7829c4bd10"
+      ],
+      "expected_revision_count": 9,
+      "migration_exit_codes": [
+        0,
+        0
+      ],
+      "upgrades_per_process": [
+        9,
+        0
+      ],
+      "each_revision_applied_once": true,
+      "waiter_executed_before_schema": true,
+      "waiter_exit_code": 0,
+      "two_separate_migrators_observed_waiting_on_same_lock": true,
+      "repeated_migration_exit_code": 0,
+      "repeated_upgrade_count": 0,
+      "repeated_migration_idempotent": true,
+      "disposable_database_removed": true,
+      "owned_processes_stopped": true,
+      "elapsed_seconds": 6.165
+    },
+    "redis": {
+      "mode": "two_independent_limiters_real_local_redis",
+      "shared_source_and_alias_budget": {
+        "submitted": 60,
+        "accepted": 7,
+        "rejected": 53
+      },
+      "shared_actor_budget": {
+        "submitted": 60,
+        "accepted": 6,
+        "rejected": 54
+      },
+      "shared_global_budget": {
+        "submitted": 60,
+        "accepted": 11,
+        "rejected": 49
+      },
+      "independent_control_budget": {
+        "submitted": 20,
+        "accepted": 4,
+        "rejected": 16
+      },
+      "nonce_aliases_ignore_rotating_credentials": {
+        "submitted": 60,
+        "accepted": 5,
+        "rejected": 55
+      },
+      "signed_ipv6_canonicalized": true,
+      "expired_unsigned_tampered_source_rejected": true,
+      "counter_keys_hashed": true,
+      "counter_values_numeric": true,
+      "all_keys_have_bounded_ttl": true,
+      "outage_statuses": [
+        503,
+        503
+      ],
+      "outage_blocked_before_sink": true,
+      "liveness_during_outage": true,
+      "external_provider_calls": 0,
+      "capacity_50000_users": "NOT_MEASURED"
+    },
+    "images": [
+      {
+        "id": "sha256:fb4df386887e888b9aa61de134807ac9c0d4544a5b68efdf59c93cda83eb6d12",
+        "tags": [
+          "relationship-assistant-api:local"
+        ],
+        "user": "10001:10001",
+        "architecture": "amd64",
+        "os": "linux"
+      },
+      {
+        "id": "sha256:2571263a9a2b9d2b8744992cca55a61bf89a15c5b6ce9ba6f922824cfe0b91a8",
+        "tags": [
+          "milo-web:local"
+        ],
+        "user": "10001:10001",
+        "architecture": "amd64",
+        "os": "linux"
+      },
+      {
+        "id": "sha256:6443fd17a89f653eb90c387778e9bef9cfad7d83dacaacedd324a06a57ef024c",
+        "tags": [
+          "relationship-assistant-api:railway"
+        ],
+        "user": "10001:10001",
+        "architecture": "amd64",
+        "os": "linux"
+      },
+      {
+        "id": "sha256:921bc58953fbb6c921d57afeb4dce671d4867e40f5c4bfc9ed57c76af2a8066c",
+        "tags": [
+          "milo-web:railway"
+        ],
+        "user": "10001:10001",
+        "architecture": "amd64",
+        "os": "linux"
+      }
+    ],
+    "image_acceptance": {
+      "api": {
+        "mode": "non_root_container_real_local_http_mock_transport",
+        "imported_records": 4,
+        "reimport_deduplicated": true,
+        "owner_style_sample_count": 2,
+        "approved_status": "approved",
+        "dispatch_status": "accepted",
+        "repeat_dispatch_same_attempt": true,
+        "pause_all": "accepted",
+        "external_network_calls": 0,
+        "built_image": "relationship-assistant-api:local",
+        "built_image_id": "sha256:fb4df386887e888b9aa61de134807ac9c0d4544a5b68efdf59c93cda83eb6d12",
+        "non_root_user": "10001:10001",
+        "migration_and_readiness": "passed"
+      },
+      "web": {
+        "built_image": "milo-web:local",
+        "built_image_id": "sha256:2571263a9a2b9d2b8744992cca55a61bf89a15c5b6ce9ba6f922824cfe0b91a8",
+        "non_root": true,
+        "standalone_assets": true,
+        "real_private_backend_proxy": true,
+        "nonce_cookie_path": "/api/auth",
+        "authenticated_snapshot": true,
+        "csrf_protected_controls": true,
+        "cross_site_blocked": true,
+        "forwarded_https_origin": true,
+        "browser_dev_and_internal_routes_blocked": true,
+        "private_dependency_readiness": true,
+        "synthetic_release_commit_exposure": true,
+        "missing_dependency_schema_rejected": true,
+        "external_provider_calls": 0
+      },
+      "railway-api": {
+        "mode": "non_root_container_real_local_http_mock_transport",
+        "imported_records": 4,
+        "reimport_deduplicated": true,
+        "owner_style_sample_count": 2,
+        "approved_status": "approved",
+        "dispatch_status": "accepted",
+        "repeat_dispatch_same_attempt": true,
+        "pause_all": "accepted",
+        "external_network_calls": 0,
+        "built_image": "relationship-assistant-api:railway",
+        "built_image_id": "sha256:6443fd17a89f653eb90c387778e9bef9cfad7d83dacaacedd324a06a57ef024c",
+        "non_root_user": "10001:10001",
+        "migration_and_readiness": "passed"
+      },
+      "railway-web": {
+        "built_image": "milo-web:railway",
+        "built_image_id": "sha256:921bc58953fbb6c921d57afeb4dce671d4867e40f5c4bfc9ed57c76af2a8066c",
+        "non_root": true,
+        "standalone_assets": true,
+        "real_private_backend_proxy": true,
+        "nonce_cookie_path": "/api/auth",
+        "authenticated_snapshot": true,
+        "csrf_protected_controls": true,
+        "cross_site_blocked": true,
+        "forwarded_https_origin": true,
+        "browser_dev_and_internal_routes_blocked": true,
+        "private_dependency_readiness": true,
+        "synthetic_release_commit_exposure": true,
+        "missing_dependency_schema_rejected": true,
+        "external_provider_calls": 0
+      },
+      "railway-runtime": {
+        "mode": "disposable_manifest_runtime_configuration",
+        "built_image": "relationship-assistant-api:railway",
+        "built_image_id": "sha256:6443fd17a89f653eb90c387778e9bef9cfad7d83dacaacedd324a06a57ef024c",
+        "non_root_uid": 10001,
+        "configured_port_honored": true,
+        "ipv4_readiness": true,
+        "ipv6_http": true,
+        "configured_admission_limit": 64,
+        "admission_probe_connections": 72,
+        "overload_status": 503,
+        "overload_rejections": 10,
+        "admission_recovered": true,
+        "shutdown_exit_code": 0,
+        "shutdown_seconds": 0.417,
+        "external_provider_calls": 0,
+        "capacity_50000_users": "NOT_MEASURED"
+      }
+    },
+    "container_security": {
+      "api": {
+        "full_findings": {
+          "available": true,
+          "valid_report": true,
+          "counts": {
+            "CRITICAL": 2,
+            "HIGH": 53,
+            "LOW": 101,
+            "MEDIUM": 108,
+            "UNKNOWN": 1
+          },
+          "total_rows": 265,
+          "image_id": "sha256:fb4df386887e888b9aa61de134807ac9c0d4544a5b68efdf59c93cda83eb6d12",
+          "scopes": [
+            {
+              "class": "os-pkgs",
+              "type": "debian",
+              "counts": {
+                "CRITICAL": 2,
+                "HIGH": 53,
+                "LOW": 101,
+                "MEDIUM": 107,
+                "UNKNOWN": 1
+              },
+              "total_rows": 264
+            },
+            {
+              "class": "lang-pkgs",
+              "type": "python-pkg",
+              "counts": {},
+              "total_rows": 0
+            },
+            {
+              "class": "lang-pkgs",
+              "type": "cargo",
+              "counts": {
+                "MEDIUM": 1
+              },
+              "total_rows": 1
+            }
+          ],
+          "report_sha256": "13083d0c4f95d1ca3dd2542bd38e048bf58dd3ac8770a1dd083ee35be4c0db37"
+        },
+        "fixable_high_critical_gate": {
+          "available": true,
+          "valid_report": true,
+          "counts": {},
+          "total_rows": 0,
+          "image_id": "sha256:fb4df386887e888b9aa61de134807ac9c0d4544a5b68efdf59c93cda83eb6d12",
+          "scopes": [
+            {
+              "class": "os-pkgs",
+              "type": "debian",
+              "counts": {},
+              "total_rows": 0
+            },
+            {
+              "class": "lang-pkgs",
+              "type": "python-pkg",
+              "counts": {},
+              "total_rows": 0
+            },
+            {
+              "class": "lang-pkgs",
+              "type": "cargo",
+              "counts": {},
+              "total_rows": 0
+            }
+          ],
+          "report_sha256": "e64849c5fffc3a5f458a9dc5d8f5d453155f59f8df19d7bea1cad17f6dad6800"
+        },
+        "sbom_available": true
+      },
+      "web": {
+        "full_findings": {
+          "available": true,
+          "valid_report": true,
+          "counts": {
+            "CRITICAL": 1,
+            "HIGH": 50,
+            "LOW": 81,
+            "MEDIUM": 103,
+            "UNKNOWN": 1
+          },
+          "total_rows": 236,
+          "image_id": "sha256:2571263a9a2b9d2b8744992cca55a61bf89a15c5b6ce9ba6f922824cfe0b91a8",
+          "scopes": [
+            {
+              "class": "os-pkgs",
+              "type": "debian",
+              "counts": {
+                "CRITICAL": 1,
+                "HIGH": 50,
+                "LOW": 81,
+                "MEDIUM": 103,
+                "UNKNOWN": 1
+              },
+              "total_rows": 236
+            },
+            {
+              "class": "lang-pkgs",
+              "type": "node-pkg",
+              "counts": {},
+              "total_rows": 0
+            }
+          ],
+          "report_sha256": "060462f151b2544f8df832785c92dd6d7602b048ed6ea9db842b4407566866a0"
+        },
+        "fixable_high_critical_gate": {
+          "available": true,
+          "valid_report": true,
+          "counts": {},
+          "total_rows": 0,
+          "image_id": "sha256:2571263a9a2b9d2b8744992cca55a61bf89a15c5b6ce9ba6f922824cfe0b91a8",
+          "scopes": [
+            {
+              "class": "os-pkgs",
+              "type": "debian",
+              "counts": {},
+              "total_rows": 0
+            },
+            {
+              "class": "lang-pkgs",
+              "type": "node-pkg",
+              "counts": {},
+              "total_rows": 0
+            }
+          ],
+          "report_sha256": "0ae95319d72867d9b40fb0f1ba05c0757abf1b7656c8831d0f8ba57d9bdeb99a"
+        },
+        "sbom_available": true
+      },
+      "railway-api": {
+        "full_findings": {
+          "available": true,
+          "valid_report": true,
+          "counts": {
+            "CRITICAL": 2,
+            "HIGH": 53,
+            "LOW": 101,
+            "MEDIUM": 108,
+            "UNKNOWN": 1
+          },
+          "total_rows": 265,
+          "image_id": "sha256:6443fd17a89f653eb90c387778e9bef9cfad7d83dacaacedd324a06a57ef024c",
+          "scopes": [
+            {
+              "class": "os-pkgs",
+              "type": "debian",
+              "counts": {
+                "CRITICAL": 2,
+                "HIGH": 53,
+                "LOW": 101,
+                "MEDIUM": 107,
+                "UNKNOWN": 1
+              },
+              "total_rows": 264
+            },
+            {
+              "class": "lang-pkgs",
+              "type": "python-pkg",
+              "counts": {},
+              "total_rows": 0
+            },
+            {
+              "class": "lang-pkgs",
+              "type": "cargo",
+              "counts": {
+                "MEDIUM": 1
+              },
+              "total_rows": 1
+            }
+          ],
+          "report_sha256": "3b25505bbeb2eeb122b02e46f6a6c203ce0bf11ffb9875b152400390b4599b5c"
+        },
+        "fixable_high_critical_gate": {
+          "available": true,
+          "valid_report": true,
+          "counts": {},
+          "total_rows": 0,
+          "image_id": "sha256:6443fd17a89f653eb90c387778e9bef9cfad7d83dacaacedd324a06a57ef024c",
+          "scopes": [
+            {
+              "class": "os-pkgs",
+              "type": "debian",
+              "counts": {},
+              "total_rows": 0
+            },
+            {
+              "class": "lang-pkgs",
+              "type": "python-pkg",
+              "counts": {},
+              "total_rows": 0
+            },
+            {
+              "class": "lang-pkgs",
+              "type": "cargo",
+              "counts": {},
+              "total_rows": 0
+            }
+          ],
+          "report_sha256": "a92acb651c6e2ae91279fbc7b8e0a83c677f56fda227a759038d599527ec97a7"
+        },
+        "sbom_available": true
+      },
+      "railway-web": {
+        "full_findings": {
+          "available": true,
+          "valid_report": true,
+          "counts": {
+            "CRITICAL": 1,
+            "HIGH": 50,
+            "LOW": 81,
+            "MEDIUM": 103,
+            "UNKNOWN": 1
+          },
+          "total_rows": 236,
+          "image_id": "sha256:921bc58953fbb6c921d57afeb4dce671d4867e40f5c4bfc9ed57c76af2a8066c",
+          "scopes": [
+            {
+              "class": "os-pkgs",
+              "type": "debian",
+              "counts": {
+                "CRITICAL": 1,
+                "HIGH": 50,
+                "LOW": 81,
+                "MEDIUM": 103,
+                "UNKNOWN": 1
+              },
+              "total_rows": 236
+            },
+            {
+              "class": "lang-pkgs",
+              "type": "node-pkg",
+              "counts": {},
+              "total_rows": 0
+            }
+          ],
+          "report_sha256": "101065303500ccbfbe8f25b8a00106e6ab54d0af983d904cce83a23bcb9dc665"
+        },
+        "fixable_high_critical_gate": {
+          "available": true,
+          "valid_report": true,
+          "counts": {},
+          "total_rows": 0,
+          "image_id": "sha256:921bc58953fbb6c921d57afeb4dce671d4867e40f5c4bfc9ed57c76af2a8066c",
+          "scopes": [
+            {
+              "class": "os-pkgs",
+              "type": "debian",
+              "counts": {},
+              "total_rows": 0
+            },
+            {
+              "class": "lang-pkgs",
+              "type": "node-pkg",
+              "counts": {},
+              "total_rows": 0
+            }
+          ],
+          "report_sha256": "7f4440d928af461991f4b820536f087519b539843f5eee5f6a54cc1ad2f26da9"
+        },
+        "sbom_available": true
+      }
+    },
+    "audits": {
+      "web_production": {
+        "available": true,
+        "valid_completed_report": true,
+        "counts": {
+          "info": 0,
+          "low": 0,
+          "moderate": 0,
+          "high": 0,
+          "critical": 0,
+          "total": 0
+        },
+        "error_present": false,
+        "base_advisory_ids": []
+      },
+      "gateway": {
+        "available": true,
+        "valid_completed_report": true,
+        "counts": {
+          "info": 0,
+          "low": 0,
+          "moderate": 0,
+          "high": 0,
+          "critical": 0,
+          "total": 0
+        },
+        "error_present": false,
+        "base_advisory_ids": []
+      },
+      "native_production": {
+        "available": true,
+        "valid_completed_report": true,
+        "counts": {
+          "info": 0,
+          "low": 0,
+          "moderate": 8,
+          "high": 21,
+          "critical": 0,
+          "total": 29
+        },
+        "error_present": false,
+        "base_advisory_ids": [
+          "GHSA-86w9-cpqp-85rv",
+          "GHSA-hp3w-g68c-fv3c",
+          "GHSA-vcc3-ghjq-m6fr",
+          "GHSA-vfj7-8cjw-p6xm"
+        ]
+      },
+      "python_production": {
+        "available": true,
+        "packages": 48,
+        "findings": 0,
+        "valid_completed_report": true
+      }
+    },
+    "container_source_sha_matches_run": true,
+    "migration_validation": {
+      "sqlite_upgrade_twice_and_model_alignment": "success",
+      "postgres_migration_locking_and_worker_readiness": "success"
+    },
+    "worker_entrypoints": {
+      "step_conclusion": "success",
+      "logs_present": {
+        "local/jobs": true,
+        "local/lifecycle": true,
+        "local/actions": true,
+        "railway/jobs": true,
+        "railway/lifecycle": true,
+        "railway/actions": true
+      }
+    },
+    "render_deployment": {
+      "job_conclusion": "skipped",
+      "attempted": false,
+      "live_deployment_established": false
+    },
+    "verification_limits": [
+      "CI validation is distinct from a live Render deployment",
+      "Full vulnerability findings include unfixed residual rows",
+      "Browser and native export checks do not establish physical-device/store acceptance",
+      "No 50,000-user capacity or personal WhatsApp synchronization certification"
+    ]
+  },
+  "railway_provider": {
+    "observed_at": "2026-10-07T18:22:34.260280+00:00",
+    "project_id": "7fe11891-3f09-471b-91ed-864ea3a0e675",
+    "environment_id": "2ebd5d64-7b47-4092-ab0b-129177ce6ada",
+    "source_commit": "3336764b7846a62da07903d6a3ab123bc8650d1c",
+    "services": [
+      {
+        "id": "35784ebb-9ae5-4c53-b949-bdde350c4d10",
+        "serviceId": "2e685ac8-490f-4570-b2e7-ba43b1c2a309",
+        "serviceName": "Web",
+        "numReplicas": 1,
+        "healthcheckPath": "/readyz",
+        "latestDeployment": {
+          "id": "e513951f-17c6-496e-8d2d-22b659c03813",
+          "status": "SUCCESS",
+          "createdAt": "2026-10-07T18:20:19.938Z",
+          "deploymentStopped": false,
+          "instances": [
+            {
+              "id": "5a868421-1dc9-40bd-972e-46c26a46d921",
+              "status": "RUNNING"
+            }
+          ]
+        },
+        "activeDeployments": [
+          {
+            "id": "e513951f-17c6-496e-8d2d-22b659c03813",
+            "status": "SUCCESS",
+            "deploymentStopped": false,
+            "instances": [
+              {
+                "id": "5a868421-1dc9-40bd-972e-46c26a46d921",
+                "status": "RUNNING"
+              }
+            ]
+          }
+        ],
+        "role": "web",
+        "start_matches_role_manifest": true,
+        "predeploy_migrate_configured": false,
+        "wait_schema_startup_gate": false,
+        "matches_accepted_release_upload": true
+      },
+      {
+        "id": "8172810b-880f-40aa-93cd-48bc82054a4e",
+        "serviceId": "4221b740-712c-4f06-99e9-9f0b8de88b2f",
+        "serviceName": "API",
+        "numReplicas": 1,
+        "healthcheckPath": "/health/ready",
+        "latestDeployment": {
+          "id": "7a55e9e7-d406-4957-934c-df0daab7ad46",
+          "status": "SUCCESS",
+          "createdAt": "2026-10-07T18:14:43.324Z",
+          "deploymentStopped": false,
+          "instances": [
+            {
+              "id": "88f079c4-90dd-4d09-9d73-c9463c74dae9",
+              "status": "REMOVED"
+            },
+            {
+              "id": "bbbe8347-19d8-4dd0-af96-55a577737eae",
+              "status": "RUNNING"
+            }
+          ]
+        },
+        "activeDeployments": [
+          {
+            "id": "7a55e9e7-d406-4957-934c-df0daab7ad46",
+            "status": "SUCCESS",
+            "deploymentStopped": false,
+            "instances": [
+              {
+                "id": "88f079c4-90dd-4d09-9d73-c9463c74dae9",
+                "status": "REMOVED"
+              },
+              {
+                "id": "bbbe8347-19d8-4dd0-af96-55a577737eae",
+                "status": "RUNNING"
+              }
+            ]
+          }
+        ],
+        "role": "api",
+        "start_matches_role_manifest": true,
+        "predeploy_migrate_configured": true,
+        "wait_schema_startup_gate": false,
+        "matches_accepted_release_upload": true
+      },
+      {
+        "id": "86ef37bd-2461-47e7-a36e-689ed5ecde44",
+        "serviceId": "bc2c5bde-f8a0-4860-aeb0-2b71b0a5dcb3",
+        "serviceName": "Retention",
+        "numReplicas": 1,
+        "healthcheckPath": null,
+        "latestDeployment": {
+          "id": "a0bde525-5399-4092-b2a4-abf669da3a47",
+          "status": "SUCCESS",
+          "createdAt": "2026-10-07T18:20:17.390Z",
+          "deploymentStopped": false,
+          "instances": [
+            {
+              "id": "96cc88c9-494b-4923-a0c5-21de799162f6",
+              "status": "RUNNING"
+            }
+          ]
+        },
+        "activeDeployments": [
+          {
+            "id": "a0bde525-5399-4092-b2a4-abf669da3a47",
+            "status": "SUCCESS",
+            "deploymentStopped": false,
+            "instances": [
+              {
+                "id": "96cc88c9-494b-4923-a0c5-21de799162f6",
+                "status": "RUNNING"
+              }
+            ]
+          }
+        ],
+        "role": "retention",
+        "start_matches_role_manifest": true,
+        "predeploy_migrate_configured": false,
+        "wait_schema_startup_gate": true,
+        "matches_accepted_release_upload": true
+      },
+      {
+        "id": "a9aa99ad-b97a-4ccd-b264-4e51a0b8dee6",
+        "serviceId": "db9f942c-01c3-4375-b59b-92549034f562",
+        "serviceName": "Postgres",
+        "numReplicas": 1,
+        "healthcheckPath": null,
+        "latestDeployment": {
+          "id": "543de66a-8ea4-4cda-ac32-ce61155e31f8",
+          "status": "SUCCESS",
+          "createdAt": "2026-10-07T13:43:18.972Z",
+          "deploymentStopped": false,
+          "instances": [
+            {
+              "id": "d20065eb-7b03-48d4-87f4-5430af669c3b",
+              "status": "RUNNING"
+            }
+          ]
+        },
+        "activeDeployments": [
+          {
+            "id": "543de66a-8ea4-4cda-ac32-ce61155e31f8",
+            "status": "SUCCESS",
+            "deploymentStopped": false,
+            "instances": [
+              {
+                "id": "d20065eb-7b03-48d4-87f4-5430af669c3b",
+                "status": "RUNNING"
+              }
+            ]
+          }
+        ],
+        "role": "database-or-cache"
+      },
+      {
+        "id": "bbcea810-1d45-4546-acce-4cbfdec224ca",
+        "serviceId": "b79b197e-d38f-420f-88c2-4fdf8e631a30",
+        "serviceName": "Jobs",
+        "numReplicas": 1,
+        "healthcheckPath": null,
+        "latestDeployment": {
+          "id": "279f39b0-096c-4b17-a8fb-df4159d51443",
+          "status": "SUCCESS",
+          "createdAt": "2026-10-07T18:20:14.710Z",
+          "deploymentStopped": false,
+          "instances": [
+            {
+              "id": "b5e7c04b-6430-4090-a9cf-f4b5e134f542",
+              "status": "RUNNING"
+            }
+          ]
+        },
+        "activeDeployments": [
+          {
+            "id": "279f39b0-096c-4b17-a8fb-df4159d51443",
+            "status": "SUCCESS",
+            "deploymentStopped": false,
+            "instances": [
+              {
+                "id": "b5e7c04b-6430-4090-a9cf-f4b5e134f542",
+                "status": "RUNNING"
+              }
+            ]
+          }
+        ],
+        "role": "jobs",
+        "start_matches_role_manifest": true,
+        "predeploy_migrate_configured": false,
+        "wait_schema_startup_gate": true,
+        "matches_accepted_release_upload": true
+      },
+      {
+        "id": "e970bf5b-73c6-430e-96db-dacb2f27a9b6",
+        "serviceId": "a1b4d6d2-e9f2-464a-95f5-6454650e10a7",
+        "serviceName": "Redis",
+        "numReplicas": 1,
+        "healthcheckPath": null,
+        "latestDeployment": {
+          "id": "32f9d8d9-b5fe-4bbc-b65a-95ba672f69d3",
+          "status": "SUCCESS",
+          "createdAt": "2026-10-07T13:43:15.941Z",
+          "deploymentStopped": false,
+          "instances": [
+            {
+              "id": "94be6dc1-6eb6-4cb3-8e00-7f1113678326",
+              "status": "RUNNING"
+            }
+          ]
+        },
+        "activeDeployments": [
+          {
+            "id": "32f9d8d9-b5fe-4bbc-b65a-95ba672f69d3",
+            "status": "SUCCESS",
+            "deploymentStopped": false,
+            "instances": [
+              {
+                "id": "94be6dc1-6eb6-4cb3-8e00-7f1113678326",
+                "status": "RUNNING"
+              }
+            ]
+          }
+        ],
+        "role": "database-or-cache"
+      }
+    ],
+    "volumes": [
+      {
+        "id": "1fa697f0-3e13-4615-8200-55562ba1c0d7",
+        "serviceId": "a1b4d6d2-e9f2-464a-95f5-6454650e10a7",
+        "mountPath": "/data",
+        "state": "READY",
+        "deletedAt": null,
+        "isPendingDeletion": false,
+        "volume": {
+          "id": "8a6da23c-4a77-4b99-8e49-27a2350adf35",
+          "name": "redis-volume"
+        }
+      },
+      {
+        "id": "b2715040-c5ff-4530-9055-b591c2e0d9d8",
+        "serviceId": "db9f942c-01c3-4375-b59b-92549034f562",
+        "mountPath": "/var/lib/postgresql/data",
+        "state": "READY",
+        "deletedAt": null,
+        "isPendingDeletion": false,
+        "volume": {
+          "id": "8e865763-2994-4136-86f9-b47a62011ecb",
+          "name": "postgres-volume"
+        }
+      }
+    ],
+    "pagination_complete": true,
+    "safe_configuration": {
+      "api": {
+        "required_provider_setting_presence": {
+          "GOOGLE_CLIENT_ID": false,
+          "GOOGLE_CLIENT_SECRET": false,
+          "GOOGLE_NATIVE_REDIRECT_URI": false,
+          "MODEL_API_KEY": false,
+          "WHATSAPP_ACCESS_TOKEN": false,
+          "WHATSAPP_APP_SECRET": false,
+          "WHATSAPP_VERIFY_TOKEN": false,
+          "WHATSAPP_PHONE_NUMBER_ID": false,
+          "WHATSAPP_AUTHORIZED_OWNER_SUBJECT": false
+        },
+        "railway_dockerfile_matches": true,
+        "production": true,
+        "model_disabled": true,
+        "external_sends_disabled": true,
+        "dev_auth_disabled": true,
+        "secure_session": true,
+        "redis_limits": true
+      },
+      "jobs": {
+        "required_provider_setting_presence": {
+          "GOOGLE_CLIENT_ID": false,
+          "GOOGLE_CLIENT_SECRET": false,
+          "GOOGLE_NATIVE_REDIRECT_URI": false,
+          "MODEL_API_KEY": false,
+          "WHATSAPP_ACCESS_TOKEN": false,
+          "WHATSAPP_APP_SECRET": false,
+          "WHATSAPP_VERIFY_TOKEN": false,
+          "WHATSAPP_PHONE_NUMBER_ID": false,
+          "WHATSAPP_AUTHORIZED_OWNER_SUBJECT": false
+        },
+        "railway_dockerfile_matches": true,
+        "production": true,
+        "model_disabled": true,
+        "external_sends_disabled": true,
+        "dev_auth_disabled": true,
+        "secure_session": true,
+        "redis_limits": true
+      },
+      "retention": {
+        "required_provider_setting_presence": {
+          "GOOGLE_CLIENT_ID": false,
+          "GOOGLE_CLIENT_SECRET": false,
+          "GOOGLE_NATIVE_REDIRECT_URI": false,
+          "MODEL_API_KEY": false,
+          "WHATSAPP_ACCESS_TOKEN": false,
+          "WHATSAPP_APP_SECRET": false,
+          "WHATSAPP_VERIFY_TOKEN": false,
+          "WHATSAPP_PHONE_NUMBER_ID": false,
+          "WHATSAPP_AUTHORIZED_OWNER_SUBJECT": false
+        },
+        "railway_dockerfile_matches": true,
+        "production": true,
+        "model_disabled": true,
+        "external_sends_disabled": true,
+        "dev_auth_disabled": true,
+        "secure_session": true,
+        "redis_limits": true
+      },
+      "web": {
+        "required_provider_setting_presence": {
+          "GOOGLE_CLIENT_ID": false,
+          "GOOGLE_CLIENT_SECRET": false,
+          "GOOGLE_NATIVE_REDIRECT_URI": false,
+          "MODEL_API_KEY": false,
+          "WHATSAPP_ACCESS_TOKEN": false,
+          "WHATSAPP_APP_SECRET": false,
+          "WHATSAPP_VERIFY_TOKEN": false,
+          "WHATSAPP_PHONE_NUMBER_ID": false,
+          "WHATSAPP_AUTHORIZED_OWNER_SUBJECT": false
+        },
+        "railway_dockerfile_matches": true,
+        "public_origin_matches": true,
+        "ignores_unverified_forwarded_source": true
+      }
+    },
+    "shared_private_bindings_consistent": {
+      "ENCRYPTION_KEY": true,
+      "INTERNAL_SERVICE_TOKEN": true
+    },
+    "deployment_events": {
+      "web": [
+        {
+          "step": "SNAPSHOT_CODE",
+          "created_at": "2026-10-07T18:20:19.962Z",
+          "completed_at": "2026-10-07T18:20:23.469Z",
+          "has_error": false
+        },
+        {
+          "step": "BUILD_IMAGE",
+          "created_at": "2026-10-07T18:20:24.209Z",
+          "completed_at": "2026-10-07T18:21:14.668Z",
+          "has_error": false
+        },
+        {
+          "step": "CREATE_CONTAINER",
+          "created_at": "2026-10-07T18:21:15.684Z",
+          "completed_at": "2026-10-07T18:21:21.704Z",
+          "has_error": false
+        },
+        {
+          "step": "HEALTHCHECK",
+          "created_at": "2026-10-07T18:21:22.457Z",
+          "completed_at": "2026-10-07T18:21:23.451Z",
+          "has_error": false
+        },
+        {
+          "step": "CONFIGURE_NETWORK",
+          "created_at": "2026-10-07T18:21:23.714Z",
+          "completed_at": "2026-10-07T18:21:26.701Z",
+          "has_error": false
+        },
+        {
+          "step": "DRAIN_INSTANCES",
+          "created_at": "2026-10-07T18:21:27.209Z",
+          "completed_at": "2026-10-07T18:22:02.911Z",
+          "has_error": false
+        }
+      ],
+      "api": [
+        {
+          "step": "SNAPSHOT_CODE",
+          "created_at": "2026-10-07T18:14:43.345Z",
+          "completed_at": "2026-10-07T18:14:47.322Z",
+          "has_error": false
+        },
+        {
+          "step": "BUILD_IMAGE",
+          "created_at": "2026-10-07T18:14:48.817Z",
+          "completed_at": "2026-10-07T18:16:16.226Z",
+          "has_error": false
+        },
+        {
+          "step": "PRE_DEPLOY_COMMAND",
+          "created_at": "2026-10-07T18:16:16.510Z",
+          "completed_at": "2026-10-07T18:16:24.699Z",
+          "has_error": false
+        },
+        {
+          "step": "CREATE_CONTAINER",
+          "created_at": "2026-10-07T18:16:24.977Z",
+          "completed_at": "2026-10-07T18:16:29.732Z",
+          "has_error": false
+        },
+        {
+          "step": "HEALTHCHECK",
+          "created_at": "2026-10-07T18:16:30.741Z",
+          "completed_at": "2026-10-07T18:16:31.759Z",
+          "has_error": false
+        },
+        {
+          "step": "CONFIGURE_NETWORK",
+          "created_at": "2026-10-07T18:16:32.511Z",
+          "completed_at": "2026-10-07T18:16:36.761Z",
+          "has_error": false
+        },
+        {
+          "step": "DRAIN_INSTANCES",
+          "created_at": "2026-10-07T18:16:37.264Z",
+          "completed_at": "2026-10-07T18:17:12.780Z",
+          "has_error": false
+        }
+      ],
+      "retention": [
+        {
+          "step": "SNAPSHOT_CODE",
+          "created_at": "2026-10-07T18:20:17.408Z",
+          "completed_at": "2026-10-07T18:20:22.812Z",
+          "has_error": false
+        },
+        {
+          "step": "BUILD_IMAGE",
+          "created_at": "2026-10-07T18:20:23.877Z",
+          "completed_at": "2026-10-07T18:21:14.513Z",
+          "has_error": false
+        },
+        {
+          "step": "CREATE_CONTAINER",
+          "created_at": "2026-10-07T18:21:16.038Z",
+          "completed_at": "2026-10-07T18:21:20.110Z",
+          "has_error": false
+        },
+        {
+          "step": "CONFIGURE_NETWORK",
+          "created_at": "2026-10-07T18:21:20.354Z",
+          "completed_at": "2026-10-07T18:21:23.285Z",
+          "has_error": false
+        },
+        {
+          "step": "DRAIN_INSTANCES",
+          "created_at": "2026-10-07T18:21:23.795Z",
+          "completed_at": "2026-10-07T18:21:59.299Z",
+          "has_error": false
+        }
+      ],
+      "jobs": [
+        {
+          "step": "SNAPSHOT_CODE",
+          "created_at": "2026-10-07T18:20:14.729Z",
+          "completed_at": "2026-10-07T18:20:22.708Z",
+          "has_error": false
+        },
+        {
+          "step": "BUILD_IMAGE",
+          "created_at": "2026-10-07T18:20:23.779Z",
+          "completed_at": "2026-10-07T18:21:19.547Z",
+          "has_error": false
+        },
+        {
+          "step": "CREATE_CONTAINER",
+          "created_at": "2026-10-07T18:21:19.928Z",
+          "completed_at": "2026-10-07T18:21:25.687Z",
+          "has_error": false
+        },
+        {
+          "step": "CONFIGURE_NETWORK",
+          "created_at": "2026-10-07T18:21:26.695Z",
+          "completed_at": "2026-10-07T18:21:28.938Z",
+          "has_error": false
+        },
+        {
+          "step": "DRAIN_INSTANCES",
+          "created_at": "2026-10-07T18:21:29.450Z",
+          "completed_at": "2026-10-07T18:22:04.916Z",
+          "has_error": false
+        }
+      ]
+    },
+    "startup_evidence": {
+      "web": [],
+      "api": [
+        {
+          "event": "Database release startup confirmed",
+          "timestamp": "2026-10-07T18:16:21.372889160Z"
+        },
+        {
+          "event": "Application startup complete.",
+          "timestamp": "2026-10-07T18:16:31.665975114Z"
+        }
+      ],
+      "retention": [
+        {
+          "event": "Database release startup confirmed",
+          "timestamp": "2026-10-07T18:21:21.314276235Z"
+        },
+        {
+          "event": "Application retention sweep completed; redacted records:",
+          "timestamp": "2026-10-07T18:21:22.370910566Z"
+        },
+        {
+          "event": "Authentication metadata cleanup completed; expired records:",
+          "timestamp": "2026-10-07T18:21:22.370915526Z"
+        },
+        {
+          "event": "Application retention sweep completed; redacted records:",
+          "timestamp": "2026-10-07T18:21:52.372236201Z"
+        },
+        {
+          "event": "Authentication metadata cleanup completed; expired records:",
+          "timestamp": "2026-10-07T18:21:52.372239681Z"
+        }
+      ],
+      "jobs": [
+        {
+          "event": "Database release startup confirmed",
+          "timestamp": "2026-10-07T18:21:28.569159015Z"
+        }
+      ]
+    },
+    "build_proof": {
+      "web": {
+        "log_rows": 131,
+        "python_uv_observed": false,
+        "next_observed": true
+      },
+      "api": {
+        "log_rows": 156,
+        "python_uv_observed": true,
+        "next_observed": false
+      },
+      "retention": {
+        "log_rows": 84,
+        "python_uv_observed": true,
+        "next_observed": false
+      },
+      "jobs": {
+        "log_rows": 169,
+        "python_uv_observed": true,
+        "next_observed": false
+      }
+    },
+    "migration_evidence": {
+      "release_head": "3f7829c4bd10",
+      "migration_files": 9,
+      "direct_remote_sql": false,
+      "method": "Exact-source migration predeploy and new worker wait-schema startup gates; no direct SQL head query"
+    },
+    "limits": [
+      "Provider volume readiness does not prove recovery",
+      "No private SQL or Redis runtime probe",
+      "Build logs reduced to toolchain booleans and startup event names",
+      "No provider credential value recorded"
+    ]
+  },
+  "hosted_acceptance": {
+    "status": "passed",
+    "counts": {
+      "http": 40,
+      "connectivity_ingress": 11,
+      "anonymous_browser": 66
+    },
+    "total_passed": 117,
+    "total_failed": 0,
+    "http": {
+      "origin": "https://web-production-bde60.up.railway.app",
+      "checked_at": "2026-10-07T18:22:39.594689+00:00",
+      "expected_commit": "3336764b7846a62da07903d6a3ab123bc8650d1c",
+      "source_evidence": {
+        "kind": "cli-upload",
+        "manifest": ".local/connectivity-source-3336764b7846.json",
+        "source_commit": "3336764b7846a62da07903d6a3ab123bc8650d1c",
+        "tracked_files": 295,
+        "all_export_hashes_match_git": true,
+        "archive_sha256": "db89fe64e49a9045971e69d62e5acd9d59854fc72f483e6748f6c2e34595e115",
+        "native_provider_commit_metadata": "absent"
+      },
+      "passed": true,
+      "checks": [
+        {
+          "name": "cli_uploaded_source_export_matches_tested_commit",
+          "passed": true,
+          "tracked_files": 295
+        },
+        {
+          "name": "root_https_milo",
+          "passed": true,
+          "status": 200,
+          "seconds": 0.36
+        },
+        {
+          "name": "header_x-content-type-options",
+          "passed": true,
+          "value": "nosniff"
+        },
+        {
+          "name": "header_x-frame-options",
+          "passed": true,
+          "value": "DENY"
+        },
+        {
+          "name": "header_referrer-policy",
+          "passed": true,
+          "value": "strict-origin-when-cross-origin"
+        },
+        {
+          "name": "header_permissions_policy",
+          "passed": true
+        },
+        {
+          "name": "header_csp",
+          "passed": true
+        },
+        {
+          "name": "header_hsts",
+          "passed": true
+        },
+        {
+          "name": "root_has_built_assets",
+          "passed": true,
+          "count": 11
+        },
+        {
+          "name": "asset_/_next/static/chunks/1_r4gz_wq_ke5.css",
+          "passed": true,
+          "status": 200,
+          "seconds": 0.248
+        },
+        {
+          "name": "asset_/_next/static/chunks/23ri-gjur2z0d.css",
+          "passed": true,
+          "status": 200,
+          "seconds": 0.253
+        },
+        {
+          "name": "asset_/_next/static/chunks/1f0m_nyksetzr.js",
+          "passed": true,
+          "status": 200,
+          "seconds": 0.225
+        },
+        {
+          "name": "asset_/_next/static/chunks/1rj7ns8rte9vc.js",
+          "passed": true,
+          "status": 200,
+          "seconds": 0.267
+        },
+        {
+          "name": "asset_/_next/static/chunks/1bd6-d9tokmw0.js",
+          "passed": true,
+          "status": 200,
+          "seconds": 0.289
+        },
+        {
+          "name": "asset_/_next/static/chunks/turbopack-19ihkw_bd7681.js",
+          "passed": true,
+          "status": 200,
+          "seconds": 0.243
+        },
+        {
+          "name": "web_liveness",
+          "passed": true,
+          "status": 200,
+          "seconds": 0.256
+        },
+        {
+          "name": "web_private_api_sql_redis_ready",
+          "passed": true,
+          "status": 200,
+          "seconds": 0.261
+        },
+        {
+          "name": "cli_upload_does_not_fabricate_native_git_commit",
+          "passed": true,
+          "source_commit": "3336764b7846a62da07903d6a3ab123bc8650d1c",
+          "observed_native_commit": null
+        },
+        {
+          "name": "readiness_does_not_claim_external_integrations",
+          "passed": true
+        },
+        {
+          "name": "readiness_uncached",
+          "passed": true
+        },
+        {
+          "name": "private_backend_public_configuration",
+          "passed": true,
+          "status": 200,
+          "seconds": 0.269
+        },
+        {
+          "name": "google_is_truthfully_unconfigured",
+          "passed": true
+        },
+        {
+          "name": "external_sends_disabled",
+          "passed": true
+        },
+        {
+          "name": "model_is_disabled_not_mock",
+          "passed": true
+        },
+        {
+          "name": "personal_whatsapp_truthful",
+          "passed": true
+        },
+        {
+          "name": "unauth_denied_/api/me",
+          "passed": true,
+          "status": 401,
+          "seconds": 0.234
+        },
+        {
+          "name": "unauth_uncached_/api/me",
+          "passed": true
+        },
+        {
+          "name": "unauth_error_sanitized_/api/me",
+          "passed": true
+        },
+        {
+          "name": "unauth_denied_/api/workspaces",
+          "passed": true,
+          "status": 401,
+          "seconds": 0.251
+        },
+        {
+          "name": "unauth_uncached_/api/workspaces",
+          "passed": true
+        },
+        {
+          "name": "unauth_error_sanitized_/api/workspaces",
+          "passed": true
+        },
+        {
+          "name": "unauth_denied_/api/ui/bootstrap",
+          "passed": true,
+          "status": 401,
+          "seconds": 0.246
+        },
+        {
+          "name": "unauth_uncached_/api/ui/bootstrap",
+          "passed": true
+        },
+        {
+          "name": "unauth_error_sanitized_/api/ui/bootstrap",
+          "passed": true
+        },
+        {
+          "name": "unauth_denied_/api/inbox?workspace_id=acceptance-unowned",
+          "passed": true,
+          "status": 401,
+          "seconds": 0.237
+        },
+        {
+          "name": "unauth_uncached_/api/inbox?workspace_id=acceptance-unowned",
+          "passed": true
+        },
+        {
+          "name": "unauth_error_sanitized_/api/inbox?workspace_id=acceptance-unowned",
+          "passed": true
+        },
+        {
+          "name": "cross_site_write_blocked_before_backend",
+          "passed": true,
+          "status": 403,
+          "seconds": 0.214
+        },
+        {
+          "name": "browser_route_not_exposed_/api/internal/actions/run-once",
+          "passed": true,
+          "status": 404,
+          "seconds": 0.222
+        },
+        {
+          "name": "browser_route_not_exposed_/api/auth/dev",
+          "passed": true,
+          "status": 404,
+          "seconds": 0.242
+        }
+      ],
+      "failures": [],
+      "limitations": [
+        "No customer account or provider credentials used",
+        "No persistent customer writes",
+        "Google sign-in unconfigured",
+        "Personal WhatsApp unavailable",
+        "No real AI or external reply acceptance",
+        "No load or 50,000-user capacity claim"
+      ]
+    },
+    "connectivity_ingress": {
+      "checked_at": "2026-10-07T18:22:36.228984+00:00",
+      "origin": "https://web-production-bde60.up.railway.app",
+      "mode": "public_https",
+      "status": "passed",
+      "passed": 11,
+      "failed": 0,
+      "checks": [
+        {
+          "name": "browser_public_configuration",
+          "method": "GET",
+          "path": "/api/auth/config",
+          "passed": true,
+          "http_status": 200,
+          "response_bytes": 1022,
+          "cookie_issued": false,
+          "redirect_issued": false,
+          "no_store": true
+        },
+        {
+          "name": "native_public_configuration_matches",
+          "method": "GET",
+          "path": "/native-api/v1/auth/config",
+          "passed": true,
+          "http_status": 200,
+          "response_bytes": 1022,
+          "cookie_issued": false,
+          "redirect_issued": false,
+          "no_store": true
+        },
+        {
+          "name": "native_identity_requires_bearer",
+          "method": "GET",
+          "path": "/native-api/v1/me",
+          "passed": true,
+          "http_status": 401,
+          "response_bytes": 48,
+          "cookie_issued": false,
+          "redirect_issued": false,
+          "no_store": true
+        },
+        {
+          "name": "native_internal_routes_unavailable",
+          "method": "GET",
+          "path": "/native-api/v1/internal/dispatch-authority",
+          "passed": true,
+          "http_status": 404,
+          "response_bytes": 53,
+          "cookie_issued": false,
+          "redirect_issued": false,
+          "no_store": true
+        },
+        {
+          "name": "native_development_login_unavailable",
+          "method": "POST",
+          "path": "/native-api/v1/auth/dev",
+          "passed": true,
+          "http_status": 404,
+          "response_bytes": 53,
+          "cookie_issued": false,
+          "redirect_issued": false,
+          "no_store": true
+        },
+        {
+          "name": "native_config_rejects_browser_origin",
+          "method": "GET",
+          "path": "/native-api/v1/auth/config",
+          "passed": true,
+          "http_status": 403,
+          "response_bytes": 63,
+          "cookie_issued": false,
+          "redirect_issued": false,
+          "no_store": true
+        },
+        {
+          "name": "native_config_rejects_ambient_cookie",
+          "method": "GET",
+          "path": "/native-api/v1/auth/config",
+          "passed": true,
+          "http_status": 403,
+          "response_bytes": 63,
+          "cookie_issued": false,
+          "redirect_issued": false,
+          "no_store": true
+        },
+        {
+          "name": "native_config_rejects_browser_metadata",
+          "method": "GET",
+          "path": "/native-api/v1/auth/config",
+          "passed": true,
+          "http_status": 403,
+          "response_bytes": 63,
+          "cookie_issued": false,
+          "redirect_issued": false,
+          "no_store": true
+        },
+        {
+          "name": "unsigned_whatsapp_webhook_rejected",
+          "method": "POST",
+          "path": "/api/webhooks/whatsapp",
+          "passed": true,
+          "http_status": 401,
+          "response_bytes": 50,
+          "cookie_issued": false,
+          "redirect_issued": false,
+          "no_store": true
+        },
+        {
+          "name": "empty_webhook_verification_rejected",
+          "method": "GET",
+          "path": "/api/webhooks/whatsapp",
+          "passed": true,
+          "http_status": 503,
+          "response_bytes": 52,
+          "cookie_issued": false,
+          "redirect_issued": false,
+          "no_store": true,
+          "observed_webhook_configuration": "not_configured"
+        },
+        {
+          "name": "missing_google_callback_state_rejected",
+          "method": "GET",
+          "path": "/api/auth/native/google/callback",
+          "passed": true,
+          "http_status": 422,
+          "response_bytes": 78,
+          "cookie_issued": false,
+          "redirect_issued": false,
+          "no_store": true
+        }
+      ],
+      "configuration": {
+        "backend_configured": true,
+        "google_browser_configured": false,
+        "google_native_broker_configured": false,
+        "google_native_platforms": {
+          "ios": false,
+          "android": false
+        },
+        "google_native_broker_live_verified": false,
+        "native_refresh_supported": true,
+        "whatsapp_personal_status": "unavailable",
+        "whatsapp_personal_pairing_supported": false,
+        "whatsapp_business_status": "not_configured",
+        "whatsapp_business_live_verification_required": true,
+        "whatsapp_webhook_configured": null,
+        "external_sends_enabled": false,
+        "model_status": "disabled",
+        "model_quality_verified": false,
+        "identity_grants_service_access": false
+      },
+      "response_limit_bytes": 65536,
+      "redirects_followed": false,
+      "provider_login_performed": false,
+      "model_calls_performed": false,
+      "external_messages_submitted": false,
+      "customer_data_writes_performed": false,
+      "scope": "Anonymous configuration and rejection boundaries only; no live Google, WhatsApp, model or delivery verification."
+    },
+    "anonymous_browser": {
+      "origin": "https://web-production-bde60.up.railway.app",
+      "checkedAt": "2026-10-07T18:45:41.911Z",
+      "passed": true,
+      "checks": [
+        {
+          "name": "desktop / renders synthetic workspace",
+          "passed": true,
+          "status": 200,
+          "width": 1440,
+          "scrollWidth": 1440
+        },
+        {
+          "name": "desktop / accessibility",
+          "passed": true,
+          "violations": []
+        },
+        {
+          "name": "desktop /inbox renders synthetic workspace",
+          "passed": true,
+          "status": 200,
+          "width": 1440,
+          "scrollWidth": 1440
+        },
+        {
+          "name": "desktop /inbox accessibility",
+          "passed": true,
+          "violations": []
+        },
+        {
+          "name": "desktop /inbox/chat_maya renders synthetic workspace",
+          "passed": true,
+          "status": 200,
+          "width": 1440,
+          "scrollWidth": 1440
+        },
+        {
+          "name": "desktop /inbox/chat_maya accessibility",
+          "passed": true,
+          "violations": []
+        },
+        {
+          "name": "desktop /actions renders synthetic workspace",
+          "passed": true,
+          "status": 200,
+          "width": 1440,
+          "scrollWidth": 1440
+        },
+        {
+          "name": "desktop /actions accessibility",
+          "passed": true,
+          "violations": []
+        },
+        {
+          "name": "desktop /memory renders synthetic workspace",
+          "passed": true,
+          "status": 200,
+          "width": 1440,
+          "scrollWidth": 1440
+        },
+        {
+          "name": "desktop /memory accessibility",
+          "passed": true,
+          "violations": []
+        },
+        {
+          "name": "desktop /rules renders synthetic workspace",
+          "passed": true,
+          "status": 200,
+          "width": 1440,
+          "scrollWidth": 1440
+        },
+        {
+          "name": "desktop /rules accessibility",
+          "passed": true,
+          "violations": []
+        },
+        {
+          "name": "desktop /connections renders synthetic workspace",
+          "passed": true,
+          "status": 200,
+          "width": 1440,
+          "scrollWidth": 1440
+        },
+        {
+          "name": "desktop /connections accessibility",
+          "passed": true,
+          "violations": []
+        },
+        {
+          "name": "desktop /activity renders synthetic workspace",
+          "passed": true,
+          "status": 200,
+          "width": 1440,
+          "scrollWidth": 1440
+        },
+        {
+          "name": "desktop /activity accessibility",
+          "passed": true,
+          "violations": []
+        },
+        {
+          "name": "desktop /settings renders synthetic workspace",
+          "passed": true,
+          "status": 200,
+          "width": 1440,
+          "scrollWidth": 1440
+        },
+        {
+          "name": "desktop /settings accessibility",
+          "passed": true,
+          "violations": []
+        },
+        {
+          "name": "desktop /more renders synthetic workspace",
+          "passed": true,
+          "status": 200,
+          "width": 1440,
+          "scrollWidth": 1440
+        },
+        {
+          "name": "desktop /more accessibility",
+          "passed": true,
+          "violations": []
+        },
+        {
+          "name": "desktop unavailable sign-in is explicit",
+          "passed": true
+        },
+        {
+          "name": "desktop recipient composer requires exact review",
+          "passed": true
+        },
+        {
+          "name": "desktop synthetic assistant digest works",
+          "passed": true
+        },
+        {
+          "name": "desktop voice remains unavailable",
+          "passed": true
+        },
+        {
+          "name": "desktop no uncaught browser errors",
+          "passed": true,
+          "errors": []
+        },
+        {
+          "name": "desktop no unexpected console errors",
+          "passed": true,
+          "errors": []
+        },
+        {
+          "name": "desktop no unexpected HTTP failures",
+          "passed": true,
+          "responses": []
+        },
+        {
+          "name": "desktop no persistent network writes",
+          "passed": true,
+          "blockedWrites": []
+        },
+        {
+          "name": "mobile / renders synthetic workspace",
+          "passed": true,
+          "status": 200,
+          "width": 390,
+          "scrollWidth": 390
+        },
+        {
+          "name": "mobile / accessibility",
+          "passed": true,
+          "violations": []
+        },
+        {
+          "name": "mobile /inbox renders synthetic workspace",
+          "passed": true,
+          "status": 200,
+          "width": 390,
+          "scrollWidth": 390
+        },
+        {
+          "name": "mobile /inbox accessibility",
+          "passed": true,
+          "violations": []
+        },
+        {
+          "name": "mobile /inbox/chat_maya renders synthetic workspace",
+          "passed": true,
+          "status": 200,
+          "width": 390,
+          "scrollWidth": 390
+        },
+        {
+          "name": "mobile /inbox/chat_maya accessibility",
+          "passed": true,
+          "violations": []
+        },
+        {
+          "name": "mobile /actions renders synthetic workspace",
+          "passed": true,
+          "status": 200,
+          "width": 390,
+          "scrollWidth": 390
+        },
+        {
+          "name": "mobile /actions accessibility",
+          "passed": true,
+          "violations": []
+        },
+        {
+          "name": "mobile /memory renders synthetic workspace",
+          "passed": true,
+          "status": 200,
+          "width": 390,
+          "scrollWidth": 390
+        },
+        {
+          "name": "mobile /memory accessibility",
+          "passed": true,
+          "violations": []
+        },
+        {
+          "name": "mobile /rules renders synthetic workspace",
+          "passed": true,
+          "status": 200,
+          "width": 390,
+          "scrollWidth": 390
+        },
+        {
+          "name": "mobile /rules accessibility",
+          "passed": true,
+          "violations": []
+        },
+        {
+          "name": "mobile /connections renders synthetic workspace",
+          "passed": true,
+          "status": 200,
+          "width": 390,
+          "scrollWidth": 390
+        },
+        {
+          "name": "mobile /connections accessibility",
+          "passed": true,
+          "violations": []
+        },
+        {
+          "name": "mobile /activity renders synthetic workspace",
+          "passed": true,
+          "status": 200,
+          "width": 390,
+          "scrollWidth": 390
+        },
+        {
+          "name": "mobile /activity accessibility",
+          "passed": true,
+          "violations": []
+        },
+        {
+          "name": "mobile /settings renders synthetic workspace",
+          "passed": true,
+          "status": 200,
+          "width": 390,
+          "scrollWidth": 390
+        },
+        {
+          "name": "mobile /settings accessibility",
+          "passed": true,
+          "violations": []
+        },
+        {
+          "name": "mobile /more renders synthetic workspace",
+          "passed": true,
+          "status": 200,
+          "width": 390,
+          "scrollWidth": 390
+        },
+        {
+          "name": "mobile /more accessibility",
+          "passed": true,
+          "violations": []
+        },
+        {
+          "name": "mobile unavailable sign-in is explicit",
+          "passed": true
+        },
+        {
+          "name": "mobile recipient composer requires exact review",
+          "passed": true
+        },
+        {
+          "name": "mobile synthetic assistant digest works",
+          "passed": true
+        },
+        {
+          "name": "mobile voice remains unavailable",
+          "passed": true
+        },
+        {
+          "name": "320px / fits viewport",
+          "passed": true
+        },
+        {
+          "name": "320px /inbox fits viewport",
+          "passed": true
+        },
+        {
+          "name": "320px /inbox/chat_maya fits viewport",
+          "passed": true
+        },
+        {
+          "name": "320px /actions fits viewport",
+          "passed": true
+        },
+        {
+          "name": "320px /memory fits viewport",
+          "passed": true
+        },
+        {
+          "name": "320px /rules fits viewport",
+          "passed": true
+        },
+        {
+          "name": "320px /connections fits viewport",
+          "passed": true
+        },
+        {
+          "name": "320px /activity fits viewport",
+          "passed": true
+        },
+        {
+          "name": "320px /settings fits viewport",
+          "passed": true
+        },
+        {
+          "name": "320px /more fits viewport",
+          "passed": true
+        },
+        {
+          "name": "mobile no uncaught browser errors",
+          "passed": true,
+          "errors": []
+        },
+        {
+          "name": "mobile no unexpected console errors",
+          "passed": true,
+          "errors": []
+        },
+        {
+          "name": "mobile no unexpected HTTP failures",
+          "passed": true,
+          "responses": []
+        },
+        {
+          "name": "mobile no persistent network writes",
+          "passed": true,
+          "blockedWrites": []
+        }
+      ],
+      "failures": [],
+      "observed": [
+        {
+          "profile": "desktop",
+          "expected_unauthenticated_me_status": 401,
+          "expected_unauthenticated_console_events": 13
+        },
+        {
+          "profile": "mobile",
+          "expected_unauthenticated_me_status": 401,
+          "expected_unauthenticated_console_events": 23
+        }
+      ],
+      "limitations": [
+        "Synthetic demo interactions only",
+        "No Google identity verified",
+        "No personal WhatsApp sync",
+        "No real AI/external delivery",
+        "No load/capacity validation"
+      ],
+      "certificate_verification": {
+        "ignore_https_errors": false,
+        "tls_bypass_used": false,
+        "home_changed": false,
+        "user_browser_profile_used": false,
+        "private_key_or_credential_inspection_performed": false,
+        "initial_runner_failure": "NSS SEC_ERROR_READ_ONLY (-8126) prevented Chromium from using the existing platform-approved trust database; the earlier browser run stopped before navigation.",
+        "correction": "Anonymous Chromium ran with approved filesystem access for normal NSS initialization. Existing trusted roots and normal TLS validation were preserved."
+      },
+      "screenshots": [
+        {
+          "profile": "desktop",
+          "local_artifact": ".local/railway-hosted-desktop.png",
+          "sha256": "4c432355550d9c920c870b1758f61aa3df2c0a67b6e1befddd49acd22bd5f215"
+        },
+        {
+          "profile": "mobile",
+          "local_artifact": ".local/railway-hosted-mobile.png",
+          "sha256": "94ca23dd4cd8cc76dad679889cc1ac1a60cadab251171322fe06f086f7455f4a"
+        }
+      ]
+    },
+    "scope": "Anonymous public HTTPS, private dependency readiness through Web, synthetic demonstration, responsive rendering and rejection boundaries. No customer/provider account or model credentials were used."
+  },
+  "cloud_setup": {
+    "installer": "bash scripts/dev-bootstrap.sh",
+    "installer_rerun_passed": true,
+    "existing_environment_file_preserved": true,
+    "dependency_locks_frozen": true,
+    "api_web_startup_checks": {
+      "api_ready": true,
+      "web_ready": true,
+      "homepage": true,
+      "new_native_https_broker_config": true
+    },
+    "local_sql_heads": [
+      "3f7829c4bd10"
+    ],
+    "expected_local_sql_heads": [
+      "3f7829c4bd10"
+    ],
+    "migration_count": 9,
+    "direct_local_sql_head_query_passed": true,
+    "local_startup_live_provider_calls": false,
+    "processes_not_guaranteed_to_persist_in_a_new_cloud_task": true
+  },
+  "real_provider_acceptance": {
+    "google_browser_login": "NOT_CONFIGURED_OR_LIVE_VERIFIED",
+    "google_native_login": "NOT_CONFIGURED_OR_DEVICE_VERIFIED",
+    "whatsapp_business": "NOT_CONFIGURED_OR_LIVE_VERIFIED",
+    "whatsapp_personal_qr_and_live_groups": "UNAVAILABLE",
+    "eligible_business_coexistence_history": "IMPLEMENTED_CONDITIONALLY_NOT_LIVE_VERIFIED",
+    "model_generation_and_quality": "DISABLED_NOT_LIVE_VERIFIED",
+    "external_reply_forward_and_delivery_receipt": "DISABLED_NOT_LIVE_VERIFIED",
+    "active_customer_business_accounts_supported_by_current_configuration": 1,
+    "multi_customer_embedded_signup_and_asset_grants": "NOT_IMPLEMENTED",
+    "business_history_limits": "Eligible Meta Business Coexistence onboarding only; up to 180 days of supported one-to-one history, with provider eligibility and sharing timing requirements. It is not general personal/group account history access.",
+    "message_intelligence_scope": "Explicitly authorized, retained chat messages and attributed human-owner examples; bounded retrieval/local style refresh. No account-wide history access or model fine-tuning is established.",
+    "guide": "../connectivity-setup.md"
+  },
+  "remaining_release_gates": [
+    "Configure Google Web OAuth client ID/secret, registered HTTPS callback and test users; verify the same real Google subject on web and installed iOS/Android.",
+    "Configure Meta Business assets, webhook secrets/token, verified owner binding, recipient opt-in and per-chat grants; verify signed ingress and real reply delivery before enabling production sends.",
+    "For eligible Business Coexistence, complete provider onboarding/history sharing and independently attribute human-owner examples.",
+    "Configure model credentials, model/pricing and budgets; measure actual answer quality and cost on authorized messages.",
+    "Signed installed iOS/Android builds, background/deep-link/secure-storage/permission acceptance and store review remain unrun.",
+    "General native forwarding/provider adapters remain unavailable beyond explicitly supported tested routes; synthetic dispatch acceptance does not prove real forwarding.",
+    "50,000 simultaneous users and production autoscaling are not certified; the existing deployment has one running instance per service.",
+    "Managed Postgres restore, Redis runtime persistence and direct private SQL/cache probes remain unrun. READY volumes and local recovery evidence do not prove managed recovery.",
+    "Full container reports retain unfixed HIGH/CRITICAL base-image findings, and the native dependency audit retains 29 affected nodes (21 high, 8 moderate). Zero fixable HIGH/CRITICAL gate findings is not a vulnerability-free claim.",
+    "Render schema/workflow validation passed; the Render deployment job was skipped and no live Render release is established."
+  ]
+}
