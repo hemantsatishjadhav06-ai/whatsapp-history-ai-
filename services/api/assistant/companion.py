@@ -91,6 +91,8 @@ def reserve_usage(db, workspace_id, operation_key, kind, *, action_units=0, toke
             or any(not isinstance(value, int) or value < 0 for value in
                    (action_units, token_units, cost_microusd))):
         raise ValueError("Usage reservations require bounded metadata and nonnegative integer units")
+    from .storage_authority import lock_workspace
+    lock_workspace(db, workspace_id)
     budget = _budget(db, workspace_id)
     existing = db.scalar(select(UsageLedger).where(UsageLedger.workspace_id == workspace_id,
                                                    UsageLedger.operation_key == operation_key))

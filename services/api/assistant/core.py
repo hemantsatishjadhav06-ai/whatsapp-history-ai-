@@ -5,18 +5,21 @@ import inspect
 from typing import Literal
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, ConfigDict, Field
-from sqlalchemy import delete, func, select, true
+from sqlalchemy import LargeBinary, cast, delete, func, or_, select, true, union_all, update
 
 from .access import audit, conversation_for, permission_for, workspace_for
 from .auth import get_current_user
-from .db import aware, get_db, now
+from .db import EncryptedText, aware, get_db, now
 from .models import (AuditEvent, Connector, Conversation, Draft, ImportRecord, Memory, Message,
                      MessageEvent, Outbox, Permission, StyleProfile,
                      Suppression, Task, Workspace)
 
 router = APIRouter()
+MAX_PRIVATE_OPERATION_CONVERSATIONS = 200
+MAX_PRIVATE_OPERATION_ROWS = 20000
+MAX_PRIVATE_OPERATION_CIPHERTEXT_BYTES = 32 * 1024 * 1024
 
 
 class Payload(BaseModel):
@@ -75,11 +78,7 @@ def invalidate(db, conversation, reason):
 
 
 def serialized_control(function):
-    """Serialize observed owner changes with this pilot's single submit gateway.
-
-    This process-local guard is not a multi-cell distributed fencing protocol.
-    Resource mapping still comes from SQL, and authorization runs in the handler.
-    """
+    """Order SQL controls with claims; resource mapping and permission remain SQL-owned."""
     @wraps(function)
     def wrapped(*args, **kwargs):
         from .messaging import submit_guard
@@ -98,15 +97,19 @@ def serialized_control(function):
         if not workspace_id:
             return function(*args, **kwargs)
         with submit_guard(workspace_id):
+            from .storage_authority import lock_workspace
+            lock_workspace(db, workspace_id)
             db.expire_all()
             return function(*args, **kwargs)
     return wrapped
 
 
 @router.get("/workspaces")
-def list_workspaces(user=Depends(get_current_user), db=Depends(get_db)):
+def list_workspaces(limit: int = Query(100, ge=1, le=200), offset: int = Query(0, ge=0, le=10000),
+                    user=Depends(get_current_user), db=Depends(get_db)):
     return [public(w, "name", "timezone", "paused", "pause_generation")
-            for w in db.scalars(select(Workspace).where(Workspace.owner_id == user.id))]
+            for w in db.scalars(select(Workspace).where(Workspace.owner_id == user.id)
+                                .order_by(Workspace.created_at, Workspace.id).offset(offset).limit(limit))]
 
 
 @router.post("/workspaces", status_code=201)
@@ -211,10 +214,12 @@ def connector_capability_evidence(connector_id: str, user=Depends(get_current_us
 
 
 @router.get("/connectors")
-def list_connectors(workspace_id: str, user=Depends(get_current_user), db=Depends(get_db)):
+def list_connectors(workspace_id: str, limit: int = Query(100, ge=1, le=200),
+                    offset: int = Query(0, ge=0, le=10000), user=Depends(get_current_user), db=Depends(get_db)):
     workspace_for(db, user, workspace_id)
     return [public(row, "workspace_id", "provider", "account_id", "status", "capabilities", "fence")
-            for row in db.scalars(select(Connector).where(Connector.workspace_id == workspace_id))]
+            for row in db.scalars(select(Connector).where(Connector.workspace_id == workspace_id)
+                                  .order_by(Connector.created_at, Connector.id).offset(offset).limit(limit))]
 
 
 @router.post("/connectors/{connector_id}/verify")
@@ -279,10 +284,12 @@ def create_conversation(body: ConversationInput, user=Depends(get_current_user),
 
 
 @router.get("/conversations")
-def list_conversations(workspace_id: str, user=Depends(get_current_user), db=Depends(get_db)):
+def list_conversations(workspace_id: str, limit: int = Query(100, ge=1, le=200),
+                       offset: int = Query(0, ge=0, le=10000), user=Depends(get_current_user), db=Depends(get_db)):
     workspace_for(db, user, workspace_id)
     return [public(c, "workspace_id", "connector_id", "title", "kind", "revision", "control_state")
-            for c in db.scalars(select(Conversation).where(Conversation.workspace_id == workspace_id))]
+            for c in db.scalars(select(Conversation).where(Conversation.workspace_id == workspace_id)
+                                .order_by(Conversation.created_at, Conversation.id).offset(offset).limit(limit))]
 
 
 @router.put("/conversations/{conversation_id}/permissions")
@@ -480,10 +487,10 @@ def pause_all(workspace_id: str, user=Depends(get_current_user), db=Depends(get_
     # Pause has its own generation fence. It does not erase a durable owner
     # schedule or the conversation context that must be rechecked on resume.
     from .jobs_models import AuthorizedJob
-    for job in db.scalars(select(AuthorizedJob).where(AuthorizedJob.workspace_id == row.id,
-                         AuthorizedJob.action_kind != "REMINDER", AuthorizedJob.status.in_(["scheduled", "held"]))):
-        if job.hold_reason != "OWNER_HOLD":
-            job.status, job.hold_reason = "held", "GLOBAL_PAUSE"
+    db.execute(update(AuthorizedJob).where(AuthorizedJob.workspace_id == row.id,
+               AuthorizedJob.action_kind != "REMINDER", AuthorizedJob.status.in_(["scheduled", "held"]),
+               or_(AuthorizedJob.hold_reason.is_(None), AuthorizedJob.hold_reason != "OWNER_HOLD"))
+               .values(status="held", hold_reason="GLOBAL_PAUSE").execution_options(synchronize_session=False))
     audit(db, row.id, user.id, "workspace.paused", row.id)
     db.commit()
     return {"paused": row.paused, "pause_generation": row.pause_generation}
@@ -541,12 +548,100 @@ def activity(workspace_id: str, limit: int = 100, user=Depends(get_current_user)
                        .order_by(AuditEvent.created_at.desc()).limit(limit))]
 
 
+def _admit_private_operation(db, workspace_id, *, operation, conversation_id=None):
+    """Count bounded ID projections before loading or changing private material.
+
+    The caller checks ownership first. These are synchronous request limits;
+    larger exports and erasures need a separate durable batching workflow.
+    """
+    from .action_models import AutomationGrant, ForwardRoute, OutboundAction, SubmissionAttempt
+    from .jobs_models import AuthorizedJob, JobRun
+    from .models import Automation, ScheduledIntent, SendAttempt
+    from .native_models import MessageContext, NativeRecord, ReactionExample
+    from .people_models import ContactSaveGrant, ContactSource, LocalContact, UsageLedger, WorkspaceBudget
+
+    conversations = select(Conversation.id).where(Conversation.workspace_id == workspace_id)
+    if conversation_id is not None:
+        conversations = conversations.where(Conversation.id == conversation_id)
+    elif operation == "export":
+        readable = select(Permission.conversation_id).where(
+            Permission.workspace_id == workspace_id, Permission.read.is_(True),
+            or_(Permission.expires_at.is_(None), Permission.expires_at > now()))
+        conversations = conversations.where(Conversation.id.in_(readable))
+    conversation_count = db.scalar(select(func.count()).select_from(
+        conversations.limit(MAX_PRIVATE_OPERATION_CONVERSATIONS + 1).subquery()))
+    if conversation_count > MAX_PRIVATE_OPERATION_CONVERSATIONS:
+        raise HTTPException(413, {"code": "PRIVATE_ROW_LIMIT_EXCEEDED", "operation": operation,
+                                  "limit": MAX_PRIVATE_OPERATION_CONVERSATIONS, "resource": "conversations"})
+
+    counts, payload_sizes = [], []
+
+    def count_rows(model, *conditions):
+        ids = select(model.id).where(model.workspace_id == workspace_id, *conditions)
+        counts.append(select(func.count().label("row_count")).select_from(
+            ids.limit(MAX_PRIVATE_OPERATION_ROWS + 1).subquery()))
+        encrypted = [column for column in model.__table__.columns if isinstance(column.type, EncryptedText)]
+        if encrypted:
+            # Database byte lengths avoid decrypting any private row. SQLite
+            # length(TEXT) counts Unicode characters, so measure a BLOB there.
+            byte_length = (lambda column: func.octet_length(column)) if db.get_bind().dialect.name == "postgresql" else (
+                lambda column: func.length(cast(column, LargeBinary)))
+            sizes = [func.coalesce(byte_length(column), 0) for column in encrypted]
+            projected = select(sum(sizes).label("payload_bytes")).where(model.workspace_id == workspace_id, *conditions)
+            payload_sizes.append(select(func.coalesce(func.sum(projected.subquery().c.payload_bytes), 0).label("payload_bytes")))
+
+    for model in (Permission, Message, MessageEvent, ImportRecord, StyleProfile, Automation, Memory, Task,
+                  Suppression, Draft, ScheduledIntent, AutomationGrant, MessageContext, NativeRecord,
+                  ReactionExample, ContactSource, ContactSaveGrant):
+        if model is Task and operation == "purge_workspace":
+            count_rows(model)
+        else:
+            count_rows(model, model.conversation_id.in_(conversations))
+    action_scope = OutboundAction.conversation_id.in_(conversations)
+    if operation != "export":
+        action_scope = or_(action_scope, OutboundAction.destination_conversation_id.in_(conversations))
+    count_rows(OutboundAction, action_scope)
+    action_ids = select(OutboundAction.id).where(OutboundAction.workspace_id == workspace_id, action_scope)
+    count_rows(SubmissionAttempt, SubmissionAttempt.action_id.in_(action_ids))
+    draft_ids = select(Draft.id).where(Draft.workspace_id == workspace_id, Draft.conversation_id.in_(conversations))
+    count_rows(SendAttempt, SendAttempt.draft_id.in_(draft_ids))
+    count_rows(ForwardRoute, or_(ForwardRoute.source_conversation_id.in_(conversations),
+                                ForwardRoute.destination_conversation_id.in_(conversations)))
+    job_scope = AuthorizedJob.conversation_id.in_(conversations)
+    if conversation_id is None:
+        job_scope = or_(job_scope, AuthorizedJob.conversation_id.is_(None))
+    count_rows(AuthorizedJob, job_scope)
+    job_ids = select(AuthorizedJob.id).where(AuthorizedJob.workspace_id == workspace_id, job_scope)
+    count_rows(JobRun, JobRun.job_id.in_(job_ids))
+    if conversation_id is None and operation == "purge_workspace":
+        for model in (Connector, LocalContact, UsageLedger, WorkspaceBudget):
+            count_rows(model)
+    else:
+        contact_ids = select(ContactSource.contact_id).where(
+            ContactSource.workspace_id == workspace_id, ContactSource.conversation_id.in_(conversations))
+        count_rows(LocalContact, LocalContact.id.in_(contact_ids))
+    if operation != "export":
+        # Per-chat erasure currently inspects every pending workspace outbox row.
+        # Admit the actual scan, including pending records for other conversations.
+        count_rows(Outbox, *([Outbox.status == "pending"] if conversation_id is not None else []))
+    total = conversation_count + db.scalar(select(func.coalesce(func.sum(union_all(*counts).subquery().c.row_count), 0)))
+    if total > MAX_PRIVATE_OPERATION_ROWS:
+        raise HTTPException(413, {"code": "PRIVATE_ROW_LIMIT_EXCEEDED", "operation": operation,
+                                  "limit": MAX_PRIVATE_OPERATION_ROWS, "resource": "private_rows"})
+    if payload_sizes:
+        total_bytes = db.scalar(select(func.coalesce(func.sum(union_all(*payload_sizes).subquery().c.payload_bytes), 0)))
+        if total_bytes > MAX_PRIVATE_OPERATION_CIPHERTEXT_BYTES:
+            raise HTTPException(413, {"code": "PRIVATE_PAYLOAD_LIMIT_EXCEEDED", "operation": operation,
+                                      "limit": MAX_PRIVATE_OPERATION_CIPHERTEXT_BYTES, "resource": "ciphertext_bytes"})
+
+
 def purge_conversation(db, row):
     from .models import Automation
     from .actions import purge_action_data
     from .jobs import purge_job_data
     from .native import purge_native_data
     from .people import purge_people_data
+    _admit_private_operation(db, row.workspace_id, operation="purge_conversation", conversation_id=row.id)
     invalidate(db, row, "data_deleted")
     purge_action_data(db, row.id)
     purge_job_data(db, row.id)
@@ -593,6 +688,7 @@ def delete_conversation_data(conversation_id: str, user=Depends(get_current_user
 
 
 @router.post("/data-export")
+@serialized_control
 def export_data(workspace_id: str, user=Depends(get_current_user), db=Depends(get_db)):
     from .actions import export_action_data
     from .jobs import export_job_data
@@ -600,8 +696,12 @@ def export_data(workspace_id: str, user=Depends(get_current_user), db=Depends(ge
     from .native import export_native_data, message_available
     from .people import export_people_data
     workspace_for(db, user, workspace_id)
+    _admit_private_operation(db, workspace_id, operation="export")
     records = []
-    for conv in db.scalars(select(Conversation).where(Conversation.workspace_id == workspace_id)):
+    readable = select(Permission.conversation_id).where(Permission.workspace_id == workspace_id,
+               Permission.read.is_(True), or_(Permission.expires_at.is_(None), Permission.expires_at > now()))
+    for conv in db.scalars(select(Conversation).where(Conversation.workspace_id == workspace_id,
+                           Conversation.id.in_(readable)).order_by(Conversation.id).limit(MAX_PRIVATE_OPERATION_CONVERSATIONS)):
         grant = db.scalar(select(Permission).where(Permission.conversation_id == conv.id))
         if not grant or not grant.read or (grant.expires_at and aware(grant.expires_at) <= now()):
             continue
@@ -627,6 +727,7 @@ def delete_account_data(workspace_id: str, user=Depends(get_current_user), db=De
     from .people import purge_workspace_people_data
     from .jobs import purge_workspace_jobs
     workspace = workspace_for(db, user, workspace_id)
+    _admit_private_operation(db, workspace_id, operation="purge_workspace")
     workspace.paused = True
     workspace.pause_generation += 1
     for conv in db.scalars(select(Conversation).where(Conversation.workspace_id == workspace_id)):

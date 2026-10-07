@@ -1,0 +1,14 @@
+{
+  "$schema": "https://railway.com/railway.schema.json",
+  "build": {
+    "builder": "DOCKERFILE",
+    "dockerfilePath": "services/api/Dockerfile",
+    "watchPatterns": ["/services/api/**", "/db/**", "/pyproject.toml", "/uv.lock", "/infra/railway-retention.json"]
+  },
+  "deploy": {
+    "numReplicas": 1,
+    "startCommand": "/app/.venv/bin/python -m assistant.lifecycle",
+    "restartPolicyType": "ON_FAILURE",
+    "restartPolicyMaxRetries": 3
+  }
+}

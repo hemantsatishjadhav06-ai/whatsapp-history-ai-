@@ -87,7 +87,8 @@ def native_nonce(body: NativeChallengeInput, request: Request, response: Respons
         raise HTTPException(503, "Google sign-in for this device platform is not configured")
     nonce = secrets.token_urlsafe(32)
     expires = now() + timedelta(seconds=LOGIN_NONCE_TTL_SECONDS)
-    db.execute(delete(NativeLoginChallenge).where(NativeLoginChallenge.expires_at <= now()))
+    from .auth_lifecycle import sweep_native_challenges
+    sweep_native_challenges(db)
     db.add(NativeLoginChallenge(nonce_hash=digest(nonce), code_challenge=body.code_challenge,
                                platform=body.platform, device_name=body.device_name, expires_at=expires))
     db.commit()
@@ -104,6 +105,9 @@ def native_login(body: NativeLoginInput, request: Request, response: Response, d
     if not equal_secret(challenge.code_challenge, proof_challenge(body.code_verifier)):
         raise HTTPException(401, "Native login proof is invalid")
     client_id = getattr(request.app.state.settings, f"google_{challenge.platform}_client_id")
+    # Provider verification must not occupy a SQL connection while fetching keys.
+    # Final challenge consumption remains an expiry-checked atomic operation.
+    db.commit()
     claims = verified_google_claims(body.credential, client_id, body.nonce)
     consumed = db.execute(delete(NativeLoginChallenge).where(NativeLoginChallenge.nonce_hash == digest(body.nonce),
                           NativeLoginChallenge.expires_at > now()).execution_options(synchronize_session=False))

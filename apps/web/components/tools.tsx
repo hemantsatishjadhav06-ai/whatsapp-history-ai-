@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import type { Conversation, DataRecord, MiloActions, MiloState, ToolsProps } from '../lib/types';
+import { authorizedToolRequest, currentToolResult, toolAuthorizationVersion, type PrivateToolResult } from '../lib/tool-privacy';
 import styles from './tools.module.css';
 
 const text = (row: DataRecord | null | undefined, key: string, fallback = '') => typeof row?.[key] === 'string' ? String(row[key]) : fallback;
@@ -18,7 +19,8 @@ const time = (value: string, zone = 'Asia/Kolkata') => {
 };
 const query = (key: string, value: string) => `?${key}=${encodeURIComponent(value)}`;
 type ToolModal = { kind: 'schedule' | 'receipt' | 'memory' | 'voice' | 'rule' | 'route' | 'import' | 'connection' | 'retention' | 'budget' | 'notifications' | 'security' | 'remove'; row?: DataRecord };
-type ModalProps = { modal: ToolModal; state: MiloState; actions: MiloActions; close(): void; saved(message: string): void };
+type AuthorizedToolModal = ToolModal & { authorizationVersion: string };
+type ModalProps = { modal: AuthorizedToolModal; state: MiloState; actions: MiloActions; close(): void; saved(message: string): void };
 
 function Glyph({ name, size = 20 }: { name: string; size?: number }) {
   const paths: Record<string, ReactNode> = {
@@ -66,7 +68,10 @@ export function ToolsView({ section, state, actions }: ToolsProps) {
   const router = useRouter();
   const timezone = (state as MiloState & { timezone?: string }).timezone || 'Asia/Kolkata';
   const format = (value: string, zone = timezone) => time(value, zone);
-  const [modal, setModal] = useState<ToolModal | null>(null);
+  const authorizationVersion = toolAuthorizationVersion(state);
+  const latestAuthorization = useRef(authorizationVersion);
+  latestAuthorization.current = authorizationVersion;
+  const [modal, setModal] = useState<AuthorizedToolModal | null>(null);
   const [tab, setTab] = useState('all');
   const [search, setSearch] = useState('');
   const [notice, setNotice] = useState('');
@@ -77,7 +82,7 @@ export function ToolsView({ section, state, actions }: ToolsProps) {
   const conversation = (id: string) => conversations.find(row => row.id === id || row.conversation_id === id);
   const closeModal = () => { setModal(null); router.replace(`/${section}`); };
   const openModal = (next: ToolModal) => {
-    setModal(next);
+    setModal({ ...next, authorizationVersion });
     const identifier = next.row ? encodeURIComponent(next.row.id) : 'new';
     const route = next.kind === 'receipt' ? `/activity/${identifier}` : next.kind === 'schedule' ? `/actions/${identifier}` : next.kind === 'memory' ? `/memory/${identifier}` : next.kind === 'voice' ? `/memory/people/${identifier}` : next.kind === 'rule' ? `/rules/${identifier}` : next.kind === 'route' ? '/rules/routes/new' : next.kind === 'import' ? '/connections/import' : next.kind === 'connection' ? `/connections/${identifier}` : `/settings/${({retention:'privacy',budget:'usage',notifications:'focus',security:'security',remove:'delete'} as Record<string,string>)[next.kind]}`;
     if (pathname !== route) actions.navigate(route);
@@ -85,6 +90,7 @@ export function ToolsView({ section, state, actions }: ToolsProps) {
   useEffect(() => {
     if (state.loading) return;
     let active = true;
+    setModal(previous => previous?.authorizationVersion === authorizationVersion ? previous : null);
     const path = pathname.split('/').filter(Boolean);
     if (path.length < 2) { setModal(null); return; }
     let target: ToolModal | null = null;
@@ -102,14 +108,16 @@ export function ToolsView({ section, state, actions }: ToolsProps) {
       if (identifier === 'import') target = {kind:'import'}; else { const row = state.data.connections.find(row => row.id === identifier); if (row) target = {kind:'connection',row}; }
     } else if (section === 'activity') { const row = state.data.actions.find(row => row.id === identifier); if (row) target = {kind:'receipt',row}; }
     else if (section === 'settings') { const kind = ({privacy:'retention',usage:'budget',focus:'notifications',security:'security',delete:'remove'} as Record<string,ToolModal['kind']>)[identifier]; if (kind) target = {kind,row:kind === 'budget' ? state.data.budget || undefined : undefined}; }
-    const show = (next: ToolModal) => { if (active) setModal(previous => previous?.kind === next.kind && previous?.row?.id === next.row?.id ? previous : next); };
-    const unavailable = () => { if (active) { setModal(null); setError('This detail is unavailable in your current scope. Return to the list for the latest permitted items.'); } };
+    const isCurrent = () => active && latestAuthorization.current === authorizationVersion;
+    const show = (next: ToolModal) => { if (isCurrent()) setModal(previous => previous?.authorizationVersion === authorizationVersion && previous?.kind === next.kind && previous?.row?.id === next.row?.id ? previous : {...next,authorizationVersion}); };
+    const unavailable = () => { if (isCurrent()) { setModal(null); setError('This detail is unavailable in your current scope. Return to the list for the latest permitted items.'); } };
     const resolvedKinds: Record<string,string> = {receipt:'action',memory:'memory',schedule:'job',connection:'connection',voice:'conversation'};
     const resolverKind = target?.row && resolvedKinds[target.kind];
     if (state.mode === 'live' && resolverKind && target?.row) {
       const selected = target;
-      void actions.request<DataRecord>('GET',`/ui/resolve?kind=${resolverKind}&id=${encodeURIComponent(selected.row!.id)}`).then(result => {
-        const resolved = object(result.object);
+      void authorizedToolRequest(actions.request<DataRecord>('GET',`/ui/resolve?kind=${resolverKind}&id=${encodeURIComponent(selected.row!.id)}`), authorizationVersion, () => latestAuthorization.current).then(entry => {
+        if (!entry) return;
+        const resolved = object(entry.value.object);
         if (!resolved.id) { unavailable(); return; }
         show({...selected,row:selected.kind === 'voice' ? selected.row : resolved});
       }).catch(unavailable);
@@ -118,16 +126,16 @@ export function ToolsView({ section, state, actions }: ToolsProps) {
       const kinds = section === 'actions' ? (path[1] === 'jobs' ? ['job'] : ['action','job']) : [section === 'activity' ? 'action' : section === 'connections' ? 'connection' : 'memory'];
       void (async () => {
         for (const kind of kinds) {
-          try { const result = await actions.request<DataRecord>('GET',`/ui/resolve?kind=${kind}&id=${encodeURIComponent(identifier)}`); const resolved = object(result.object); if (!resolved.id) continue; show({kind:kind === 'job' ? 'schedule' : kind === 'action' ? 'receipt' : kind === 'connection' ? 'connection' : 'memory',row:resolved}); return; }
+          try { const entry = await authorizedToolRequest(actions.request<DataRecord>('GET',`/ui/resolve?kind=${kind}&id=${encodeURIComponent(identifier)}`), authorizationVersion, () => latestAuthorization.current); if (!entry || !isCurrent()) return; const resolved = object(entry.value.object); if (!resolved.id) continue; show({kind:kind === 'job' ? 'schedule' : kind === 'action' ? 'receipt' : kind === 'connection' ? 'connection' : 'memory',row:resolved}); return; }
           catch { /* Try only other readable object kinds, never an outward action. */ }
         }
         unavailable();
       })();
     } else unavailable();
     return () => { active = false; };
-    // Keep the opened version stable while editing. A stale save returns a conflict.
+    // An unchanged authorized poll preserves edits; changed scope clears old private content.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pathname, section, state.loading, state.mode]);
+  }, [pathname, section, state.loading, state.mode, authorizationVersion]);
   const mutate = async (id: string, operation: () => Promise<unknown>, message: string) => {
     if (pending) return;
     setPending(id); setError(''); setNotice('');
@@ -198,7 +206,7 @@ export function ToolsView({ section, state, actions }: ToolsProps) {
       <Panel title="Session & account" className={styles.widePanel}><div className={styles.settingRow}><div><strong>Sign out of this device</strong><p>Clears this app session. Server Auto and your primary phone stay separate.</p></div><button className="button secondary" disabled={!!pending} onClick={() => mutate('logout', () => actions.logout(), 'Signed out.')}>Sign out</button></div><div className={styles.settingRow}><div><strong>Delete workspace content</strong><p>Pause automation, disconnect app accounts, and remove application conversation content.</p></div><button className={styles.dangerButton} onClick={() => openModal({ kind: 'remove' })}>{state.mode === 'demo' ? 'Delete demo data' : 'Delete data'}</button></div></Panel></div>;
   }
 
-  return <div className={styles.tools}><header className={styles.pageHeader}><span className={styles.eyebrow}>{readable(section)} <span className={styles.eyebrowDot}/><span>{state.mode === 'demo' ? 'Synthetic workspace' : 'Your workspace'}</span></span><h1>{titles[section][0]}</h1><p>{titles[section][1]}</p></header>{!state.online && <div className={styles.warning} role="status">Last-known data · your app is offline. Server automation may still be active. Pause needs server acknowledgement.</div>}{notice && <div className={styles.success} role="status"><Glyph name="check"/>{notice}<button aria-label="Dismiss confirmation" onClick={() => setNotice('')}><Glyph name="close" size={16}/></button></div>}{error && <div className={styles.warning} role="alert">{error}<button className={styles.textButton} onClick={() => void actions.refresh()}>Refresh current state</button></div>}{content}{modal && <ToolDialog key={`${modal.kind}:${modal.row?.id || 'new'}`} modal={modal} state={state} actions={actions} close={closeModal} saved={message => { closeModal(); setNotice(message); }}/>}</div>;
+  return <div className={styles.tools}><header className={styles.pageHeader}><span className={styles.eyebrow}>{readable(section)} <span className={styles.eyebrowDot}/><span>{state.mode === 'demo' ? 'Synthetic workspace' : 'Your workspace'}</span></span><h1>{titles[section][0]}</h1><p>{titles[section][1]}</p></header>{!state.online && <div className={styles.warning} role="status">Last-known data · your app is offline. Server automation may still be active. Pause needs server acknowledgement.</div>}{notice && <div className={styles.success} role="status"><Glyph name="check"/>{notice}<button aria-label="Dismiss confirmation" onClick={() => setNotice('')}><Glyph name="close" size={16}/></button></div>}{error && <div className={styles.warning} role="alert">{error}<button className={styles.textButton} onClick={() => void actions.refresh()}>Refresh current state</button></div>}{content}{modal?.authorizationVersion === authorizationVersion && <ToolDialog key={`${modal.kind}:${modal.row?.id || 'new'}`} modal={modal} state={state} actions={actions} close={closeModal} saved={message => { closeModal(); setNotice(message); }}/>}</div>;
 }
 
 function ToolDialog({ modal, state, actions, close, saved }: ModalProps) {
@@ -207,7 +215,11 @@ function ToolDialog({ modal, state, actions, close, saved }: ModalProps) {
   const ref = useRef<HTMLDialogElement>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  const [detail, setDetail] = useState<DataRecord | null>(null);
+  const authorizationVersion = toolAuthorizationVersion(state);
+  const latestAuthorization = useRef(authorizationVersion);
+  latestAuthorization.current = authorizationVersion;
+  const [detailEntry, setDetailEntry] = useState<PrivateToolResult<DataRecord> | null>(null);
+  const detail = currentToolResult(detailEntry, authorizationVersion);
   const [view, setView] = useState('details');
   const [simulation, setSimulation] = useState('');
   const [idempotencyKey] = useState(() => `web-${globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`}`);
@@ -231,9 +243,9 @@ function ToolDialog({ modal, state, actions, close, saved }: ModalProps) {
   useEffect(() => {
     let active = true;
     const path = modal.kind === 'connection' && row ? `/connectors/${encodeURIComponent(row.id)}/capabilities` : modal.kind === 'security' ? '/auth/sessions' : modal.kind === 'retention' ? `/privacy/retention${query('workspace_id', state.workspaceId)}` : modal.kind === 'receipt' && row ? `/actions/${encodeURIComponent(row.id)}/evidence` : modal.kind === 'memory' || modal.kind === 'voice' ? `/conversations/${encodeURIComponent(current?.id || '')}/messages` : null;
-    if (path) actions.request('GET', path).then(result => { if (active) setDetail(Array.isArray(result) ? { id: '', messages: result } : object(result)); }).catch(failure => { if (active) setError(failure instanceof Error ? failure.message : 'The detail could not be loaded.'); });
+    if (path) void authorizedToolRequest(actions.request('GET', path), authorizationVersion, () => latestAuthorization.current).then(entry => { if (active && entry) setDetailEntry({ authorizationVersion: entry.authorizationVersion, value: Array.isArray(entry.value) ? { id: '', messages: entry.value } : object(entry.value) }); }).catch(failure => { if (active && latestAuthorization.current === authorizationVersion) setError(failure instanceof Error ? failure.message : 'The detail could not be loaded.'); });
     return () => { active = false; };
-  }, [actions, modal.kind, row, current?.id, state.workspaceId]);
+  }, [actions, modal.kind, row, current?.id, state.workspaceId, authorizationVersion]);
   const submit = async (operation: () => Promise<unknown>, message: string, remain = false) => {
     if (busy) return;
     setBusy(true); setError('');

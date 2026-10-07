@@ -24,7 +24,7 @@ class NativeSession(Entity, Base):
     user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), index=True)
     token_hash: Mapped[str] = mapped_column(String(64), unique=True)
     refresh_token_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
-    refresh_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    refresh_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True, index=True)
     platform: Mapped[str] = mapped_column(String(10))
     device_name: Mapped[str] = mapped_column(EncryptedText)
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)

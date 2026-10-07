@@ -15,7 +15,7 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, ConfigDict, Field, field_validator
-from sqlalchemy import or_, select
+from sqlalchemy import or_, select, update
 from sqlalchemy.exc import IntegrityError
 
 from .access import audit, conversation_for, permission_for, workspace_for
@@ -25,6 +25,7 @@ from .core import serialized_control
 from .db import aware, get_db, now, uid
 from .messaging import require_internal, submit_guard
 from .models import Automation, Connector, Conversation, Memory, Message, Outbox, Permission, Suppression, User, Workspace
+from .storage_authority import lock_workspace, SUBMISSION_RECOVERY_SECONDS
 
 router = APIRouter(tags=["automatic actions"])
 KINDS = {"SEND_TEXT", "QUOTE", "REACTION", "FORWARD"}
@@ -402,6 +403,8 @@ def revoke_grant(grant_id: str, user=Depends(get_current_user), db=Depends(get_d
         raise HTTPException(404, "Grant not found")
     workspace_for(db, user, row.workspace_id)
     with submit_guard(row.workspace_id):
+        lock_workspace(db, row.workspace_id)
+        db.expire_all()
         db.refresh(row)
         row.enabled = False
         row.version += 1
@@ -419,6 +422,8 @@ def create_route(body: RouteInput, user=Depends(get_current_user), db=Depends(ge
     source = conversation_for(db, user, body.source_conversation_id)
     destination = conversation_for(db, user, body.destination_conversation_id)
     with submit_guard(source.workspace_id):
+        lock_workspace(db, source.workspace_id)
+        db.expire_all()
         if (source.workspace_id != destination.workspace_id or source.connector_id != destination.connector_id
                 or source.id == destination.id or destination.kind != body.audience):
             fail("ROUTE_DENIED")
@@ -451,6 +456,8 @@ def patch_route(route_id: str, body: RouteUpdate, user=Depends(get_current_user)
         raise HTTPException(404, "Route not found")
     workspace_for(db, user, row.workspace_id)
     with submit_guard(row.workspace_id):
+        lock_workspace(db, row.workspace_id)
+        db.expire_all()
         db.refresh(row)
         if row.version != body.expected_version:
             fail("CONTEXT_STALE", 409)
@@ -471,6 +478,8 @@ def prepare_action(db, user_id: str, conversation_id: str, proposal: ActionPropo
     if user is None:
         fail("SCOPE_DENIED")
     conversation = conversation_for(db, user, conversation_id)
+    lock_workspace(db, conversation.workspace_id)
+    db.refresh(conversation)
     workspace = workspace_for(db, user, conversation.workspace_id)
     if workspace.paused:
         fail("GLOBAL_PAUSE", 409)
@@ -728,14 +737,19 @@ def invalidate_actions(db, conversation, reason):
 
 def hold_workspace_actions(db, workspace):
     """Acknowledge pause with canceled live work and durable held job actions."""
-    for action in db.scalars(select(OutboundAction).where(OutboundAction.workspace_id == workspace.id,
-                                                         OutboundAction.status.in_(PENDING))):
-        if action.authorized_job_id:
-            if action.status == "ready" or action.reason_code == "GLOBAL_PAUSE":
-                action.status, action.reason_code = "held", "GLOBAL_PAUSE"
-        else:
-            action.status, action.reason_code = "canceled", "GLOBAL_PAUSE"
-            _release_budget(db, action)
+    from .people_models import UsageLedger
+    live = (OutboundAction.workspace_id == workspace.id, OutboundAction.status.in_(PENDING),
+            OutboundAction.authorized_job_id.is_(None))
+    keys = select("action:" + OutboundAction.id).where(*live)
+    db.execute(update(UsageLedger).where(UsageLedger.workspace_id == workspace.id,
+               UsageLedger.operation_key.in_(keys), UsageLedger.status == "reserved").values(status="released")
+               .execution_options(synchronize_session=False))
+    db.execute(update(OutboundAction).where(*live).values(status="canceled", reason_code="GLOBAL_PAUSE")
+               .execution_options(synchronize_session=False))
+    db.execute(update(OutboundAction).where(OutboundAction.workspace_id == workspace.id,
+               OutboundAction.authorized_job_id.is_not(None), OutboundAction.status.in_(PENDING),
+               or_(OutboundAction.status == "ready", OutboundAction.reason_code == "GLOBAL_PAUSE"))
+               .values(status="held", reason_code="GLOBAL_PAUSE").execution_options(synchronize_session=False))
 
 
 def resume_workspace_actions(db, workspace, settings=None):
@@ -759,7 +773,11 @@ def resume_workspace_actions(db, workspace, settings=None):
 
 
 def invalidate_target(db, message_id, reason="HUMAN_REACTION"):
-    for row in db.scalars(select(OutboundAction).where(OutboundAction.status.in_(PENDING))):
+    source = db.get(Message, message_id)
+    if source is None:
+        return
+    for row in db.scalars(select(OutboundAction).where(OutboundAction.workspace_id == source.workspace_id,
+                          OutboundAction.conversation_id == source.conversation_id, OutboundAction.status.in_(PENDING))):
         if message_id in row.source_revisions or message_id in {row.target_message_id, row.trigger_message_id}:
             row.status, row.reason_code = "canceled", reason
             _release_budget(db, row)
@@ -857,6 +875,8 @@ def action_evidence(action_id: str, user=Depends(get_current_user), db=Depends(g
 def cancel_action(action_id: str, user=Depends(get_current_user), db=Depends(get_db)):
     row = _read_action(db, user, action_id)
     with submit_guard(row.workspace_id):
+        lock_workspace(db, row.workspace_id)
+        db.expire_all()
         db.refresh(row)
         if row.status not in PENDING:
             fail("ACTION_NOT_CANCELABLE", 409)
@@ -903,6 +923,7 @@ def dispatch_authority(body: DispatchEnvelope, request: Request, db=Depends(get_
     if row is None:
         fail("SCOPE_DENIED")
     with submit_guard(row.workspace_id):
+        lock_workspace(db, row.workspace_id)
         db.expire_all()
         row = db.get(OutboundAction, body.action_id)
         if body.model_dump() != envelope_for(db, row):
@@ -940,12 +961,16 @@ async def dispatch_action(factory, settings, action_id):
             raise HTTPException(404, "Action not found")
         workspace_id = action.workspace_id
     with submit_guard(workspace_id), factory() as db:
+        lock_workspace(db, workspace_id)
         action = db.get(OutboundAction, action_id)
+        if action is None:
+            raise HTTPException(404, "Action not found")
         attempt = db.scalar(select(SubmissionAttempt).where(SubmissionAttempt.action_id == action.id))
         if attempt is not None:
-            # A worker crash after claiming may have sent. Preserve uncertainty;
-            # the same logical action can never obtain a second submission.
-            if attempt.status == "submitting":
+            # An active duplicate observes the original claim. After a bounded
+            # recovery window a crashed claim becomes uncertain, never retryable.
+            if (attempt.status == "submitting" and
+                    aware(attempt.created_at) <= now() - timedelta(seconds=SUBMISSION_RECOVERY_SECONDS)):
                 attempt.status, attempt.error_code = "uncertain", "DELIVERY_UNCERTAIN"
                 action.status, action.reason_code = "uncertain", "DELIVERY_UNCERTAIN"
                 from .companion import settle_action_budget
@@ -992,7 +1017,10 @@ async def dispatch_action(factory, settings, action_id):
 
     def current_authority():
         with submit_guard(workspace_id), factory() as current_db:
+            lock_workspace(current_db, workspace_id)
             current = current_db.get(OutboundAction, action_id)
+            if current is None or current.status != "submitting":
+                fail("DELIVERY_UNCERTAIN", 409)
             if envelope_for(current_db, current) != envelope:
                 fail("PAYLOAD_CHANGED", 409)
             authorize_action(current_db, current)
@@ -1016,8 +1044,11 @@ async def dispatch_action(factory, settings, action_id):
     except Exception:
         transport = {"status": "uncertain", "provider_message_id": None, "error_code": "DELIVERY_UNCERTAIN"}
     with submit_guard(workspace_id), factory() as db:
+        lock_workspace(db, workspace_id)
         action = db.get(OutboundAction, action_id)
         attempt = db.scalar(select(SubmissionAttempt).where(SubmissionAttempt.action_id == action_id))
+        if action is None or attempt is None:
+            return {"id": action_id, "status": "uncertain", "reason_code": "LEDGER_REMOVED_AFTER_SUBMIT"}
         # Confirmed receipts/echoes can win a race against the transport result.
         if attempt.status not in {"accepted", "delivered", "read"}:
             status = transport["status"]
@@ -1091,6 +1122,7 @@ async def process_auto_actions(factory, settings, batch_size=50):
     for outbox_id, workspace_id in refs:
         action_id = None
         with submit_guard(workspace_id), factory() as db:
+            lock_workspace(db, workspace_id)
             if db.scalar(select(Outbox).where(Outbox.kind == "action.handled", Outbox.aggregate_id == outbox_id)):
                 continue
             source_ref = db.get(Outbox, outbox_id)
@@ -1171,6 +1203,10 @@ class ActionReceipt(Payload):
 @router.post("/internal/action-receipts", dependencies=[Depends(require_internal)])
 def action_receipt(body: ActionReceipt, db=Depends(get_db)):
     action = db.get(OutboundAction, body.action_id)
+    if action is None:
+        fail("SCOPE_DENIED")
+    lock_workspace(db, action.workspace_id)
+    db.refresh(action)
     attempt = db.scalar(select(SubmissionAttempt).where(SubmissionAttempt.action_id == body.action_id))
     if action is None or attempt is None or action.connector_id != body.connector_id:
         fail("SCOPE_DENIED")

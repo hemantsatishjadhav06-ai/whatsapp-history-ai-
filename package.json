@@ -9,10 +9,12 @@
     "typecheck": "npm run typecheck --workspaces --if-present",
     "test:web": "playwright test",
     "test:clients": "npm test --workspace=@milo/contracts",
-    "test:proxy": "node --import tsx --test tests/web_proxy.test.ts",
+    "test:proxy": "node --import tsx --test tests/web_proxy*.test.ts",
+    "test:privacy": "node --import tsx --test tests/web_tool_privacy.test.ts",
     "mobile:export": "npm run export --workspace=@milo/mobile"
   },
   "engines": {"node": ">=22"},
+  "overrides": {"uuid": "11.1.1"},
   "devDependencies": {
     "@axe-core/playwright": "4.13.0",
     "@playwright/test": "1.63.0"

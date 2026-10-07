@@ -421,7 +421,7 @@ def test_crashed_submission_claim_never_retries(owner_client, chat, app):
         row.status = "submitting"
         db.add(SubmissionAttempt(workspace_id=row.workspace_id, action_id=row.id, connector_id=row.connector_id,
               destination_conversation_id=row.destination_conversation_id, payload_hash=row.payload_hash,
-              connector_fence=row.connector_fence, status="submitting"))
+              connector_fence=row.connector_fence, status="submitting", created_at=now() - timedelta(seconds=121)))
         db.commit()
     result = owner_client.post(f"/actions/{action['id']}/dispatch").json()
     assert result["status"] == "uncertain"

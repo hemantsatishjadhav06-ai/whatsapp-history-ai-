@@ -1,0 +1,164 @@
+{
+  "label": "bounded-before-prefetch",
+  "timestamp_utc": "2026-10-07T09:04:12.540706+00:00",
+  "source_commit": "4c9be7357bf2bb5df9cbcedce6dbd9ea090466a0",
+  "source_dirty": true,
+  "mode": "real_http_loopback_postgresql_and_next_proxy",
+  "runs": [
+    {
+      "http_requests": 160,
+      "independent_authenticated_owners": 8,
+      "virtual_users": 8,
+      "peak_http_requests_in_flight": 8,
+      "max_client_http_connections": 8,
+      "per_user_requests": 20,
+      "closed_loop_think_seconds": 0,
+      "elapsed_seconds": 16.145,
+      "attempted_requests_per_second": 9.91,
+      "successful_invariant_checks": 160,
+      "failed_invariant_checks": 0,
+      "errors": {},
+      "endpoint_requests": {
+        "bootstrap": 96,
+        "messages": 32,
+        "resolve": 16,
+        "foreign": 16
+      },
+      "expected_forbidden_probes": 16,
+      "p50_ms": 1093.697,
+      "p95_ms": 1571.586,
+      "p99_ms": 1723.747,
+      "max_ms": 1843.127,
+      "arrival_model": "closed-loop bounded per-owner sequential requests",
+      "endpoint": "direct_api",
+      "service_cpu_seconds": 16.24,
+      "service_rss_bytes_after": 228323328
+    },
+    {
+      "http_requests": 57,
+      "independent_authenticated_owners": 24,
+      "virtual_users": 24,
+      "peak_http_requests_in_flight": 24,
+      "max_client_http_connections": 24,
+      "per_user_requests": 20,
+      "closed_loop_think_seconds": 0,
+      "elapsed_seconds": 8.821,
+      "attempted_requests_per_second": 6.462,
+      "successful_invariant_checks": 49,
+      "failed_invariant_checks": 8,
+      "errors": {
+        "bootstrap:503:scope_or_result": 8
+      },
+      "endpoint_requests": {
+        "bootstrap": 57
+      },
+      "expected_forbidden_probes": 0,
+      "p50_ms": 3077.237,
+      "p95_ms": 4704.289,
+      "p99_ms": 5269.688,
+      "max_ms": 5269.688,
+      "arrival_model": "closed-loop bounded per-owner sequential requests",
+      "endpoint": "direct_api",
+      "service_cpu_seconds": 8.47,
+      "service_rss_bytes_after": 234102784
+    },
+    {
+      "http_requests": 160,
+      "independent_authenticated_owners": 8,
+      "virtual_users": 8,
+      "peak_http_requests_in_flight": 8,
+      "max_client_http_connections": 8,
+      "per_user_requests": 20,
+      "closed_loop_think_seconds": 0,
+      "elapsed_seconds": 13.898,
+      "attempted_requests_per_second": 11.512,
+      "successful_invariant_checks": 160,
+      "failed_invariant_checks": 0,
+      "errors": {},
+      "endpoint_requests": {
+        "bootstrap": 96,
+        "messages": 32,
+        "resolve": 16,
+        "foreign": 16
+      },
+      "expected_forbidden_probes": 16,
+      "p50_ms": 933.255,
+      "p95_ms": 1302.075,
+      "p99_ms": 1478.049,
+      "max_ms": 1673.658,
+      "arrival_model": "closed-loop bounded per-owner sequential requests",
+      "endpoint": "next_browser_proxy",
+      "service_cpu_seconds": 15.62,
+      "service_rss_bytes_after": 270745600
+    },
+    {
+      "http_requests": 98,
+      "independent_authenticated_owners": 24,
+      "virtual_users": 24,
+      "peak_http_requests_in_flight": 24,
+      "max_client_http_connections": 24,
+      "per_user_requests": 20,
+      "closed_loop_think_seconds": 0,
+      "elapsed_seconds": 12.914,
+      "attempted_requests_per_second": 7.589,
+      "successful_invariant_checks": 94,
+      "failed_invariant_checks": 4,
+      "errors": {
+        "bootstrap:503:scope_or_result": 4
+      },
+      "endpoint_requests": {
+        "bootstrap": 98
+      },
+      "expected_forbidden_probes": 0,
+      "p50_ms": 3043.076,
+      "p95_ms": 3898.473,
+      "p99_ms": 4329.671,
+      "max_ms": 4329.671,
+      "arrival_model": "closed-loop bounded per-owner sequential requests",
+      "endpoint": "next_browser_proxy",
+      "service_cpu_seconds": 14.03,
+      "service_rss_bytes_after": 286552064
+    }
+  ],
+  "client_setup_excluded": true,
+  "adaptive_abort": "stop stage after >=VU samples and >5% failures (minimum four)",
+  "limits": {
+    "external_provider_calls": 0,
+    "real_connected_whatsapp_accounts": 0,
+    "model_calls": 0,
+    "target_50000_concurrent": "NOT_RUN",
+    "dataset_cap_bytes": 524288000
+  },
+  "dataset": {
+    "owners": 32,
+    "small_owner_chats": 32,
+    "large_owner_chats": 2500,
+    "messages_per_populated_chat": 3,
+    "postgres_database_bytes": 22069775,
+    "synthetic_cookie_sessions": 32
+  },
+  "bootstrap_query_profile": {
+    "queries": 108,
+    "database_seconds": 0.059088037989567965,
+    "wall_ms": 328.772,
+    "contacts_returned": 27
+  },
+  "large_inbox_query_profile": {
+    "queries": 108,
+    "database_seconds": 0.054584329918725416,
+    "wall_ms": 137.795,
+    "contacts_returned": 27
+  },
+  "api_query_pool_metrics": {
+    "query_count": 37045,
+    "query_seconds": 381.23417767825595,
+    "pool_wait_seconds": 253.20830282417592,
+    "pool_wait_max_seconds": 3.0867762170091737,
+    "pool_checkouts": 464,
+    "checked_out": 0,
+    "checked_out_peak": 10,
+    "pool_configuration": "Pool size: 5  Connections in pool: 0 Current Overflow: -5 Current Checked out connections: 0"
+  },
+  "disposable_database_dropped": true,
+  "comparison_limitation": "Captured before contact prefetch and final admission/thread settings; Redis limits were off. This is a combined-path latency comparison, not isolated attribution of latency gains to SQL batching. Query-count comparison uses the same bounded contact fixture."
+}

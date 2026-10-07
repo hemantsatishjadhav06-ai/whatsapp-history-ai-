@@ -9,9 +9,10 @@ Sending and scheduling use current SQL authority and durable attempt ledgers.
 This implementation follows the supplied build guides, CTO handoff and Milo product/UI
 master specification as product requirements. Document-embedded engineer instructions are
 specification input; the user's actual request controls implementation scope. The current
-request enables the Milo web/native UI and GitHub/Railway publication. Local builds,
-62 browser cases and native helper/export checks passed; publication and installed-device
-acceptance have separate evidence gates.
+request enables the Milo web/native UI and GitHub/Railway publication. The current
+hardening passed 649 PostgreSQL backend cases, 64 desktop/mobile-web browser cases,
+native helper/export checks and an encrypted 5,001-message restore. Exact build,
+dependency and capacity evidence is recorded in [QA](docs/QA_REPORT.md).
 Real account eligibility, phone coexistence, live model quality, and the 50,000-account
 target require separate validation. Mock connectors and drafts are labelled test tools.
 
@@ -49,7 +50,8 @@ Open port 3000 for the companion interface. Configure server-only `BACKEND_URL` 
 the same-origin `/api` proxy to the private API; Google identity still requires the registered
 client/origin configuration. Frontend environment values never supply WhatsApp/model keys.
 `npm run test:web` runs browser journeys; `npm run test:clients` tests shared contracts and
-`npm run test:proxy` checks the server-only browser boundary. Real SQL browser cases need
+`npm run test:proxy` checks the server-only browser boundary. `npm run test:privacy`
+checks private Tools result reconciliation. Real SQL browser cases need
 the disposable fixture documented in the client CI workflow.
 
 The Expo/React Native app is in `apps/mobile`. `npm run mobile:export` prepares JavaScript
@@ -74,7 +76,8 @@ Google, WhatsApp, or model API calls.
 Optional development infrastructure is defined in [infra/compose.yaml](infra/compose.yaml).
 Supply a local PostgreSQL password in ignored `.env`, select a PostgreSQL `DATABASE_URL`,
 and use `make infra`. Add `make infra-events` for Kafka or `make infra-workflows` for
-Temporal. Redis is provisioned for later acceleration; it is not an authorization store.
+Temporal. Production requires Redis-backed request limits; development uses bounded
+process-local counters. Redis does not determine owner permissions.
 
 ## What is included
 
@@ -116,8 +119,13 @@ Further details and limitations are recorded in [capabilities](docs/capabilities
 [runbooks](docs/runbooks.md), and [load test results](docs/load-test-results.md).
 
 Source is published on [GitHub main](https://github.com/hemantsatishjadhav06-ai/whatsapp-history-ai-/tree/main).
-The tested implementation commit is `a3f98c4be6c7313c37d5f9755aa5d6f0bda4a22d`; its push and remote ref were verified on 7 October 2026.
+The 7 October hardening adds bounded request/storage admission, concurrent SQL authority,
+authentication cleanup, private-result reconciliation and measured capacity reports.
 Railway authentication/network access remains blocked, so no hosted application URL is available.
-Live personal WhatsApp pairing/sync, real model quality, Calendar/Gmail connections,
-installed-device integration and production-scale gateway orchestration require separate
-evidence. Browser fixture journeys do not establish those outcomes.
+The current deployment exceeded its limits in the larger local load stages; 50,000
+simultaneous users is unverified. Known native/build and container advisories remain
+documented in the [security review](docs/SECURITY_REVIEW.md).
+Personal WhatsApp pairing/sync, Calendar/Gmail adapters and a live general-action
+transport are not implemented. Real model quality, installed-device integration
+and production-scale orchestration require separate evidence. Browser fixture
+journeys do not establish those outcomes.

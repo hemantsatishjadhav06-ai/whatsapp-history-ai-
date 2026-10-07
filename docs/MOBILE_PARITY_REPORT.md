@@ -125,6 +125,43 @@ versions, OS version, device model, simulator/physical status, permissions, netw
 exact actions, observations and artifacts. Android export and iOS export do not establish
 installation, native OAuth, push, secure-storage or contact-writing behavior.
 
+## Latest native cloud evidence — 7 October 2026
+
+The hardening rerun retained native source version **0.3.0**, Expo 55.0.31,
+React Native 0.83.10 and React 19.2.0 under Node **24.19.0**. The current lock uses
+`tsx` **4.23.15** and `uuid` **11.1.1**. The inspected root lock SHA-256 was
+`5b0c619a9ee93813779e30a4863a692dccbe295e077fad37fcbf0c2c0ade2e26`.
+
+| Latest local evidence | Outcome | Final log filesystem write, 7 October 2026 UTC |
+| --- | --- | --- |
+| [Native tests](../.local/hardening-native-tests.log) | 16 passed, zero failed/skipped | 09:35:06.429758614 |
+| [Workspace TypeScript](../.local/hardening-workspace-typecheck.log) | Mobile, web and contracts all passed | 09:35:21.949663707 |
+| [Expo all-platform export](../.local/hardening-native-export.log) | Android/iOS/web export and 16 static routes passed | 09:37:58.584754687 |
+
+These log timestamps are observed filesystem metadata, not embedded start/finish
+records. Their exact hashes and the latest local bundle links are in the
+[native device evidence report](../apps/mobile/NATIVE_DEVICE_TEST_REPORT.md).
+The base checkout was `4c9be7357bf2bb5df9cbcedce6dbd9ea090466a0` with uncommitted
+hardening changes; the ignored local outputs are not a published signed build.
+
+| Latest bundle | Bytes | SHA-256 | Prior comparison |
+| --- | ---: | --- | --- |
+| [Android](../apps/mobile/dist/_expo/static/js/android/entry-52abd3c85985d0762cb079495c3d055b.hbc) | 2,991,404 | `1706fd3cf29b1a9ea532418ba532aa581fdf2ed2aa199a9110dfd71123a65a89` | Same name/size, different from prior recorded checksum |
+| [iOS](../apps/mobile/dist/_expo/static/js/ios/entry-a625294f1e9d2edf49dc86f5c56be944.hbc) | 2,902,314 | `14f58db787d082c628d6faa38bd707484891ee57f26b86db94e42843092a800e` | Same name/size, different from prior recorded checksum |
+| [Web](../apps/mobile/dist/_expo/static/js/web/entry-b87a9fefa5c9a0522e0e4efac2c2e4af.js) | 1,279,841 | `0388860622b428dd0a30daad9eb19a447a89c54ac1a40465d5248d2194de39a6` | Same prior size/checksum |
+
+Native Hermes byte-for-byte reproducibility is unproven; the checksum difference
+was observed without attributing a cause. The native helper/export passes do not
+change any installed-device column above: physical-device journeys, app signing/
+store distribution, live OAuth, APNs/FCM push and OS Contacts remain untested or
+blocked by their external prerequisites.
+
+The latest native/workspace audit retains **29 affected dependency nodes (21 high,
+eight moderate)**, so dependency remediation is incomplete. The earlier 36-node
+count (21 high / 15 moderate) belongs to a prior graph only. Production web and
+native/build graphs must be evaluated separately; current root conclusions are
+recorded in [SECURITY_REVIEW.md](SECURITY_REVIEW.md).
+
 ## Release boundary
 
 Browser release requires operable routes and truthful fixture/live distinctions. Installed

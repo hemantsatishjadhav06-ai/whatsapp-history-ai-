@@ -21,6 +21,7 @@ export type MiloState = {
   mode: 'demo' | 'live'; workspaceId: string; selectedConversationId: string | null;
   loading: boolean; error: string | null; paused: boolean; pausePending: boolean; online: boolean;
   user: { id: string; display_name: string; email: string }; data: MiloData; lastUpdated: string; timezone: string;
+  authorizationVersion?: string;
   nextCursor: string | null; hasMore: boolean;
 };
 export type MiloActions = {

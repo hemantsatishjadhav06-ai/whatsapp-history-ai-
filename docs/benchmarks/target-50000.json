@@ -1,0 +1,36 @@
+{
+  "scenario": "milo-synthetic-distributed-50000",
+  "execution_status": "NOT_RUN",
+  "target_independent_authenticated_owners": 50000,
+  "runner_count": 50,
+  "owners_per_runner": 1000,
+  "real_provider_accounts": 0,
+  "external_provider_calls": 0,
+  "model_calls": 0,
+  "phases": [
+    {"name": "smoke", "total_virtual_users": 100, "requests_per_user": 20, "think_seconds": 1, "stagger_seconds": 30},
+    {"name": "ramp1000", "total_virtual_users": 1000, "requests_per_user": 20, "think_seconds": 1, "stagger_seconds": 60},
+    {"name": "ramp10000", "total_virtual_users": 10000, "requests_per_user": 20, "think_seconds": 30, "stagger_seconds": 120},
+    {"name": "connected_users_50000", "total_virtual_users": 50000, "requests_per_user": 60, "think_seconds": 30, "stagger_seconds": 120},
+    {"name": "simultaneous_request_burst_50000", "total_virtual_users": 50000, "requests_per_user": 10, "think_seconds": 0, "stagger_seconds": 0, "requires_synchronized_barrier_and_server_side_concurrency_evidence": true}
+  ],
+  "read_mix": {"ui_bootstrap": 0.6, "messages": 0.2, "resolve": 0.1, "cross_owner_negative": 0.1},
+  "proposed_acceptance": {
+    "privacy_invariant_failures": 0,
+    "unexpected_timeout_or_server_error_rate": 0,
+    "non_overload_read_p95_ms": 1000,
+    "bounded_overload_must_reject_with_retry_after": true,
+    "must_recover_after_overload_without_lost_permission_state": true
+  },
+  "gates": [
+    "Dedicated authorized disposable deployment, verified HTTPS, external sends disabled, model mock",
+    "Provision 50000 distinct synthetic owners and hashed sessions before HTTP timing; this is not performed by the runner",
+    "Private 0600 per-runner session/source manifests with non-overlapping owner ranges; never publish them",
+    "Explicitly record every rate/admission/pool/process/replica override and actual or signed trusted source identities",
+    "At 30-second think time 50000 users offer about 1667 polls/sec before other operations; default global 60000/min budget limits about1000 requests/sec",
+    "Bound total database connections across replicas; do not multiply per-process pools without a PostgreSQL connection budget",
+    "Verify runner CPU/network/socket margins and synchronize clocks independently; do not sum per-runner peak concurrency as simultaneous concurrency",
+    "Measure edge/API/Redis/PG queues, CPU, memory, latency, accepted/rejected traffic and server-side concurrent active requests",
+    "Real WhatsApp sockets, provider limits, live model traffic, jobs and outbound action evidence require separate scenarios and authorization"
+  ]
+}

@@ -13,7 +13,6 @@ from datetime import timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from google.auth import exceptions as google_exceptions
-from google.auth.transport import requests as google_requests
 from google.oauth2 import id_token as google_id_token
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from sqlalchemy import delete, select
@@ -22,6 +21,7 @@ from sqlalchemy.orm import Session
 
 from .db import aware, get_db, now
 from .models import LoginNonce, SessionRecord, User
+from .google_certificates import certificate_transport
 
 
 router = APIRouter(tags=["authentication"])
@@ -152,7 +152,8 @@ def login_nonce(request: Request, response: Response, db: Session = Depends(get_
     settings = request.app.state.settings
     nonce = secrets.token_urlsafe(32)
     previous = request.cookies.get(NONCE_COOKIE)
-    db.execute(delete(LoginNonce).where(LoginNonce.expires_at <= now()).execution_options(synchronize_session=False))
+    from .auth_lifecycle import sweep_browser_nonces
+    sweep_browser_nonces(db)
     if previous and len(previous) <= 256:
         db.execute(delete(LoginNonce).where(LoginNonce.nonce_hash == digest(previous)))
     db.add(LoginNonce(nonce_hash=digest(nonce), expires_at=now() + timedelta(seconds=LOGIN_NONCE_TTL_SECONDS)))
@@ -168,7 +169,9 @@ def verified_google_claims(credential: str, client_id: str, nonce: str) -> dict:
     if not client_id:
         raise HTTPException(503, "Google sign-in is not configured")
     try:
-        claims = google_id_token.verify_oauth2_token(credential, google_requests.Request(), client_id)
+        claims = google_id_token.verify_oauth2_token(credential, certificate_transport, client_id)
+    except google_exceptions.TransportError:
+        raise HTTPException(503, "Google verification service is temporarily unavailable") from None
     except (ValueError, google_exceptions.GoogleAuthError):
         raise HTTPException(401, "Invalid Google credential") from None
     # Explicit claim checks keep the boundary fail-closed even with an injected
@@ -210,6 +213,9 @@ def google_login(body: GoogleLogin, request: Request, response: Response,
     pending = db.scalar(select(LoginNonce).where(LoginNonce.nonce_hash == digest(body.nonce)))
     if pending is None or aware(pending.expires_at) <= now():
         raise HTTPException(401, "Login nonce is invalid or expired")
+    # Release the read transaction/connection before certificate networking.
+    # The final single-use DELETE below rechecks nonce lifetime and ownership.
+    db.commit()
     claims = verified_google_claims(body.credential, request.app.state.settings.google_client_id, body.nonce)
     consumed = db.execute(delete(LoginNonce).where(LoginNonce.nonce_hash == digest(body.nonce),
                                                    LoginNonce.expires_at > now())

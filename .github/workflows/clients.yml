@@ -21,6 +21,7 @@ jobs:
       - run: npm run typecheck
       - run: npm run test:clients
       - run: npm run test:proxy
+      - run: npm run test:privacy
       - run: npm test --workspace=@milo/mobile
       - run: npm run build
       - run: npm run mobile:export

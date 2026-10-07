@@ -175,6 +175,7 @@ def _job_for(db, user, job_id):
 
 
 def _sources(db, job, *, snapshot=False):
+    from .native import message_available
     if not job.conversation_id:
         return
     source_ids = set(job.evidence_message_ids)
@@ -188,7 +189,7 @@ def _sources(db, job, *, snapshot=False):
         source = db.get(Message, source_id)
         if (source is None or source.workspace_id != job.workspace_id or source.conversation_id != job.conversation_id
                 or source.deleted or source_id in suppressed
-                or (getattr(source, "expires_at", None) and aware(source.expires_at) <= now())):
+                or not message_available(db, source)):
             raise HTTPException(409, "SOURCE_MISSING")
         revisions[source_id] = source.revision
     versions = {}
@@ -202,7 +203,7 @@ def _sources(db, job, *, snapshot=False):
             if (source is None or source.deleted or source.workspace_id != job.workspace_id
                     or source.conversation_id != job.conversation_id or source_id in suppressed
                     or source.revision != memory.source_revision.get(source_id)
-                    or (getattr(source, "expires_at", None) and aware(source.expires_at) <= now())):
+                    or not message_available(db, source)):
                 raise HTTPException(409, "CONTEXT_STALE")
             revisions[source_id] = source.revision
         versions[memory_id] = memory.version
@@ -322,6 +323,9 @@ def authorize_job_action(db, job, action):
 def create_job(body: JobCreate, user=Depends(get_current_user), db=Depends(get_db)):
     workspace = workspace_for(db, user, body.workspace_id)
     with submit_guard(workspace.id):
+        from .storage_authority import lock_workspace
+        lock_workspace(db, workspace.id)
+        db.refresh(workspace)
         request_hash = _digest(body.model_dump(mode="json"))
         existing = db.scalar(select(AuthorizedJob).where(AuthorizedJob.workspace_id == workspace.id,
                                                        AuthorizedJob.idempotency_key == body.idempotency_key))
@@ -384,6 +388,8 @@ def job_runs(job_id: str, user=Depends(get_current_user), db=Depends(get_db)):
 def control_job(job_id: str, body: JobControl, user=Depends(get_current_user), db=Depends(get_db)):
     job = _job_for(db, user, job_id)
     with submit_guard(job.workspace_id):
+        from .storage_authority import lock_workspace
+        lock_workspace(db, job.workspace_id)
         db.refresh(job)
         if job.version != body.expected_version:
             raise HTTPException(409, "Job version changed")
@@ -460,6 +466,7 @@ def _proposal(job):
 
 async def process_jobs(session_factory, settings, job_id=None):
     """Bounded worker tick. Expired recurrences are recorded, never burst-sent."""
+    from .storage_authority import lock_workspace
     with session_factory() as db:
         query = select(AuthorizedJob.id).where(AuthorizedJob.status.in_(ACTIVE), AuthorizedJob.due_at <= now())
         if job_id:
@@ -472,6 +479,7 @@ async def process_jobs(session_factory, settings, job_id=None):
         if workspace_id is None:
             continue
         with submit_guard(workspace_id), session_factory() as db:
+            lock_workspace(db, workspace_id)
             job = db.get(AuthorizedJob, selected)
             if job is None or job.status not in ACTIVE or aware(job.due_at) > now():
                 continue
@@ -536,16 +544,27 @@ async def process_jobs(session_factory, settings, job_id=None):
         except HTTPException as error:
             result = {"status": "blocked", "reason_code": _reason(error)}
         with submit_guard(workspace_id), session_factory() as db:
+            lock_workspace(db, workspace_id)
             job, run = db.get(AuthorizedJob, selected), db.get(JobRun, run_id)
             if job is None or run is None:
                 continue
             status = result.get("status", "uncertain")
+            # Multiple workers may observe the same immutable action outcome.
+            # Only the current occurrence can consume the recurrence once.
+            if job.runs_done != run.occurrence or job.version != run.job_version:
+                results.append({**result, "job_id": selected, "run_id": run_id})
+                continue
+            if run.status in {"accepted", "delivered", "read"}:
+                results.append({**result, "job_id": selected, "run_id": run_id})
+                continue
             run.status, run.error_code = status, result.get("reason_code")
             if status in {"accepted", "delivered", "read"}:
                 _advance(job)
             elif status in {"held", "ready"}:
                 job.status, job.hold_reason = "held", result.get("reason_code", "QUOTA_HELD")
-            elif status in {"uncertain", "submitting", "dispatching"}:
+            elif status in {"submitting", "dispatching"}:
+                job.status, job.hold_reason = "running", None
+            elif status == "uncertain":
                 job.status, job.hold_reason = "uncertain", "RECONCILE_REQUIRED"
             else:
                 job.status, job.hold_reason = "needs_review", result.get("reason_code", "ACTION_BLOCKED")

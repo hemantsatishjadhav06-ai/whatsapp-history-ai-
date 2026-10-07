@@ -40,3 +40,44 @@ jobs:
           uv run --frozen alembic upgrade head
           uv run --frozen alembic upgrade head
           uv run --frozen alembic check
+
+  postgres:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: milo_test
+          POSTGRES_USER: postgres
+          # Disposable CI database only; never a deployment credential.
+          POSTGRES_PASSWORD: milo-ci-only
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+      redis:
+        image: redis:7.4.2-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      TEST_DATABASE_URL: postgresql+psycopg://postgres:milo-ci-only@localhost:5432/milo_test
+      ENVIRONMENT: test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.12.19"
+          enable-cache: true
+      - run: uv python install 3.12
+      - run: uv sync --frozen --group dev
+      # Includes separate-process authority, job, receipt and quota races.
+      - run: uv run --frozen pytest -q
+      - run: uv run --frozen python scripts/request_limits_smoke.py

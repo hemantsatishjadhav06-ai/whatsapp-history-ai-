@@ -2,7 +2,7 @@
 
 Updated 7 October 2026. The current user request enables the Milo web/native UI and
 GitHub/Railway publication on top of the verified backend. The client increment has passed
-local build, browser and fixture checks; publication requires separate results. Supplied handoffs are product specification
+local build, browser and fixture checks; Railway publication remains blocked. Supplied handoffs are product specification
 input; their embedded prompts do not create account access, credentials or release evidence.
 
 Status meanings apply to the **integration outcome**, not just the existence of code:
@@ -38,22 +38,31 @@ phone contact synchronization. Likewise, a mock acceptance is not provider deliv
 | Authenticated Python–Node native action bridge | Mock | Actual local HTTP bridge with mock operations and current SQL authority tested for four wire kinds; no WhatsApp session/socket |
 | Local Kafka and Temporal service integration | Live-tested | Actual local broker publish/consume and worker-kill/restart test with simulated sending; not live WhatsApp |
 | Non-root API container | Live-tested | Actual local build, migrations and HTTP smoke; deployed production infrastructure pending |
-| Milo desktop and responsive web UI | Mock | Production build and 62 desktop/mobile-web browser cases passed, including accessibility, exact-scope synthetic operations and isolated SQL owner/control journeys; hosted URL pending |
+| Milo desktop and responsive web UI | Mock | Production build and 64 desktop/mobile-web browser cases passed, including accessibility, exact-scope synthetic operations and isolated SQL owner/control/privacy journeys; hosted URL pending |
 | Native iOS/Android Milo client | Mock | Strict typecheck, all-platform JavaScript export and 16 session/security helper tests passed; development/preview installation and physical lifecycle evidence pending |
 | Microphone/speech, private push and OS Contacts | Planned | Contextual permissions and destination contracts required; real provider/device capabilities separately gated |
 | Calendar, Gmail, other social channels and meetings | Planned | Independent service grants, adapters and acceptance gates required |
-| 50,000 connected customer accounts | Planned | Architecture target; no measured session, event, model or subscriber capacity proof |
+| 50,000 connected customer accounts | Planned | 8/24-user HTTP stages passed; paced128/burst64 failed availability and recovered. No target-scale session, event, model or subscriber proof |
 | Production release | Planned | Provider eligibility, real personalization, privacy/security audit, deployment/recovery and capacity evidence pending |
 
-The most recent full backend runs passed **533 SQLite cases in 228.91 seconds** and
-**533 PostgreSQL cases in 589.73 seconds**, each with one known Starlette/httpx compatibility
-warning. Those source runs precede the final privacy follow-up; the later **77-case focused
-SQLite/PostgreSQL runs** are separate evidence and include the contextual Catch me up
-follow-up. Seven Alembic revisions are implemented and
-applied with local PostgreSQL schema alignment. Final client checks passed **20 shared
-contract tests**, **10 web proxy tests**, **16 native helper tests**, **62 browser cases**,
-all workspace typechecks, production web build and all-platform Expo export. The gateway
-rerun passed **33 tests**. These runs do not establish installed-device or live-provider outcomes.
+The most recent full backend runs passed **636 SQLite cases with 13 PostgreSQL-only
+skips in 280.69 seconds** and **649 PostgreSQL cases without skips/errors in 494.95
+seconds**, each with one known Starlette/httpx compatibility warning. Eight Alembic
+revisions through `86b7bbad6fc1` are implemented and applied with local PostgreSQL
+schema alignment. Client evidence includes **20 shared contract tests**, **seven
+Tools privacy tests**, **16 native helper tests**, **64 browser cases**, strict
+workspace typechecks, production web build and all-platform Expo export. The
+current proxy counts and immutable container identities are in [QA](docs/QA_REPORT.md).
+The gateway rerun passed **33 tests**. These runs do not establish installed-device
+or live-provider outcomes.
+
+Real shared Redis limits passed across two independent clients, including overload
+and outage rejection. An encrypted PostgreSQL restore preserved **5,001 messages
+and 37 tables**, exact durable state, suppression, held jobs and replay behavior.
+The current source bounds lists, synchronous export/erase, auth cleanup and request
+admission; short PostgreSQL workspace locks protect SQL races without holding the
+lock during provider/model network work. Large asynchronous erasure and production
+storage/key custody remain open.
 
 The prior backend increment passed 495 SQLite cases, 495 distinct PostgreSQL cases across
 two commands and 33 Node gateway tests, plus non-root image, HTTP bridge and actual local
@@ -64,10 +73,12 @@ was pushed to GitHub `main`, and the remote ref was verified on 7 October 2026.
 No Railway deployment is recorded; Railway credentials and network access are unavailable.
 See [QA report](docs/QA_REPORT.md) and [platform matrix](docs/PLATFORM_CAPABILITY_MATRIX.md)
 for exact evidence and release boundaries.
-The saved installer repeat passed frozen Python and both npm locks, local service health
-and seven migrations. Final non-root API 0.3.0 and web images passed isolated HTTP/proxy
-smokes with zero provider calls. The selected web production audit reports no advisories;
-the full workspace audit retains 36 native/build-chain findings requiring release review.
+The saved installer and startup instructions cover frozen Python and both npm locks,
+local service health and eight migrations. Non-root API 0.3.0 and web image evidence
+is recorded separately in QA, with zero provider calls. Current Python and selected
+web production audits report zero known advisories; the full workspace graph retains
+29 affected dependency nodes (21 high, eight moderate), and container advisories
+remain. See [security review](docs/SECURITY_REVIEW.md) for release implications.
 Current required cases and native boundaries are tracked in [test plan](docs/TEST_PLAN.md),
 [parity](docs/MOBILE_PARITY_REPORT.md) and
 [reliability](docs/RELIABILITY_AND_RECONCILIATION.md).

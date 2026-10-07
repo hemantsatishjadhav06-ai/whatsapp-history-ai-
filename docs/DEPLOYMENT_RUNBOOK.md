@@ -9,8 +9,8 @@ and [existing operations runbooks](runbooks.md).
 Use Python 3.12, uv 0.12.19 and Node 24. From the checkout, run `make bootstrap`,
 `make test`, `make lint`, `make gateway-check` and `make demo`. Bootstrap preserves an
 existing ignored `.env`, installs frozen locks and applies migrations. `make dev` starts
-the API on loopback port 8000 without access logs. `/health/ready` checks SQL schema and
-does not certify external access.
+the API on loopback port 8000 without access logs. `/health/ready` checks SQL schema
+and the required request-limit backend; it does not certify external access.
 
 Compose profiles provision local PostgreSQL/pgvector, Redis, Kafka and Temporal via
 `make infra`, `make infra-events` and `make infra-workflows`. Start independently restartable
@@ -48,15 +48,15 @@ Docker/Compose files target development and do not supply a production secret/TL
 
 ## Milo clients and Railway preparation
 
-The source/API version is 0.3.0 with seven migrations through `05439876fc2e`. The persistent
-port-8000 API and workers were refreshed; the final synthetic HTTP workflow passed with
-content cleanup recorded in `.local/milo-http-smoke-final.log`. Browser acceptance used an
+The source/API version is 0.3.0 with eight migrations through `86b7bbad6fc1`. The persistent
+port-8000 API and workers were refreshed; the current synthetic demo and API-container
+workflow passed with artifacts listed in [QA](QA_REPORT.md). Browser acceptance used an
 independent disposable port-8001 fixture; its results are separate from the persistent runtime.
 
 From the repository root run `npm ci --ignore-scripts`, `npm run typecheck`,
-`npm run test:clients`, `npm run test:proxy`, `npm test --workspace=@milo/mobile`,
+`npm run test:clients`, `npm run test:proxy`, `npm run test:privacy`, `npm test --workspace=@milo/mobile`,
 `npm run build` and `npm run mobile:export`. The current local checks passed 20 shared
-contract, 10 proxy, 16 native helper and 62 browser cases, plus strict typechecks/build/export.
+contract, 25 proxy, seven Tools privacy, 16 native helper and 64 browser cases, plus strict typechecks/build/export.
 Expo export produces JavaScript/assets, not signed installed iOS/Android builds. Real OAuth,
 native permissions and physical lifecycle need separately recorded builds/accounts.
 
@@ -68,12 +68,13 @@ sending remains disabled. A protected Railway access token/session and network a
 `backboard.railway.app`/`backboard.railway.com` are currently absent/blocked. No Railway build,
 public URL, hosted health check or HTTPS browser smoke has been recorded.
 
-The cloud installer/startup draft was updated for web/native and seven revisions and saved
-with publication required. Its final `bash scripts/dev-bootstrap.sh` repeat passed frozen
-Python and both npm locks, PostgreSQL/Redis health and seven migrations. Final non-root API
-0.3.0 and web image smokes passed with zero provider calls; saving the draft does not verify
-publication or new-task restoration.
-GitHub `main` was published and verified against implementation commit
+The cloud installer/startup draft now covers web/native, hardening and eight migrations,
+with publication required. Current locks, migrations, service health and non-root
+image evidence are recorded in QA. Required Railway services are Web, API, Jobs and
+Retention plus PostgreSQL and Redis; Actions stays undeployed pending its real
+adapter/planner gates. Saving the draft does not apply runtime access, publish it
+or verify new-task restoration.
+The prior GitHub `main` baseline was published and verified against implementation commit
 `a3f98c4be6c7313c37d5f9755aa5d6f0bda4a22d` on 7 October 2026.
 This source publication is separate from Railway deployment and environment snapshot publication.
 The saved draft adds a secure `RAILWAY_TOKEN` requirement and the two backboard domains;
@@ -87,7 +88,7 @@ Review [implementation status](../IMPLEMENTATION_STATUS.md), [QA](QA_REPORT.md),
 Choose eligible account type/market and tested adapter version before enabling outward
 operations. Configure real Google identity and each independent integration grant.
 
-Production requires PostgreSQL, secure cookies, development login off, managed encryption
+Production requires PostgreSQL, Redis-backed request limits, secure cookies, development login off, managed encryption
 keys, scoped service identities, real/disabled models and secure origins. External sending
 stays disabled until actual account/capability/grant gates pass. This rollout switch is
 separate from per-message owner approval: configured eligible Auto work uses its existing

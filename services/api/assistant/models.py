@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, Integer, String, UniqueConstraint
+from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, Index, Integer, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from .db import Base, EncryptedJSON, EncryptedText, now, uid
@@ -24,6 +24,7 @@ class User(Entity, Base):
 
 class SessionRecord(Entity, Base):
     __tablename__ = "sessions"
+    __table_args__ = (Index("ix_sessions_expiry_page", "expires_at", "id"),)
     user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), index=True)
     token_hash: Mapped[str] = mapped_column(String(64), unique=True)
     csrf_hash: Mapped[str] = mapped_column(String(64))
@@ -32,6 +33,7 @@ class SessionRecord(Entity, Base):
 
 class LoginNonce(Entity, Base):
     __tablename__ = "login_nonces"
+    __table_args__ = (Index("ix_login_nonces_expiry_page", "expires_at", "id"),)
     nonce_hash: Mapped[str] = mapped_column(String(64), unique=True)
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
 

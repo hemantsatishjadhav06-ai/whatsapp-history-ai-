@@ -43,7 +43,8 @@ readiness, then exercises the synthetic import/style/draft/approval/idempotent-s
 flow through actual loopback HTTP. It removes its container on completion. No provider
 tokens or real account data are used, and it does not establish PostgreSQL deployment readiness.
 
-Production settings require `ENVIRONMENT=production`, PostgreSQL, an externally managed
+Production settings require `ENVIRONMENT=production`, PostgreSQL, Redis-backed request
+limits, an externally managed
 Fernet encryption key, secure session cookies, development login disabled, and a real or
 disabled model provider. Configure the intended frontend origins, Google client ID, and
 separate least-privilege internal service authentication. Supply provider credentials via
@@ -54,14 +55,18 @@ app secret, webhook verification token, access token, TLS webhook routing, recip
 and explicit external-send enablement. An identity verification response does not prove
 phone coexistence, group sending, history availability, quota capacity, or provider delivery.
 
-Deploy API, Temporal worker, schedule registrar, and optional Kafka relay as independently
-restartable processes using the same authoritative SQL database and appropriate namespace
-and task queue. Redis can be omitted until a consumer is implemented. Configure production
-Temporal/Kafka TLS/authentication through a supported integration before exposing them;
-the current clients and Compose profiles target local plaintext development services.
+Deploy Web, API, Jobs and Retention as independently restartable services, plus
+managed PostgreSQL and Redis. Jobs runs authorized SQL schedules without requiring
+Temporal; Retention is required for bounded application/session cleanup. Keep
+Actions undeployed until its real adapter and evaluated planner pass release gates.
+The legacy Temporal worker/registrar and Kafka relay are optional processes sharing
+the authoritative SQL database. Configure supported production TLS/authentication
+before connecting them to external services; current clients and Compose profiles
+target local plaintext development infrastructure. Budget all process pools together.
 
 The live endpoint demonstrates process availability. The ready endpoint demonstrates the
-SQL schema is available; it intentionally reports external integrations as not validated.
+SQL schema and required request-limit backend are available; it intentionally
+reports external integrations as not validated.
 Build deployment gates that check provider access, worker registration, event publication,
 delivery receipts, migrations, and restore behavior separately. Collect content-free
 metrics for outbox age, pending schedule lag, ambiguous send attempts, revoked-work blocks,

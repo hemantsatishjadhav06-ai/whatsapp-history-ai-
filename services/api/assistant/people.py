@@ -1,6 +1,7 @@
 """Exact-identity assistant-local contacts; no implicit external address-book writes."""
 
 import re
+from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Literal
 
@@ -14,6 +15,7 @@ from .core import serialized_control
 from .db import aware, get_db, now
 from .models import Connector, Conversation, Message, Permission, Suppression
 from .people_models import ContactSaveGrant, ContactSource, LocalContact
+from .native_models import MessageContext
 
 router = APIRouter(tags=["people"])
 DESTINATIONS = {"assistant_local": "supported", "whatsapp": "unavailable",
@@ -51,26 +53,49 @@ class ContactGrantInput(BaseModel):
         return aware(value)
 
 
-def source_valid(db, conversation, source):
+@dataclass(frozen=True)
+class PrefetchedContactScope:
+    """Internal request-local provenance; never accepts client authority."""
+    workspace_id: str
+    conversation_id: str
+    connector: Connector | None
+    contexts: dict[str, MessageContext]
+    suppressed_source_ids: frozenset[str]
+
+
+def source_valid(db, conversation, source, *, prefetched: PrefetchedContactScope | None = None):
     from .native import message_available, message_context_for, native_record_for
-    connector = db.get(Connector, conversation.connector_id)
-    context = message_context_for(db, source)
+    if prefetched is not None:
+        if prefetched.workspace_id != conversation.workspace_id or prefetched.conversation_id != conversation.id:
+            return False
+        connector = prefetched.connector
+        context = prefetched.contexts.get(source.id)
+        if (connector and connector.id != conversation.connector_id) or (context and (
+                context.message_id != source.id or context.workspace_id != source.workspace_id
+                or context.connector_id != source.connector_id or context.conversation_id != source.conversation_id)):
+            return False
+        available = not source.deleted and not (context and context.expires_at and aware(context.expires_at) <= now())
+    else:
+        connector = db.get(Connector, conversation.connector_id)
+        context = message_context_for(db, source)
+        available = message_available(db, source)
     origin_verified = (source.origin in {"live", "backfill"}
                        or (source.origin == "history" and native_record_for(db, source) is not None))
     if (source.workspace_id != conversation.workspace_id or source.conversation_id != conversation.id
             or source.connector_id != conversation.connector_id or source.deleted
             or not origin_verified
             or source.author_kind not in {"contact_human", "contact"}
-            or source.direction != "inbound" or not message_available(db, source)
+            or source.direction != "inbound" or not available
             or (context and context.sender_identity and context.sender_identity.get("id") != source.sender_id)
             or not connector or connector.workspace_id != conversation.workspace_id
             or connector.provider == "export_only" or source.sender_id == connector.owner_sender_id
             or not IDENTITY.fullmatch(source.sender_id)):
         return False
-    blocked = {key for row in db.scalars(select(Suppression).where(
-        Suppression.workspace_id == conversation.workspace_id,
-        Suppression.conversation_id == conversation.id,
-    )) for key in row.source_message_ids}
+    blocked = prefetched.suppressed_source_ids if prefetched is not None else {
+        key for row in db.scalars(select(Suppression).where(
+            Suppression.workspace_id == conversation.workspace_id,
+            Suppression.conversation_id == conversation.id,
+        )) for key in row.source_message_ids}
     return source.id not in blocked
 
 

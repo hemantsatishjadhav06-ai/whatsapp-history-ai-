@@ -1,0 +1,109 @@
+{
+  "recorded_date_utc": "2026-10-07",
+  "source_provenance": {
+    "published_baseline_commit": "4c9be7357bf2bb5df9cbcedce6dbd9ea090466a0",
+    "tested_state": "later working-tree hardening; published with this report",
+    "api_version": "0.3.0",
+    "migration_head": "86b7bbad6fc1",
+    "migration_count": 8
+  },
+  "backend_sqlite": {
+    "status": "PASS",
+    "passed": 636,
+    "skipped": 13,
+    "skip_scope": "PostgreSQL-only cases",
+    "elapsed_seconds": 280.69,
+    "warnings": 1,
+    "artifact": ".local/backend-full-sqlite-final.log"
+  },
+  "backend_postgres": {
+    "status": "PASS",
+    "passed": 649,
+    "skipped": 0,
+    "errors": 0,
+    "elapsed_seconds": 494.95,
+    "warnings": 1,
+    "artifact": ".local/backend-full-postgres.log"
+  },
+  "request_certificate_integration": {
+    "status": "PASS",
+    "passed": 43,
+    "elapsed_seconds": 6.73,
+    "artifact": ".local/hardening-boundary-rerun.log",
+    "overlap": "included in backend totals; do not add counts"
+  },
+  "client_and_gateway_checks": {
+    "shared_contracts_passed": 20,
+    "web_proxy_passed": 25,
+    "tools_privacy_passed": 7,
+    "native_helpers_passed": 16,
+    "node_gateway_passed": 33,
+    "native_exports": ["android", "ios", "web"],
+    "physical_device_status": "NOT_RUN"
+  },
+  "desktop_mobile_web": {
+    "status": "PASS",
+    "passed": 64,
+    "skipped": 0,
+    "failed": 0,
+    "retries_enabled": false,
+    "build_scope": "final proxy cap, admission and Tools privacy changes",
+    "artifact": ".local/hardening-browser-admission-final.log"
+  },
+  "storage_restore": {
+    "status": "PASS",
+    "synthetic_messages": 5001,
+    "tables": 37,
+    "elapsed_seconds": 36.69,
+    "database_bytes": 19296739,
+    "sql_backup_bytes": 4306560,
+    "exact_durable_and_decrypted_state": true,
+    "wrong_key_rejected": true,
+    "private_plaintext_marker_absent": true,
+    "suppression_held_jobs_and_replay_preserved": true,
+    "temporary_databases_and_backup_removed": true,
+    "artifact": ".local/storage-reliability.json",
+    "managed_production_recovery_status": "NOT_RUN"
+  },
+  "reply_scope": {
+    "status": "MOCK_ONLY_PASS",
+    "wire_operations_tested": ["text", "quote", "reaction", "forward"],
+    "duplicate_attempt_preserved": true,
+    "forged_recipient_rejected": true,
+    "external_provider_calls": 0,
+    "external_model_calls": 0,
+    "personal_whatsapp_pairing_and_sync": "NOT_IMPLEMENTED",
+    "general_production_dispatch": "BLOCKED_BY_IMPLEMENTATION_GATE"
+  },
+  "containers": {
+    "api_image_id": "sha256:b9f6c1a528f96decd6761ad74260936ab6e20450163e25c114cdb3526628a89c",
+    "web_image_id": "sha256:bab173cfa2eb425c2e30092bfad18cad109d5c1ab3d3ef434de08bbc1e9b6a70",
+    "functional_http_acceptance": "MOCK_ONLY_PASS",
+    "non_root_uid": 10001,
+    "available_debian12_package_fixes": 0,
+    "api_os_advisory_rows": 264,
+    "api_os_critical_rows": 2,
+    "api_vendored_rust_medium_rows": 1,
+    "api_python_advisories": 0,
+    "web_os_advisory_rows": 222,
+    "web_os_critical_rows": 1,
+    "web_node_advisories": 0,
+    "native_npm_affected_nodes": 29,
+    "release_status": "KNOWN_ADVISORIES_OPEN",
+    "report": "docs/dependency-audit.md"
+  },
+  "capacity": {
+    "complete_8_24_user_checks": 1280,
+    "complete_checks_status": "PASS",
+    "larger_paced128_and_burst64_status": "FAIL_AVAILABILITY",
+    "target_50000_status": "NOT_RUN",
+    "final_web_admission_rebenchmarked": false,
+    "report": "docs/LOAD_TEST_REPORT.md"
+  },
+  "deployment": {
+    "github_remote": "hemantsatishjadhav06-ai/whatsapp-history-ai-",
+    "railway_status": "BLOCKED_AUTHENTICATION_AND_NETWORK",
+    "railway_live_url": null,
+    "remote_ci_execution": "NOT_VERIFIED"
+  }
+}

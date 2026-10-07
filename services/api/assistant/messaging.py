@@ -30,6 +30,7 @@ from .models import (
     ScheduledIntent, SendAttempt, StyleProfile, User, Workspace,
 )
 from .native import NativeOriginal, ReactionContent, utc_datetime
+from .storage_authority import lock_workspace, SUBMISSION_RECOVERY_SECONDS
 
 router = APIRouter(tags=["messaging"])
 PENDING_DRAFTS = {"needs_approval", "approved", "ready"}
@@ -177,14 +178,14 @@ def invalidate_conversation(db: Session, conversation: Conversation, reason: str
 
 def hold_workspace_schedules(db, workspace):
     """Pause external execution while preserving exact approved durable schedules."""
-    held_drafts = set()
-    for intent in db.scalars(select(ScheduledIntent).where(
-            ScheduledIntent.workspace_id == workspace.id, ScheduledIntent.status.in_(["scheduled", "held"]))):
-        intent.status = "held"
-        held_drafts.add(intent.draft_id)
-    for draft in db.scalars(select(Draft).where(Draft.workspace_id == workspace.id, Draft.status.in_(PENDING_DRAFTS))):
-        if draft.id not in held_drafts:
-            draft.status, draft.approved_hash, draft.approval_expires_at = "cancelled", None, None
+    db.execute(update(ScheduledIntent).where(ScheduledIntent.workspace_id == workspace.id,
+               ScheduledIntent.status.in_(["scheduled", "held"])).values(status="held")
+               .execution_options(synchronize_session=False))
+    held_drafts = select(ScheduledIntent.draft_id).where(ScheduledIntent.workspace_id == workspace.id,
+                                                       ScheduledIntent.status == "held")
+    db.execute(update(Draft).where(Draft.workspace_id == workspace.id, Draft.status.in_(PENDING_DRAFTS),
+               ~Draft.id.in_(held_drafts)).values(status="cancelled", approved_hash=None, approval_expires_at=None)
+               .execution_options(synchronize_session=False))
 
 
 def resume_workspace_schedules(db, workspace, settings):
@@ -230,12 +231,17 @@ def _invalidate_evidence(db: Session, conversation: Conversation, message_id: st
 def ingest_event(db: Session, event: CanonicalEvent) -> dict:
     """Accept a trusted connector observation; caller commits the complete transaction."""
     connector = db.get(Connector, event.connector_id)
+    if connector is not None:
+        lock_workspace(db, connector.workspace_id)
+        db.refresh(connector)
     if connector is None or connector.status != "connected":
         raise HTTPException(404, "Connected account not found")
     if ((event.provider is not None and event.provider != connector.provider)
             or (event.account_id is not None and event.account_id != connector.account_id)):
         raise HTTPException(403, "Connector account mapping mismatch")
     conversation = db.get(Conversation, event.conversation_id)
+    if conversation is not None:
+        db.refresh(conversation)
     if (conversation is None or conversation.connector_id != connector.id
             or conversation.workspace_id != connector.workspace_id):
         raise HTTPException(404, "Conversation not found for connector")
@@ -352,8 +358,8 @@ def connector_event(body: CanonicalEvent, db: Session = Depends(get_db)):
     workspace_id = connector.workspace_id
     db.rollback()
     with submit_guard(workspace_id):
-        result = ingest_event(db, body)
         try:
+            result = ingest_event(db, body)
             db.commit()
         except IntegrityError:
             db.rollback()
@@ -392,6 +398,7 @@ def serialized_draft(function):
             raise HTTPException(404, "Draft not found")
         db.rollback()
         with submit_guard(workspace_id):
+            lock_workspace(db, workspace_id)
             db.expire_all()
             return function(*args, **kwargs)
     return guarded
@@ -608,8 +615,18 @@ async def dispatch_draft(session_factory, settings, draft_id: str, actor_id: str
     if workspace_id is None:
         raise HTTPException(404, "Draft not found")
     with submit_guard(workspace_id), session_factory() as db:
+        lock_workspace(db, workspace_id)
         existing = db.scalar(select(SendAttempt).where(SendAttempt.draft_id == draft_id))
         if existing:
+            if (existing.status == "dispatching" and
+                    aware(existing.created_at) <= now() - timedelta(seconds=SUBMISSION_RECOVERY_SECONDS)):
+                existing.status, existing.error_code = "uncertain", "delivery_uncertain"
+                draft = db.get(Draft, draft_id)
+                if draft is not None:
+                    draft.status = "uncertain"
+                from .companion import settle_action_budget
+                settle_action_budget(db, workspace_id, f"draft:{draft_id}", "uncertain")
+                db.commit()
             return attempt_payload(existing)
         draft = db.get(Draft, draft_id)
         if draft is None:
@@ -644,6 +661,7 @@ async def dispatch_draft(session_factory, settings, draft_id: str, actor_id: str
         # Separate transaction immediately before submission. Never hold SQL locks
         # through a provider call; later control events cannot recall an in-flight send.
         with submit_guard(workspace_id), session_factory() as db:
+            lock_workspace(db, workspace_id)
             draft = db.get(Draft, draft_id)
             attempt = db.get(SendAttempt, attempt_id)
             if draft is None or attempt is None:
@@ -659,7 +677,8 @@ async def dispatch_draft(session_factory, settings, draft_id: str, actor_id: str
         outcome, provider_id, error_code = await _transport_send(
             settings, provider, account_id, recipient, text, attempt_id, final_check)
     except HTTPException as error:
-        with session_factory() as db:
+        with submit_guard(workspace_id), session_factory() as db:
+            lock_workspace(db, workspace_id)
             attempt = db.get(SendAttempt, attempt_id)
             draft = db.get(Draft, draft_id)
             if attempt is None or draft is None:
@@ -671,7 +690,8 @@ async def dispatch_draft(session_factory, settings, draft_id: str, actor_id: str
             settle_action_budget(db, workspace_id, f"draft:{draft_id}", "released")
             db.commit()
             return {**attempt_payload(attempt), "reason": error.detail}
-    with session_factory() as db:
+    with submit_guard(workspace_id), session_factory() as db:
+        lock_workspace(db, workspace_id)
         attempt = db.get(SendAttempt, attempt_id)
         draft = db.get(Draft, draft_id)
         if attempt is None or draft is None:
@@ -723,6 +743,7 @@ def renew_lease(body: LeaseHeartbeat, db: Session = Depends(get_db)):
     workspace_id = connector.workspace_id
     db.rollback()
     with submit_guard(workspace_id):
+        lock_workspace(db, workspace_id)
         connector = db.get(Connector, body.connector_id)
         if (connector.status != "connected" or connector.fence != body.fence
                 or connector.lease_expires_at is None or aware(connector.lease_expires_at) <= now()):
@@ -738,6 +759,8 @@ def reconcile_receipt(body: Receipt, db: Session = Depends(get_db)):
     connector = db.get(Connector, body.connector_id)
     if connector is None:
         raise HTTPException(404, "Connector not found")
+    lock_workspace(db, connector.workspace_id)
+    db.refresh(connector)
     attempt = db.scalar(select(SendAttempt).join(Conversation,
                        Conversation.id == SendAttempt.conversation_id).where(
                            Conversation.connector_id == connector.id,
@@ -745,7 +768,8 @@ def reconcile_receipt(body: Receipt, db: Session = Depends(get_db)):
                            SendAttempt.provider_message_id == body.provider_message_id))
     if attempt is None:
         raise HTTPException(404, "No correlated send attempt; review uncertainty without resending")
-    if attempt.status in {"dispatching", "uncertain", "accepted"}:
+    ranks = {"dispatching": 0, "uncertain": 0, "accepted": 1, "failed": 2, "delivered": 3}
+    if ranks.get(attempt.status, -1) < ranks[body.status]:
         attempt.status = body.status
         db.get(Draft, attempt.draft_id).status = body.status
         audit(db, attempt.workspace_id, "connector", "send.receipt", attempt.id, status=body.status)
@@ -848,6 +872,7 @@ def cancel_schedule(intent_id: str, user: User = Depends(get_current_user), db: 
     workspace_id = intent.workspace_id
     db.rollback()
     with submit_guard(workspace_id):
+        lock_workspace(db, workspace_id)
         intent = db.get(ScheduledIntent, intent_id)
         if intent.status in {"scheduled", "held"}:
             attempt = db.scalar(select(SendAttempt).where(SendAttempt.draft_id == intent.draft_id))
@@ -868,10 +893,15 @@ async def process_due(session_factory, settings, intent_id: str | None = None) -
         query = select(ScheduledIntent).where(ScheduledIntent.status.in_(["scheduled", "held"]), ScheduledIntent.due_at <= now())
         if intent_id:
             query = query.where(ScheduledIntent.id == intent_id)
-        ids = list(db.scalars(query.with_only_columns(ScheduledIntent.id)))
+        ids = list(db.scalars(query.with_only_columns(ScheduledIntent.id).order_by(ScheduledIntent.due_at).limit(100)))
     results = []
     for selected_id in ids:
         with session_factory() as db:
+            workspace_id = db.scalar(select(ScheduledIntent.workspace_id).where(ScheduledIntent.id == selected_id))
+        if workspace_id is None:
+            continue
+        with submit_guard(workspace_id), session_factory() as db:
+            lock_workspace(db, workspace_id)
             intent = db.get(ScheduledIntent, selected_id)
             if intent is None or intent.status not in {"scheduled", "held"}:
                 continue
@@ -897,10 +927,11 @@ async def process_due(session_factory, settings, intent_id: str | None = None) -
         except HTTPException as error:
             result = {"reason": error.detail}
             status = "cancelled"
-        with session_factory() as db:
+        with submit_guard(workspace_id), session_factory() as db:
+            lock_workspace(db, workspace_id)
             intent = db.get(ScheduledIntent, selected_id)
             # A race with cancellation must not restore a cancelled intent.
-            if intent.status == "scheduled":
+            if intent is not None and intent.status == "scheduled":
                 intent.status = status
                 db.commit()
         results.append({**result, "intent_id": selected_id, "status": status})

@@ -10,6 +10,7 @@ from typing import Literal
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from sqlalchemy import or_, select
+from sqlalchemy.orm import load_only
 
 from .access import audit, conversation_for, permission_for, workspace_for
 from .action_models import AutomationGrant, ForwardRoute, OutboundAction
@@ -26,8 +27,10 @@ from .lifecycle_models import RetentionPolicy
 from .messaging import content_hash, draft_payload
 from .models import (AuditEvent, Connector, Conversation, Draft, Memory, Message, Permission,
                      StyleProfile, Task, Workspace)
-from .people import contact_json, source_valid
+from .people import PrefetchedContactScope, contact_json, source_valid
 from .people_models import ContactSource, LocalContact
+from .native_models import MessageContext
+from .models import Suppression
 from .tasks import task_json
 
 router = APIRouter(tags=["UI bootstrap", "client configuration"])
@@ -166,7 +169,11 @@ def bootstrap(request: Request, workspace_id: str | None = None,
             .order_by(model.created_at.desc(), model.id).limit(100))]
     # Bound provenance candidates before decrypting or scanning private records.
     # The full address-book endpoint remains separate from this UI preview.
-    candidates = db.execute(select(LocalContact, ContactSource, Message, Conversation)
+    candidates = list(db.execute(select(LocalContact, ContactSource, Message, Conversation)
+        .options(load_only(Message.id, Message.workspace_id, Message.conversation_id, Message.connector_id,
+                           Message.deleted, Message.origin, Message.author_kind, Message.direction,
+                           Message.sender_id, Message.revision),
+                 load_only(Conversation.id, Conversation.workspace_id, Conversation.connector_id))
         .join(ContactSource, ContactSource.contact_id == LocalContact.id)
         .join(Message, Message.id == ContactSource.message_id)
         .join(Conversation, Conversation.id == ContactSource.conversation_id)
@@ -178,10 +185,36 @@ def bootstrap(request: Request, workspace_id: str | None = None,
                Permission.workspace_id == workspace.id, Permission.read.is_(True), Permission.retain.is_(True),
                or_(Permission.expires_at.is_(None), Permission.expires_at > now()), Message.deleted.is_(False),
                Message.revision == ContactSource.source_revision)
-        .order_by(LocalContact.created_at.desc(), LocalContact.id).limit(200))
+        .order_by(LocalContact.created_at.desc(), LocalContact.id).limit(200)))
+    # Live/backfill identity validation requires metadata and sender identity,
+    # never the private message body or unrelated participant attributes. History
+    # records still load fields demanded by their canonical native validation.
+    # One bounded batch per provenance dimension replaces up to three queries
+    # per candidate. The canonical checker still enforces exact identities,
+    # expiry, sender lineage and Forget; history-native validation is unchanged.
+    candidate_chats = {conversation.id for _, _, _, conversation in candidates}
+    candidate_messages = {source.id for _, _, source, _ in candidates}
+    candidate_connectors = {conversation.connector_id for _, _, _, conversation in candidates}
+    source_contexts = {row.message_id: row for row in db.scalars(select(MessageContext).options(
+        load_only(MessageContext.id, MessageContext.workspace_id, MessageContext.message_id,
+                  MessageContext.connector_id, MessageContext.conversation_id, MessageContext.sender_identity,
+                  MessageContext.expires_at)).where(
+        MessageContext.workspace_id == workspace.id, MessageContext.message_id.in_(candidate_messages)))} if candidates else {}
+    source_connectors = {row.id: row for row in db.scalars(select(Connector).where(
+        Connector.workspace_id == workspace.id, Connector.id.in_(candidate_connectors)))} if candidates else {}
+    suppressed = {identifier: set() for identifier in candidate_chats}
+    if candidates:
+        # Stream metadata and retain only the <=200 candidate source IDs. No
+        # record limit is allowed to silently omit an older Forget tombstone.
+        for conversation_id, source_ids in db.execute(select(Suppression.conversation_id, Suppression.source_message_ids)
+                .where(Suppression.workspace_id == workspace.id, Suppression.conversation_id.in_(candidate_chats))
+                .execution_options(yield_per=100)):
+            suppressed[conversation_id].update(candidate_messages.intersection(source_ids))
     included = set()
     for contact, ref, source, conversation in candidates:
-        if contact.id not in included and source_valid(db, conversation, source):
+        scope = PrefetchedContactScope(workspace.id, conversation.id, source_connectors.get(conversation.connector_id),
+                                      source_contexts, frozenset(suppressed[conversation.id]))
+        if contact.id not in included and source_valid(db, conversation, source, prefetched=scope):
             result["contacts"].append(contact_json(contact))
             included.add(contact.id)
             if len(included) == 100:

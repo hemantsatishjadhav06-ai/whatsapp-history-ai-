@@ -53,6 +53,7 @@ function normalize(snapshot: MiloSnapshot, mode: 'demo' | 'live'): { state: Milo
   };
   return { state: { mode, workspaceId: workspace.id, selectedConversationId: null, loading: false, error: null,
     paused: workspace.paused, pausePending: false, online: true, user: snapshot.user, data, lastUpdated: snapshot.generated_at, timezone: workspace.timezone,
+    authorizationVersion: (snapshot as MiloSnapshot & { snapshot_version?: string }).snapshot_version,
     nextCursor: pagination?.conversation_next_cursor ?? null, hasMore: pagination?.has_more_conversations ?? false },
     messages };
 }

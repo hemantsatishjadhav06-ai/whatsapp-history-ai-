@@ -6,6 +6,48 @@ listed as actual local infrastructure. No real Google, model or WhatsApp account
 has been exercised. The current request enables Milo web/native and deployment acceptance;
 client results below are separate from backend and installed-device results.
 
+## 7 October security, storage and capacity increment
+
+This section supersedes the older results below for the current hardening. All
+content, identities and transport replies were synthetic. Provider and model
+calls were zero; actual PostgreSQL, Redis, HTTP and container execution are
+identified separately.
+
+A [redacted regression summary](benchmarks/hardening-regressions.json) preserves
+the current counts and boundaries in Git. Raw local logs are ignored; separate
+focused runs overlap the full suites and must not be added to their totals.
+
+| Check | Current result | Scope and artifact |
+| --- | --- | --- |
+| Full SQLite backend | 636 passed, 13 PostgreSQL-only skips; 280.69s | `.local/backend-full-sqlite-final.log`; one existing Starlette/httpx deprecation warning |
+| Full PostgreSQL backend | 649 passed, no skips/errors; 494.95s | `.local/backend-full-postgres.log` and JSON manifest; separate-process events, job/action claims, quota/control races and stale receipts included |
+| Request/certificate/integration boundary | 43 passed; 6.73s | `.local/hardening-boundary-rerun.log`; streaming limits, depth/framing, sanitized errors, control reserve and certificate cache |
+| Shared Redis limits | PASS | Two independent clients, exact atomic source/session/global/control budgets, hashed expiry, signed-source checks and outage rejection; [evidence](request-limits-smoke.md) |
+| Encrypted PostgreSQL backup/restore | PASS; 5,001 messages, 37 tables, 36.690s | `.local/storage-reliability.json`; encrypted/plaintext marker check, exact restored digest, wrong-key rejection, suppression, held jobs and replay; disposable databases/backup removed |
+| Schema | Eight migrations through `86b7bbad6fc1`, repeatable upgrade/alignment PASS | Local PostgreSQL and restored databases; measured authentication expiry indexes |
+| Locked dependencies and client contracts | PASS | Installed Node package versions match the lock; cryptography 50.0.2; generated OpenAPI/TypeScript, strict workspace typechecks, 20 shared contracts, 25 proxy, seven Tools privacy and 16 native helper tests |
+| Reply and HTTP bridge | MOCK_ONLY: PASS | Latest disposable demo and Python–Node–SQL text/quote/reaction/forward bridge; four durable attempts, duplicate preservation and forged-recipient rejection; `.local/hardening-demo.log`, `.local/hardening-bridge-smoke.log` |
+| Native exports | PASS, Android/iOS/web | Current locked graph; exact artifact hashes and unrun installed-device gates in the native device report |
+| Capacity | 8/24-user workloads PASS; larger stages FAIL availability | 1,280 validated requests; paced128/burst64 include explicit 503s and recovery; [complete measurements](LOAD_TEST_REPORT.md). 50,000 remains NOT_RUN |
+| Fresh API runtime | PASS | Immutable image `b9f6c1a528f96decd6761ad74260936ab6e20450163e25c114cdb3526628a89c`; UID10001, runtime port, IPv4/IPv6, overload recovery, clean shutdown; both private worker entrypoints exit0 at migration eight |
+| Fresh API container functional HTTP | MOCK_ONLY: PASS | Same immutable image; import/reimport, scoped owner style, exact approval, idempotent mock dispatch and Pause; `.local/hardening-api-container-smoke.json` |
+| Fresh standalone web container | MOCK_ONLY: PASS | Immutable image `bab173cfa2eb425c2e30092bfad18cad109d5c1ab3d3ef434de08bbc1e9b6a70`; actual HTTP assets, private proxy, authenticated snapshot, nonce/cookie/CSRF/origin and route-denial acceptance; final source includes proxy admission and Tools privacy |
+| Current-build desktop/mobile-web acceptance | PASS: 64, zero failures/skips, retries disabled | Final Next build after proxy cap and admission; `.local/hardening-browser-admission-final.log`. Includes actual SQL Tools Forget plus a delayed private GET, unchanged edit preservation and raw-history distinction |
+| Known dependency/container advisories | OPEN | Current Python/web production/gateway package audits: zero known advisories. Native graph: 29 affected nodes. Exact API/web images: 264/222 OS rows, including two/one critical; API vendored Rust: one medium. No available Debian12 package fixes in the scan; unresolved findings are retained in the [audit](dependency-audit.md) |
+| CI configuration | UPDATED, remote execution not claimed | Added PostgreSQL/Redis backend job and the focused Tools privacy command; YAML parsed locally. GitHub runner results require their own execution evidence |
+
+The first full runs found two malformed liveness-header failures, fixed before the
+passing reruns. A VFS Docker build then exhausted the workspace disk and interrupted
+PostgreSQL/browser checks. Those failed logs were retained; they are not counted as
+passes. Verified rollback image archives and removal of task-owned build caches
+recovered 13 GiB. Dockerfiles now avoid repeated dependency snapshots and keep TLS,
+signed indexes and frozen locks. Current image/browser results are finalized below.
+
+Real WhatsApp pairing/history/phone coexistence and native general-action delivery
+are still unavailable. General production action dispatch is explicitly blocked;
+real model reply quality, Google sign-in and installed-device journeys remain unrun.
+See [security and actual reply scope](SECURITY_REVIEW.md) before enabling a live account.
+
 ## Prior backend baseline
 
 These results predate the new CTO handoff increment and do not verify its new code.
@@ -99,9 +141,10 @@ actual phone-contact destinations, held-out personalization, distributed crash/l
 reconciliation, restore/privacy lifecycle, production isolation audit and staged capacity
 must have separate evidence. A passing mock suite does not close those gates.
 
-## Milo client and publication increment
+## Prior Milo client and publication baseline
 
-The current request adds interactive Next.js web and Expo/React Native clients. The
+These results predate the current security/storage/capacity increment at the top
+of this report. The request added interactive Next.js web and Expo/React Native clients. The
 canonical M01–M36 inventory, all 60 TEST cases and 31 UX cases are mapped in
 [TEST_PLAN.md](TEST_PLAN.md) and [MOBILE_PARITY_REPORT.md](MOBILE_PARITY_REPORT.md).
 Required cases are not automatically passed by a successful build or a rendered button.

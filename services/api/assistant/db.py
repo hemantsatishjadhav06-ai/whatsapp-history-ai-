@@ -66,7 +66,10 @@ def make_database(settings):
             from sqlalchemy.pool import StaticPool
             kwargs["poolclass"] = StaticPool
     else:
-        kwargs.update(pool_size=5, max_overflow=5)
+        kwargs.update(pool_size=settings.db_pool_size, max_overflow=settings.db_max_overflow,
+                      pool_timeout=settings.db_pool_timeout_seconds, pool_recycle=settings.db_pool_recycle_seconds,
+                      connect_args={"connect_timeout": 5,
+                                    "options": f"-c statement_timeout={settings.db_statement_timeout_ms}"})
     engine = create_engine(settings.database_url, **kwargs)
     engine.dialect.assistant_cipher = Fernet(settings.encryption_key.encode())
     if settings.database_url.startswith("sqlite"):

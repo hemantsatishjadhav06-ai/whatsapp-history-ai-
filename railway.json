@@ -3,9 +3,10 @@
   "build": {
     "builder": "DOCKERFILE",
     "dockerfilePath": "Dockerfile.web",
-    "watchPatterns": ["/apps/web/**", "/packages/contracts/**", "/package.json", "/package-lock.json", "/Dockerfile.web"]
+    "watchPatterns": ["/apps/web/**", "/packages/contracts/**", "/package.json", "/package-lock.json", "/Dockerfile.web", "/railway.json"]
   },
   "deploy": {
+    "numReplicas": 2,
     "healthcheckPath": "/healthz",
     "healthcheckTimeout": 120,
     "restartPolicyType": "ON_FAILURE",

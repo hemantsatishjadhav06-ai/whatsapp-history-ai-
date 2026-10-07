@@ -102,6 +102,8 @@ def set_retention(body: RetentionInput, db=Depends(get_db), user=Depends(get_cur
 
 def sweep_retention(db, workspace_id, *, actor_id="retention-worker", batch_size=500):
     """Runs in a caller-owned transaction/submit guard; no external/network operations."""
+    from .storage_authority import lock_workspace
+    lock_workspace(db, workspace_id)
     from .actions import forget_action_sources
     from .jobs import forget_job_sources
     from .native import forget_native_sources
@@ -242,6 +244,7 @@ def main():
     from .db import make_database
     from .messaging import submit_guard
     from .models import Workspace
+    from .auth_lifecycle import sweep_auth_metadata
     parser = argparse.ArgumentParser(description="Bounded retention worker, without provider or backup deletion")
     parser.add_argument("--once", action="store_true")
     parser.add_argument("--workspace-id")
@@ -249,6 +252,9 @@ def main():
     engine, factory = make_database(Settings().prepare())
     try:
         while True:
+            with factory() as db:
+                auth_cleanup = sweep_auth_metadata(db)
+                db.commit()
             # Iterate in bounded pages rather than retaining all tenant IDs.
             last_id = ""
             count = 0
@@ -267,6 +273,7 @@ def main():
                         db.commit()
                 last_id = ids[-1]
             print(f"Application retention sweep completed; redacted records: {count}", flush=True)
+            print(f"Authentication metadata cleanup completed; expired records: {auth_cleanup['total_deleted']}", flush=True)
             if args.once:
                 break
             time.sleep(30)
