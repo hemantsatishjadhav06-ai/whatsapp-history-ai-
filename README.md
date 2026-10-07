@@ -145,12 +145,17 @@ The 7 October hardening adds bounded request/storage admission, concurrent SQL a
 authentication cleanup, private-result reconciliation and measured capacity reports.
 Railway workspace authentication succeeded with the securely configured credential.
 A dedicated Milo project/environment and Web, API, Jobs and Retention services
-were created. PostgreSQL 18 and Redis 8.2 deployments succeeded with private routing
-and ready persistent volumes. The API build from `72df83c` failed before startup
-because Railway does not support its Docker bind/secret mounts; migrations have
-not run there. The mount-free `Dockerfile.web.railway` and
-`services/api/Dockerfile.railway` require their own exact-source CI and hosted
-acceptance before release. Source autodeploy remains off.
+were created. PostgreSQL 18.6 and Redis 8.2.10 reported ready with private routing
+and persistent volumes. [CI run 37635560403](https://github.com/hemantsatishjadhav06-ai/whatsapp-history-ai-/actions/runs/37635560403)
+passed for `8ea6d576`: 747 PostgreSQL cases, 734 SQLite cases with 13 skips,
+70 browser cases, four cold image builds and security gates. The subsequent
+Railway API build succeeded but produced the Web image despite the configured
+API Dockerfile; its migration command failed before application startup.
+The legacy Web manifest is now `infra/railway-web.json`, outside the repository
+root, to prevent default Web build settings from overriding another role.
+New services use explicit service settings and the mount-free
+`Dockerfile.web.railway` / `services/api/Dockerfile.railway` paths. This correction
+requires a new exact-source CI result and hosted acceptance; autodeploy stays off.
 The reserved domain `web-production-bde60.up.railway.app` is not a verified live
 application URL yet.
 The larger local load stages exceeded the measured pilot capacity; 50,000

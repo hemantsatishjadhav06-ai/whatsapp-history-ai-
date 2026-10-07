@@ -37,8 +37,11 @@ def check_dockerfile(path, *, mount_free):
 
 
 def main():
+    for legacy in ("railway.json", "railway.toml"):
+        require(not Path(legacy).exists(),
+                f"{legacy}: root defaults can override service-specific Railway build settings")
     targets = {
-        "web": (Path("railway.json"), "Dockerfile.web.railway"),
+        "web": (Path("infra/railway-web.json"), "Dockerfile.web.railway"),
         "api": (Path("infra/railway-api.json"), "services/api/Dockerfile.railway"),
         "jobs": (Path("infra/railway-jobs.json"), "services/api/Dockerfile.railway"),
         "retention": (Path("infra/railway-retention.json"), "services/api/Dockerfile.railway"),
@@ -77,7 +80,8 @@ def main():
         check_dockerfile(Path(dockerfile), mount_free=dockerfile.endswith(".railway"))
     print(json.dumps({"provider_dockerfile_selection": "passed", "pinned_non_root_images": 4,
                       "railway_mount_free_images": 2, "railway_manifests": len(targets),
-                      "railway_service_settings": len(settings), "render_docker_services": len(expected_render)}))
+                      "railway_service_settings": len(settings), "render_docker_services": len(expected_render),
+                      "railway_root_legacy_config_absent": True}))
 
 
 if __name__ == "__main__":

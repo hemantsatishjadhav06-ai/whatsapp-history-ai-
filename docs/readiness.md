@@ -2,9 +2,11 @@
 
 The backend and Milo web/native pilot have passed the local checks below. Source is
 published on GitHub; the latest user request selects Railway. Workspace authentication
-and PostgreSQL/Redis provisioning succeeded. The API build failed before startup
-on unsupported Docker bind/secret mounts, so provider migrations and hosted
-application acceptance remain open. The alternative Render preparation remains available.
+and PostgreSQL/Redis startup readiness succeeded. Source `8ea6d576` passed CI,
+but Railway built the Web image for API and its migration step failed. Removing
+the default root Web configuration requires fresh CI and provider acceptance;
+application schema and hosted readiness remain open. The alternative Render
+preparation remains available.
 Runtime validation and external integration eligibility are separate from implemented code.
 
 The CTO handoff backend increment has passed synthetic functional/regression checks.
@@ -29,7 +31,7 @@ Current per-feature status and exact evidence are tracked in
 | Authorized jobs/privacy/budgets | Bounded proactive and recurring exact-owner jobs, DST policies, held schedules/quiet hours/expiry, reminders, model/action quota reservations and bounded retention tested |
 | Authenticated action bridge | Actual local Python–Node–SQL smoke passed four wire operations/four durable attempts, duplicate suppression and forged-recipient rejection; all transport operations simulated |
 | Worker entry points | Actions, jobs and retention `--once` startup passed |
-| Docker images | Current API 0.3.0 is Python 3.12.14/cryptography 50.0.2, non-root, and migration eight. Current web/container audit evidence is in QA; authoritative build CA, signatures and frozen locks stay enabled |
+| Docker images | Run 37635560403 passed four cold image builds, HTTP/worker checks and full scans for `8ea6d576`; fixable HIGH/CRITICAL gates passed but unfixed findings remain. API is non-root Python 3.12.14/cryptography 50.0.2; image evidence and scan scope are in QA |
 | Non-root image acceptance | API migrations/readiness and local HTTP import/style/approval/idempotent mock dispatch/Pause passed; authenticated web private-proxy/assets/nonce/CSRF/origin/route denial passed; zero provider calls |
 | Compose services | PostgreSQL(pgvector), Redis, Kafka 3.9.0 and Temporal 1.26.2 started and healthy in this cloud instance |
 | Real Kafka relay | Actual broker publish/consume passed with SQL acknowledgement and metadata-only envelope |
@@ -41,8 +43,8 @@ Current per-feature status and exact evidence are tracked in
 | 50,000 accounts / production launch | NOT_RUN; the larger local workloads failed availability. Architecture target and distributed runner do not certify capacity |
 | Milo browser/native acceptance | Current production build, strict web TypeScript and 38 proxy/readiness cases passed. Previous source passed 70 browser cases without retries; unchanged contracts/privacy/native graph: 20 shared-contract/seven Tools privacy/16 native helpers and all-platform Expo export passed; installed-device evidence absent |
 | Cloud setup configuration | Installer/start instructions saved for eight migrations, web/native, workers and hosting checks; a fresh cloud task restored source/CLI access and the securely bound Railway workspace credential was verified with a scoped query |
-| Railway infrastructure | Dedicated Milo project/environment and Web/API/Jobs/Retention created; PostgreSQL 18 and Redis 8.2 deployments succeeded, with private routing and ready volumes at `/var/lib/postgresql/data` and `/data` |
-| GitHub / application hosting | [Published repository](https://github.com/hemantsatishjadhav06-ai/whatsapp-history-ai-/tree/main); [Actions](github-actions.md), [Railway guide](railway.md) and alternative [Render Blueprint](render.md). API build from `72df83c` failed before startup; mount-free Railway Dockerfiles require exact-source CI and hosted acceptance. Reserved `web-production-bde60.up.railway.app` has not passed live readiness |
+| Railway infrastructure | Dedicated Milo project/environment and Web/API/Jobs/Retention created; PostgreSQL 18.6 and Redis 8.2.10 startup readiness verified, with private routing and ready volumes at `/var/lib/postgresql/data` and `/data`; application schema and recovery unverified |
+| GitHub / application hosting | [Run 37635560403](https://github.com/hemantsatishjadhav06-ai/whatsapp-history-ai-/actions/runs/37635560403) passed for `8ea6d576`. Provider API build selected Web despite API settings and failed migration. Moving the legacy Web manifest to `infra/railway-web.json` requires fresh CI and [Railway acceptance](railway.md). Reserved `web-production-bde60.up.railway.app` has not passed live readiness |
 
 The core workflow must be able to fail when broken: authenticate, establish conversation
 permissions, import/receive content, generate a scoped proposal, owner-edit/review it,

@@ -17,20 +17,45 @@ and the CLI must use `RAILWAY_API_TOKEN` with `RAILWAY_TOKEN` unset and explicit
 project/environment/service selectors. No credential value is stored in source.
 
 Actual provider provisioning created a dedicated Milo project/environment and
-Web, API, Jobs and Retention services. PostgreSQL 18 and Redis 8.2 deployments
-reported success, with private routing and ready persistent volumes mounted at
+Web, API, Jobs and Retention services. PostgreSQL 18.6 and Redis 8.2.10 deployments
+reported success, with startup readiness verified from filtered provider logs,
+private routing and ready persistent volumes mounted at
 `/var/lib/postgresql/data` and `/data`. These results verify infrastructure
 provisioning; they do not establish application schema, backup recovery or live
-reply behavior. The reserved Web domain `web-production-bde60.up.railway.app`
+reply behavior. Redis AOF configuration and recovery remain unverified.
+The reserved Web domain `web-production-bde60.up.railway.app`
 has not passed hosted acceptance.
 
-The API deployment from exact source `72df83c1cc05e4b3c707c1bf7747b3f90c369af7`
+The initial API deployment from exact source `72df83c1cc05e4b3c707c1bf7747b3f90c369af7`
 failed during `BUILD_IMAGE`, before process startup or Alembic migrations.
 Railway staff confirmed the original bind/secret Docker build mounts are
-unsupported. Mount-free `Dockerfile.web.railway` and
-`services/api/Dockerfile.railway` are the corrective deployment paths. Their
-exact-source CI, provider builds, migration result, worker startup and public
-Web/private API readiness remain required; source autodeploy stays off.
+unsupported. The mount-free `Dockerfile.web.railway` and
+`services/api/Dockerfile.railway` subsequently passed cold builds and acceptance
+checks in [GitHub run 37635560403](https://github.com/hemantsatishjadhav06-ai/whatsapp-history-ai-/actions/runs/37635560403)
+for exact source `8ea6d57633ef993241fe2af0b5f036d9d3f22d33`. That run passed
+747 PostgreSQL cases, 734 SQLite cases with 13 PostgreSQL-only skips, 70 browser
+cases, all four cold image builds, HTTP/worker smokes and full security scans.
+
+| Railway image scan | Reported findings | Critical | High | Fixable HIGH/CRITICAL gate |
+| --- | --- | --- | --- | --- |
+| API | 265 | 2 | 53 | PASS; zero reported fixable HIGH/CRITICAL findings |
+| Web | 236 | 1 | 50 | PASS; zero reported fixable HIGH/CRITICAL findings |
+
+Unfixed image advisories remain. A passed fixable-finding gate does not mean
+the image is free of vulnerabilities; scan results apply to their recorded
+artifacts and vulnerability database snapshot.
+
+The subsequent Railway API build reported success, but its image contained the
+Web runtime despite the stored API Dockerfile path and service variable. Its
+pre-deploy migration command failed, and no API process startup or application
+schema readiness was established. Railway also rejected explicit legacy
+`railwayConfigFile` role assignment as deprecated and referred to
+`.railway/railway.ts`. The legacy root Web manifest is being moved to
+`infra/railway-web.json` to prevent default Web settings from overriding another
+role. New services use explicit current service inputs and
+`RAILWAY_DOCKERFILE_PATH` values. This correction requires fresh exact-source CI,
+provider builds, successful migrations, worker startup and public Web/private API
+readiness; source autodeploy stays off.
 
 Web readiness now reports validated Railway runtime commit metadata, checks the
 private API through `/readyz`, and starts with one pilot replica. API startup
@@ -55,8 +80,9 @@ passed for `f852b1af64ade873439415a94ee752fc49cdca72`: 747 PostgreSQL cases,
 734 SQLite cases with 13 PostgreSQL-only skips, 70 browser cases without retries,
 cold image builds, HTTP/worker smoke checks and security gates. Deployment was
 skipped. Source `72df83c1cc05e4b3c707c1bf7747b3f90c369af7` subsequently passed
-GitHub validation, but its Railway API build failed as recorded above. Corrective
-Dockerfile changes require a new exact-source CI result before deployment.
+GitHub validation, but its Railway API build failed as recorded above. The newer
+`8ea6d576` run and provider outcome are recorded above; the root configuration
+move needs a new exact-source CI result before another deployment.
 
 ## 7 October Render and fresh-owner increment
 

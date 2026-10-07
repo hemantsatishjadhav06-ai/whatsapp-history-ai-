@@ -6,28 +6,40 @@ The repository includes deployable web, API, Jobs and Retention containers, plus
 
 On 7 October 2026, workspace-scoped Bearer authentication succeeded. A dedicated
 Milo project/environment and Web, API, Jobs and Retention services were created.
-PostgreSQL 18 and Redis 8.2 deployments reported success with private routing and
+PostgreSQL 18.6 and Redis 8.2.10 deployments reported success with startup
+readiness verified from filtered logs, private routing and
 ready persistent volumes at `/var/lib/postgresql/data` and `/data` respectively.
 The Web domain `web-production-bde60.up.railway.app` is reserved; application
 readiness and a usable live URL have not been verified.
 
-The API build from `72df83c1cc05e4b3c707c1bf7747b3f90c369af7` failed at
-`BUILD_IMAGE`, before startup or Alembic migrations. Railway staff confirmed
-that its Docker bind/secret build mounts are unsupported. Deploy using the
-mount-free `Dockerfile.web.railway` and `services/api/Dockerfile.railway` after
-their exact-source CI passes. Keep source autodeploy off. Successful database
-provisioning does not establish application migrations, storage recovery, live
-replies or capacity.
+The initial `72df83c` API build failed on unsupported Docker bind/secret mounts.
+The mount-free `Dockerfile.web.railway` and `services/api/Dockerfile.railway`
+passed [CI run 37635560403](https://github.com/hemantsatishjadhav06-ai/whatsapp-history-ai-/actions/runs/37635560403)
+for `8ea6d57633ef993241fe2af0b5f036d9d3f22d33`: 747 PostgreSQL cases,
+734 SQLite cases with 13 skips, 70 browser cases, four cold image builds and full
+scans. Fixable HIGH/CRITICAL gates passed while unfixed image advisories remain;
+[QA](QA_REPORT.md) records the scan counts and boundaries.
+
+Railway's subsequent API build succeeded but produced the Web image despite the
+stored API Dockerfile setting and variable. Its migration command failed, so no
+API startup or application schema readiness is verified. Explicit legacy role
+configuration was rejected as deprecated. The legacy Web manifest has moved
+from the repository root to `infra/railway-web.json`; new services use current
+explicit service settings and Dockerfile variables. This correction requires
+fresh exact-source CI and provider readiness checks. Keep source autodeploy off.
+Successful database provisioning does not establish application migrations,
+storage recovery, live replies or capacity. Redis AOF configuration and recovery
+remain unverified.
 
 ## Service configuration
 
 Use one Railway project with PostgreSQL and Redis services plus these repository services. PostgreSQL stores durable owner data; Redis is required for shared production request limits and is checked by API readiness. Keep each service's source root at the repository root and deploy the tested source from `hemantsatishjadhav06-ai/whatsapp-history-ai-`.
 
-On 7 October 2026, Railway's [official Config as Code guide](https://docs.railway.com/guides/config-as-code) states that new services cannot opt into legacy Config as Code, and existing JSON/TOML configurations continue only until 1 December 2026. The files below retain the tested startup specifications for existing services. For new services, apply the matching current service settings through the dashboard/API or Railway Infrastructure as Code; uploading these files alone does not apply them. Do not rely on the deprecated `railwayConfigFile` setting for new services.
+On 7 October 2026, Railway's [official Config as Code guide](https://docs.railway.com/guides/config-as-code) states that new services cannot opt into legacy Config as Code, and existing JSON/TOML configurations continue only until 1 December 2026. The files below retain the tested startup specifications for existing services. For new services, apply the matching current service settings through the dashboard/API or Railway Infrastructure as Code; uploading these files alone does not apply them. The provider rejected explicit `railwayConfigFile` assignment as deprecated and referred to `.railway/railway.ts`. Keep legacy role manifests under `infra/`; a root `railway.json` selected Web settings during the API build despite the explicit API Dockerfile setting. Do not add it back to configure a new role.
 
 | Service | Railway Dockerfile | Legacy config file | Runtime |
 | --- | --- | --- | --- |
-| Web | `Dockerfile.web.railway` | `/railway.json` | Non-root Node 24, Next standalone app; dependency health `/readyz`, liveness `/healthz` |
+| Web | `Dockerfile.web.railway` | `/infra/railway-web.json` | Non-root Node 24, Next standalone app; dependency health `/readyz`, liveness `/healthz` |
 | API | `services/api/Dockerfile.railway` | `/infra/railway-api.json` | Non-root Python API; serialized Alembic pre-deploy migration; health `/health/ready` |
 | Jobs | `services/api/Dockerfile.railway` | `/infra/railway-jobs.json` | Waits for the exact migration head, then runs the required private SQL worker for authorized jobs and scheduled intents |
 | Retention | `services/api/Dockerfile.railway` | `/infra/railway-retention.json` | Waits for the exact migration head, then runs the required private expiry and authentication/session cleanup worker |
@@ -54,7 +66,8 @@ The official CLI's database templates create persistent volumes. Verify the
 resulting Postgres/Redis volume and private networking before adding any extra
 volume; never create a duplicate blindly. Current public templates use PostgreSQL
 18 and Redis 8.2, while recorded local acceptance used PostgreSQL 16 and Redis 7.4.
-The actual provisioned services reported successful deployments and ready volumes;
+The actual provisioned PostgreSQL 18.6 and Redis 8.2.10 services reported successful
+deployments, startup readiness and ready volumes;
 application-level use and recovery on these provider versions still need acceptance.
 PostgreSQL mounts
 `/var/lib/postgresql/data` with its `PGDATA` subdirectory; Redis mounts `/data`.
@@ -137,8 +150,9 @@ store; certificate verification must remain enabled in both environments.
 The successful access/provisioning used the official API and CLI 5.63.3; no
 callable Railway connector was available. The ordinary sandbox network route
 returned HTTP 403, while the supported route reached the API with HTTP 200 and
-verified workspace-scoped access. The active blocker is now Docker build
-compatibility and subsequent application acceptance, rather than credentials.
+verified workspace-scoped access. The active blocker is now consistent role
+selection in provider builds, successful migration and hosted application
+acceptance, rather than credentials.
 
 ## Pilot replicas and admission limits
 

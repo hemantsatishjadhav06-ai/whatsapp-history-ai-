@@ -3,7 +3,7 @@
   "build": {
     "builder": "DOCKERFILE",
     "dockerfilePath": "Dockerfile.web.railway",
-    "watchPatterns": ["/apps/web/**", "/packages/contracts/**", "/package.json", "/package-lock.json", "/Dockerfile.web.railway", "/railway.json"]
+    "watchPatterns": ["/apps/web/**", "/packages/contracts/**", "/package.json", "/package-lock.json", "/Dockerfile.web.railway", "/infra/railway-web.json"]
   },
   "deploy": {
     "numReplicas": 1,

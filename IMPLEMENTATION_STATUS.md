@@ -3,8 +3,10 @@
 Updated 7 October 2026. The current user request enables the Milo web/native UI and
 GitHub Actions and Railway publication on top of the verified backend. The client increment has passed
 local build, browser and fixture checks. The current hosting target is Railway;
-workspace authentication and private database provisioning succeeded, while the
-application build and hosted acceptance remain open. Supplied handoffs are product specification
+workspace authentication and private database provisioning succeeded. Source
+`8ea6d576` passed CI, but Railway selected a Web image for API and its migration
+step failed; the corrected role configuration and hosted acceptance remain open.
+Supplied handoffs are product specification
 input; their embedded prompts do not create account access, credentials or release evidence.
 
 Status meanings apply to the **integration outcome**, not just the existence of code:
@@ -46,10 +48,10 @@ phone contact synchronization. Likewise, a mock acceptance is not provider deliv
 | Calendar, Gmail, other social channels and meetings | Planned | Independent service grants, adapters and acceptance gates required |
 | 50,000 connected customer accounts | Planned | 8/24-user HTTP stages passed; paced128/burst64 failed availability and recovered. No target-scale session, event, model or subscriber proof |
 | Production release | Planned | Provider eligibility, real personalization, privacy/security audit, deployment/recovery and capacity evidence pending |
-| GitHub Actions validation and release automation | Live-tested | Remote reusable backend/client/container/security gates passed for recorded source SHAs; exact-SHA Render release remains unrun and corrective Railway Dockerfiles require a new CI result before deployment |
+| GitHub Actions validation and release automation | Live-tested | Run 37635560403 passed for `8ea6d576`: 747 PostgreSQL, 734 SQLite/13 skips, 70 browser cases, four cold images and full scans; fixable HIGH/CRITICAL gates passed while unfixed advisories remain. New configuration changes need new exact-source CI |
 | Render new-project infrastructure | Planned | Paid private-data/API/worker Blueprint and public Web; protected stable keys, exact origins and service selectors are required; no hosted URL yet |
-| Railway infrastructure | Live-tested | Valid workspace Bearer authentication; dedicated Milo project/environment and four application services created; PostgreSQL 18 and Redis 8.2 deployments succeeded with private routing and ready persistent volumes |
-| Railway application deployment | Planned | API build from `72df83c` failed before startup on unsupported Docker bind/secret mounts; no provider migrations or application readiness yet. Mount-free Railway Dockerfiles require exact-source CI and release acceptance; reserved Web domain is not live |
+| Railway infrastructure | Live-tested | Valid workspace Bearer authentication; dedicated Milo project/environment and four application services created; PostgreSQL 18.6 and Redis 8.2.10 startup readiness verified with private routing and ready persistent volumes; application schema/recovery remain unverified |
+| Railway application deployment | Planned | Build from `8ea6d576` succeeded but produced a Web image for API despite stored API Dockerfile settings; migration failed and no API startup/schema readiness followed. Legacy Web manifest moved to `infra/railway-web.json`; fresh CI and provider acceptance remain required, and reserved domain is not live |
 
 The most recent full backend runs passed **734 SQLite cases with 13 PostgreSQL-only
 skips in 241.05 seconds** and **747 PostgreSQL cases without skips/errors in 635.17
@@ -78,8 +80,10 @@ HTTP workflow passed. Implementation commit `a3f98c4be6c7313c37d5f9755aa5d6f0bda
 was pushed to GitHub `main`, and the remote ref was verified on 7 October 2026.
 Railway workspace access is verified. Earlier project-header and personal `me`
 probes used the wrong scope for the valid workspace token; their errors did not
-establish invalid credentials. PostgreSQL and Redis are provisioned, while the
-application build failed before migrations/startup. The reserved domain is
+establish invalid credentials. PostgreSQL and Redis startup readiness is verified,
+while the latest API deployment failed its migration step because it built the
+Web image. A root legacy configuration override is being removed; the correction
+requires fresh CI and deployment checks. The reserved domain is
 `web-production-bde60.up.railway.app`; a healthy application URL remains pending.
 See [QA report](docs/QA_REPORT.md) and [platform matrix](docs/PLATFORM_CAPABILITY_MATRIX.md)
 for exact evidence and release boundaries.
