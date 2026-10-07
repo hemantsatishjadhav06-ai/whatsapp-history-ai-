@@ -115,7 +115,9 @@ Further details and limitations are recorded in [capabilities](docs/capabilities
 [privacy](docs/privacy-retention.md), [deployment](docs/deployment.md),
 [runbooks](docs/runbooks.md), and [load test results](docs/load-test-results.md).
 
-Source is prepared in this local checkout and has not been committed or pushed to GitHub.
+Source is published on [GitHub main](https://github.com/hemantsatishjadhav06-ai/whatsapp-history-ai-/tree/main).
+The tested implementation commit is `a3f98c4be6c7313c37d5f9755aa5d6f0bda4a22d`; its push and remote ref were verified on 7 October 2026.
+Railway authentication/network access remains blocked, so no hosted application URL is available.
 Live personal WhatsApp pairing/sync, real model quality, Calendar/Gmail connections,
 installed-device integration and production-scale gateway orchestration require separate
 evidence. Browser fixture journeys do not establish those outcomes.

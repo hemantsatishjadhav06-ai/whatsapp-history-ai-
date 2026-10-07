@@ -59,8 +59,9 @@ The prior backend increment passed 495 SQLite cases, 495 distinct PostgreSQL cas
 two commands and 33 Node gateway tests, plus non-root image, HTTP bridge and actual local
 Kafka/Temporal recovery smokes. The persistent API and independent action/job/retention
 workers were restarted on version 0.3.0; live/readiness health and the final local synthetic
-HTTP workflow passed. No GitHub commit/push
-or Railway deployment is recorded yet. Railway credentials and network access are unavailable.
+HTTP workflow passed. Implementation commit `a3f98c4be6c7313c37d5f9755aa5d6f0bda4a22d`
+was pushed to GitHub `main`, and the remote ref was verified on 7 October 2026.
+No Railway deployment is recorded; Railway credentials and network access are unavailable.
 See [QA report](docs/QA_REPORT.md) and [platform matrix](docs/PLATFORM_CAPABILITY_MATRIX.md)
 for exact evidence and release boundaries.
 The saved installer repeat passed frozen Python and both npm locks, local service health

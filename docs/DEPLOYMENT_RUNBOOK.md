@@ -73,7 +73,11 @@ with publication required. Its final `bash scripts/dev-bootstrap.sh` repeat pass
 Python and both npm locks, PostgreSQL/Redis health and seven migrations. Final non-root API
 0.3.0 and web image smokes passed with zero provider calls; saving the draft does not verify
 publication or new-task restoration.
-GitHub publication must record the actual remote commit before release evidence can name it.
+GitHub `main` was published and verified against implementation commit
+`a3f98c4be6c7313c37d5f9755aa5d6f0bda4a22d` on 7 October 2026.
+This source publication is separate from Railway deployment and environment snapshot publication.
+The saved draft adds a secure `RAILWAY_TOKEN` requirement and the two backboard domains;
+review/save the environment settings and publish the environment before relying on these changes.
 
 ## Release preparation
 
