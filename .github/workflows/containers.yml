@@ -32,6 +32,10 @@ jobs:
           uv python install 3.12.14
           uv tool run --python 3.12.14 --from jsonschema==4.26.0 --with PyYAML==6.0.3 \
             python scripts/render_schema_check.py
+      - name: Check provider Dockerfile selection and Railway builder compatibility
+        run: |
+          uv tool run --python 3.12.14 --from jsonschema==4.26.0 --with PyYAML==6.0.3 \
+            python scripts/container_config_check.py
       - name: Check workflow expressions and shell scripts
         run: |
           tool_dir=$(mktemp -d)
@@ -44,7 +48,7 @@ jobs:
   accept:
     needs: configuration
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 60
     env:
       # Immutable official Trivy image; the vulnerability database stays current.
       TRIVY_IMAGE: aquasec/trivy:0.75.0@sha256:9db099105405c648166e6b94155eb32f8da12673cf1f455207f7385cc9a77283
@@ -62,27 +66,39 @@ jobs:
           node-version: '24.19.0'
           cache: npm
       - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
-      - name: Build both runtime images from this checkout
+      - name: Build all four provider runtime images from this checkout
         run: |
           mkdir -p .local/ci-evidence .local/ci-images .local/trivy-cache
           docker buildx build --load --progress=plain --file services/api/Dockerfile --tag relationship-assistant-api:local . |& tee .local/ci-evidence/api-build.log
           docker buildx build --load --progress=plain --file Dockerfile.web --tag milo-web:local . |& tee .local/ci-evidence/web-build.log
-          docker image inspect relationship-assistant-api:local milo-web:local > .local/ci-evidence/images.json
+          # Railway's builder has no RUN mounts. These builds use public CA
+          # trust from pinned official images, without custom CA secrets.
+          docker buildx build --load --progress=plain --file services/api/Dockerfile.railway --tag relationship-assistant-api:railway . |& tee .local/ci-evidence/railway-api-build.log
+          docker buildx build --load --progress=plain --file Dockerfile.web.railway --tag milo-web:railway . |& tee .local/ci-evidence/railway-web-build.log
+          docker image inspect relationship-assistant-api:local milo-web:local relationship-assistant-api:railway milo-web:railway > .local/ci-evidence/images.json
           git rev-parse HEAD > .local/ci-evidence/source-commit.txt
-      - name: Exercise built API and web through actual local HTTP
+      - name: Exercise both provider APIs and websites through actual local HTTP
         run: |
           uv run --frozen python scripts/container_smoke.py | tee .local/ci-evidence/api-acceptance.log
           uv run --frozen python scripts/web_container_smoke.py | tee .local/ci-evidence/web-acceptance.log
+          uv run --frozen python scripts/container_smoke.py --image relationship-assistant-api:railway | tee .local/ci-evidence/railway-api-acceptance.log
+          uv run --frozen python scripts/web_container_smoke.py --image milo-web:railway | tee .local/ci-evidence/railway-web-acceptance.log
+      - name: Exercise Railway manifest PORT, dual-stack, admission recovery and drain
+        run: |
+          uv run --frozen python scripts/railway_runtime_smoke.py --image relationship-assistant-api:railway \
+            | tee .local/ci-evidence/railway-runtime-acceptance.log
       - name: Exercise worker entrypoints on disposable empty databases
         run: |
-          for module in jobs lifecycle actions; do
+          for variant in local railway; do
+            for module in jobs lifecycle actions; do
             docker run --rm --network none \
               --env ENVIRONMENT=test --env ALLOW_DEV_AUTH=false \
               --env MODEL_PROVIDER=disabled --env ENABLE_EXTERNAL_SENDS=false \
               --env DATABASE_URL=sqlite:///.local/ci-worker.db \
-              relationship-assistant-api:local /bin/sh -c \
+              "relationship-assistant-api:$variant" /bin/sh -c \
               "/app/.venv/bin/python -m assistant.render_entrypoint migrate && /app/.venv/bin/python -m assistant.render_entrypoint wait-schema && exec /app/.venv/bin/python -m assistant.$module --once" \
-              |& tee ".local/ci-evidence/worker-$module.log"
+              |& tee ".local/ci-evidence/$variant-worker-$module.log"
+            done
           done
       - name: Audit release dependencies and record native residual findings
         run: |
@@ -126,9 +142,11 @@ jobs:
         run: |
           docker save relationship-assistant-api:local --output .local/ci-images/api.tar
           docker save milo-web:local --output .local/ci-images/web.tar
+          docker save relationship-assistant-api:railway --output .local/ci-images/railway-api.tar
+          docker save milo-web:railway --output .local/ci-images/railway-web.tar
           sha256sum .local/ci-images/*.tar > .local/ci-evidence/image-archive-sha256.txt
           docker pull "$TRIVY_IMAGE"
-          for image in api web; do
+          for image in api web railway-api railway-web; do
             docker run --rm --user "$(id -u):$(id -g)" --cap-drop ALL --security-opt no-new-privileges \
               --volume "$PWD/.local/ci-images:/images:ro" \
               --volume "$PWD/.local/ci-evidence:/evidence" \
@@ -146,15 +164,19 @@ jobs:
         run: |
           # Unfixed findings remain in the full report; this gate is deliberately
           # named for its limited scope and is not a zero-vulnerabilities claim.
-          for image in api web; do
-            docker run --rm --user "$(id -u):$(id -g)" --cap-drop ALL --security-opt no-new-privileges \
+          gate_failed=0
+          for image in api web railway-api railway-web; do
+            if ! docker run --rm --user "$(id -u):$(id -g)" --cap-drop ALL --security-opt no-new-privileges \
               --volume "$PWD/.local/ci-images:/images:ro" \
               --volume "$PWD/.local/ci-evidence:/evidence" \
               --volume "$PWD/.local/trivy-cache:/cache" \
               "$TRIVY_IMAGE" --cache-dir /cache image --timeout 10m --skip-db-update --scanners vuln \
               --input "/images/$image.tar" --severity HIGH,CRITICAL --ignore-unfixed \
-              --exit-code 1 --format json --output "/evidence/$image-fixable-gate.json"
+              --exit-code 1 --format json --output "/evidence/$image-fixable-gate.json"; then
+              gate_failed=1
+            fi
           done
+          exit "$gate_failed"
       - name: Summarize the actual scan scopes
         if: always()
         run: |
@@ -164,7 +186,7 @@ jobs:
           from pathlib import Path
           lines = ['### Container security evidence', '',
                    'Full findings include unresolved vulnerabilities. The release gate blocks HIGH/CRITICAL findings with available fixes.', '']
-          for image in ('api', 'web'):
+          for image in ('api', 'web', 'railway-api', 'railway-web'):
               path = Path(f'.local/ci-evidence/{image}-trivy.json')
               if not path.exists():
                   lines.append(f'- {image}: scan did not complete; inspect the failed step.')

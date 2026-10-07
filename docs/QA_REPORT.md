@@ -9,11 +9,28 @@ client results below are separate from backend and installed-device results.
 ## 7 October Railway deployment follow-up
 
 The latest request selects Railway. Its official API is reachable through the
-supported network route. Both API hosts returned HTTP 200 with GraphQL
-`Project Token not found` for project-token authentication and `Not Authorized`
-for account-token authentication; CLI checks also rejected the credential.
-The supplied value was not committed or stored in repository configuration.
-No Railway resources were created, deployment attempted or live URL verified.
+supported network route, and the securely configured workspace token succeeded
+with a Bearer-authenticated scoped project query. Earlier `Project Token not found`
+and personal `me` authorization errors used the wrong token scope; they did not
+prove the credential invalid. Workspace tokens cannot query personal `me` data,
+and the CLI must use `RAILWAY_API_TOKEN` with `RAILWAY_TOKEN` unset and explicit
+project/environment/service selectors. No credential value is stored in source.
+
+Actual provider provisioning created a dedicated Milo project/environment and
+Web, API, Jobs and Retention services. PostgreSQL 18 and Redis 8.2 deployments
+reported success, with private routing and ready persistent volumes mounted at
+`/var/lib/postgresql/data` and `/data`. These results verify infrastructure
+provisioning; they do not establish application schema, backup recovery or live
+reply behavior. The reserved Web domain `web-production-bde60.up.railway.app`
+has not passed hosted acceptance.
+
+The API deployment from exact source `72df83c1cc05e4b3c707c1bf7747b3f90c369af7`
+failed during `BUILD_IMAGE`, before process startup or Alembic migrations.
+Railway staff confirmed the original bind/secret Docker build mounts are
+unsupported. Mount-free `Dockerfile.web.railway` and
+`services/api/Dockerfile.railway` are the corrective deployment paths. Their
+exact-source CI, provider builds, migration result, worker startup and public
+Web/private API readiness remain required; source autodeploy stays off.
 
 Web readiness now reports validated Railway runtime commit metadata, checks the
 private API through `/readyz`, and starts with one pilot replica. API startup
@@ -28,14 +45,18 @@ removed. These are local results; they do not validate a hosted release or user 
 Railway's current documentation also prevents new services from opting into
 legacy Config as Code; deployment must apply the corresponding current service
 settings or Infrastructure as Code, as described in [the guide](railway.md).
-The four prepared non-secret service input objects were checked against live
-official API input-field names and types; no authenticated mutation was made.
+The four non-secret service input objects were checked against official API
+input-field names and types. Provider creation is now recorded above;
+configuration and upload remain explicit operations, rather than automatic
+effects of the legacy manifests.
 
 The previous exact-source [GitHub run 37617998643](https://github.com/hemantsatishjadhav06-ai/whatsapp-history-ai-/actions/runs/37617998643)
 passed for `f852b1af64ade873439415a94ee752fc49cdca72`: 747 PostgreSQL cases,
 734 SQLite cases with 13 PostgreSQL-only skips, 70 browser cases without retries,
 cold image builds, HTTP/worker smoke checks and security gates. Deployment was
-skipped. This Railway follow-up requires its own exact-source CI result.
+skipped. Source `72df83c1cc05e4b3c707c1bf7747b3f90c369af7` subsequently passed
+GitHub validation, but its Railway API build failed as recorded above. Corrective
+Dockerfile changes require a new exact-source CI result before deployment.
 
 ## 7 October Render and fresh-owner increment
 

@@ -2,8 +2,8 @@
   "$schema": "https://railway.com/railway.schema.json",
   "build": {
     "builder": "DOCKERFILE",
-    "dockerfilePath": "Dockerfile.web",
-    "watchPatterns": ["/apps/web/**", "/packages/contracts/**", "/package.json", "/package-lock.json", "/Dockerfile.web", "/railway.json"]
+    "dockerfilePath": "Dockerfile.web.railway",
+    "watchPatterns": ["/apps/web/**", "/packages/contracts/**", "/package.json", "/package-lock.json", "/Dockerfile.web.railway", "/railway.json"]
   },
   "deploy": {
     "numReplicas": 1,

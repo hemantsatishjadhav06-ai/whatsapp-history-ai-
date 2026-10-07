@@ -2,29 +2,48 @@
 
 The repository includes deployable web, API, Jobs and Retention containers, plus an optional Actions worker. A configured manifest and a successful local build do not mean a Railway deployment exists. Deployment is complete only after Railway reports healthy services and the public URL passes acceptance checks.
 
+## Current provider result
+
+On 7 October 2026, workspace-scoped Bearer authentication succeeded. A dedicated
+Milo project/environment and Web, API, Jobs and Retention services were created.
+PostgreSQL 18 and Redis 8.2 deployments reported success with private routing and
+ready persistent volumes at `/var/lib/postgresql/data` and `/data` respectively.
+The Web domain `web-production-bde60.up.railway.app` is reserved; application
+readiness and a usable live URL have not been verified.
+
+The API build from `72df83c1cc05e4b3c707c1bf7747b3f90c369af7` failed at
+`BUILD_IMAGE`, before startup or Alembic migrations. Railway staff confirmed
+that its Docker bind/secret build mounts are unsupported. Deploy using the
+mount-free `Dockerfile.web.railway` and `services/api/Dockerfile.railway` after
+their exact-source CI passes. Keep source autodeploy off. Successful database
+provisioning does not establish application migrations, storage recovery, live
+replies or capacity.
+
+## Service configuration
+
 Use one Railway project with PostgreSQL and Redis services plus these repository services. PostgreSQL stores durable owner data; Redis is required for shared production request limits and is checked by API readiness. Keep each service's source root at the repository root and deploy the tested source from `hemantsatishjadhav06-ai/whatsapp-history-ai-`.
 
 On 7 October 2026, Railway's [official Config as Code guide](https://docs.railway.com/guides/config-as-code) states that new services cannot opt into legacy Config as Code, and existing JSON/TOML configurations continue only until 1 December 2026. The files below retain the tested startup specifications for existing services. For new services, apply the matching current service settings through the dashboard/API or Railway Infrastructure as Code; uploading these files alone does not apply them. Do not rely on the deprecated `railwayConfigFile` setting for new services.
 
-| Service | Config file | Runtime |
-| --- | --- | --- |
-| Web | `/railway.json` | Non-root Node 24, Next standalone app; dependency health `/readyz`, liveness `/healthz` |
-| API | `/infra/railway-api.json` | Non-root Python API; serialized Alembic pre-deploy migration; health `/health/ready` |
-| Jobs | `/infra/railway-jobs.json` | Waits for the exact migration head, then runs the required private SQL worker for authorized jobs and scheduled intents |
-| Retention | `/infra/railway-retention.json` | Waits for the exact migration head, then runs the required private expiry and authentication/session cleanup worker |
-| Actions | `/infra/railway-actions.json` | Optional private action-admission worker; leave undeployed until the live adapter and planner gates are verified |
+| Service | Railway Dockerfile | Legacy config file | Runtime |
+| --- | --- | --- | --- |
+| Web | `Dockerfile.web.railway` | `/railway.json` | Non-root Node 24, Next standalone app; dependency health `/readyz`, liveness `/healthz` |
+| API | `services/api/Dockerfile.railway` | `/infra/railway-api.json` | Non-root Python API; serialized Alembic pre-deploy migration; health `/health/ready` |
+| Jobs | `services/api/Dockerfile.railway` | `/infra/railway-jobs.json` | Waits for the exact migration head, then runs the required private SQL worker for authorized jobs and scheduled intents |
+| Retention | `services/api/Dockerfile.railway` | `/infra/railway-retention.json` | Waits for the exact migration head, then runs the required private expiry and authentication/session cleanup worker |
+| Actions | `services/api/Dockerfile.railway` | `/infra/railway-actions.json` | Optional private action-admission worker; leave undeployed until the live adapter and planner gates are verified |
 
 For new services, [railway-service-settings.json](../infra/railway-service-settings.json)
 contains one non-secret `ServiceInstanceUpdateInput` per enabled role. Field names
-and types were checked against the live official GraphQL schema on 7 October;
-authenticated application remains unrun. Apply a selected role with
+and types were checked against the official GraphQL schema on 7 October.
+Apply a selected role with
 [railway-service-update.graphql](../infra/railway-service-update.graphql), supplying
 the actual `serviceId`, `environmentId` and role object as `input` through the CLI's
 `--variables @PATH` option. Keep any temporary request under ignored `.local`.
 These files are explicit API inputs; they are not automatically applied by upload.
 
-Set the documented `RAILWAY_DOCKERFILE_PATH` service variable to `Dockerfile.web`
-for Web and `services/api/Dockerfile` for API, Jobs and Retention, matching each
+Set the documented `RAILWAY_DOCKERFILE_PATH` service variable to `Dockerfile.web.railway`
+for Web and `services/api/Dockerfile.railway` for API, Jobs and Retention, matching each
 payload's `dockerfilePath`. Do not map legacy `builder: DOCKERFILE` to the GraphQL
 builder enum, which does not accept that value. Configure protected variables with
 `railway variable set KEY --stdin --skip-deploys` and explicit service/environment
@@ -35,7 +54,9 @@ The official CLI's database templates create persistent volumes. Verify the
 resulting Postgres/Redis volume and private networking before adding any extra
 volume; never create a duplicate blindly. Current public templates use PostgreSQL
 18 and Redis 8.2, while recorded local acceptance used PostgreSQL 16 and Redis 7.4.
-Those new provider versions need their own runtime acceptance. PostgreSQL mounts
+The actual provisioned services reported successful deployments and ready volumes;
+application-level use and recovery on these provider versions still need acceptance.
+PostgreSQL mounts
 `/var/lib/postgresql/data` with its `PGDATA` subdirectory; Redis mounts `/data`.
 Keep database routing private and publish only the Web domain.
 
@@ -68,17 +89,56 @@ For separate browser source buckets, configure the same dedicated secret as Web 
 
 The API pre-deploy step applies the repository's Alembic migrations before traffic. Its startup override binds both IPv4 and IPv6, which supports Railway ingress and private service DNS; the installed Uvicorn version was verified with HTTP on both local address families. Deploy Jobs and Retention after API migrations succeed, using the same database and production settings. Neither worker needs a public domain or an HTTP health route. Retention visits workspaces in pages of 100 and sleeps 30 seconds between completed cycles; query batches are bounded, while full-cycle duration depends on the tenant count and retention backlog. A stopped Retention service allows expired authentication metadata to accumulate, so monitor its process, restart history, cycle age and cleanup output. Jobs' SQL timers work without Temporal. The Actions manifest is preparation for a later verified adapter/planner release and is not part of the enabled pilot topology. The existing Temporal worker, registrar and Kafka relay are optional independent processes; their development plaintext clients require supported production TLS/authentication configuration before connecting to external infrastructure.
 
-For authenticated CLI deployment, the official Railway CLI supports `RAILWAY_TOKEN` for a project/environment token and `RAILWAY_API_TOKEN` for an account/workspace token. An OAuth session from `railway login` is also supported. A project token can select its own project/environment; explicit service selectors are still required for a monorepo. Use a secure environment secret for noninteractive cloud tasks instead of placing tokens in chat or shell arguments. CLI variable list commands print raw values and should not be used in shared logs.
+## Authentication and release
 
-After access is available, link or select the exact project/environment/service, upload the repository with `railway up --service <service> --environment <environment> --ci`, then inspect deployment status and generate the Web domain. `railway up --detach` only starts deployment; it does not establish that the site is healthy. For GitHub autodeploys, use `railway service source connect --repo hemantsatishjadhav06-ai/whatsapp-history-ai- --branch main --service <service>` after the repository has been published.
+The official Railway CLI supports `RAILWAY_TOKEN` for a project/environment token
+and `RAILWAY_API_TOKEN` for an account/workspace token. `RAILWAY_TOKEN` takes
+precedence and sends the project-token header. For the verified workspace key,
+bind it securely as `RAILWAY_API_TOKEN` and unset `RAILWAY_TOKEN` in the CLI process.
+If the cloud environment stores that same key under `RAILWAY_TOKEN`, remap the
+existing value in memory; a new credential is unnecessary. Supply explicit
+project, environment and service IDs to avoid personal-account discovery or
+local linking requirements. An OAuth session from `railway login` is also supported.
+
+Direct API calls use `Authorization: Bearer` for account/workspace tokens, and
+`Project-Access-Token` for project tokens. A workspace token cannot query personal
+`me` data; test it with `workspace(workspaceId: ...)` or its accessible project
+list instead. Earlier `me` and project-header errors were the wrong scope and did
+not establish invalid credentials. See Railway's [official authentication examples](https://docs.railway.com/guides/public-api).
+Use secure environment bindings; keep token values out of source, shell arguments
+and shared output. CLI variable-list commands print raw values and must not be
+used in shared logs.
+
+After exact-source CI passes, select the already created project/environment/service
+and upload a clean staging checkout with
+`railway up --project <project-id> --service <service-id> --environment <environment-id> --ci`.
+Record the returned deployment identity and inspect actual status/readiness.
+`railway up --detach` only starts deployment. CLI upload archives the working tree;
+a SHA in `--message` is a label and does not create verified Git commit metadata.
+Preserve the clean source identity and verify the actual deployed build separately;
+do not fabricate `RAILWAY_GIT_COMMIT_SHA` to fill an absent provider field.
+Keep GitHub source autodeploy disabled until an exact-source test-gated release
+path is configured. Source connection can trigger deployment; repository
+publication alone does not verify a healthy release.
 
 Acceptance checks cover Web `/healthz` and `/readyz`, API `/health/ready`, the public companion page, Google login configuration, server-side proxy/cookie behavior and read-only capability status. `/readyz` exposes only coarse private API readiness and validated `RAILWAY_GIT_COMMIT_SHA` metadata (or Render metadata on Render); verify the actual provider deployment's source identity separately. Test live provider operations only after their real credentials and account evidence are available. Keep development login and mock connectors unavailable on the public production API.
 
 For local container acceptance, build from the repository root with `docker build -f Dockerfile.web -t milo-web:local .`, then run `uv run --frozen python scripts/web_container_smoke.py`. In an environment with a managed certificate authority, supply its existing trusted bundle with `--secret id=trusted_ca,src=/etc/ssl/certs/ca-certificates.crt`; certificate verification remains enabled. The smoke test starts and removes its own disposable web container and synthetic API, checks standalone assets, private backend requests, authenticated snapshots, nonce-cookie paths, CSRF controls and cross-site rejection, and makes no provider calls. Its temporary backend uses development authentication solely to seed the test owner; the production Railway API forbids that mode.
 
-The latest access check used Railway CLI 5.63.3 and both official GraphQL API hosts. The ordinary sandbox route returned HTTP 403; the supported escalated network route succeeded with HTTP 200. With the supplied credential, project-token authentication returned `Project Token not found`; account-token authentication returned `Not Authorized`. CLI project status, account identity and project-list checks also rejected it. This establishes an authentication blocker after network access was resolved; it is not merely a CLI login prompt.
+For the Railway release, cold-build both mount-free variants separately:
+`docker build -f Dockerfile.web.railway -t milo-web:railway .` and
+`docker build -f services/api/Dockerfile.railway -t relationship-assistant-api:railway .`.
+Run the Web and Railway runtime smokes against those image tags with their
+`--image` options, and retain their own security/SBOM results. Successful checks
+for the original Dockerfiles do not validate these replacement images.
+The cloud's managed certificate setup may differ from Railway's public trust
+store; certificate verification must remain enabled in both environments.
 
-The saved environment draft already requires `RAILWAY_TOKEN` for `backboard.railway.app` and `backboard.railway.com`, and permits those API destinations. Create a valid project token for the intended deployment environment and save it securely under that existing requirement; apply it to the runtime and recheck project status. A declared requirement or saved draft is not authenticated access. No callable Railway connector is available here; the official CLI/API are the fallback. No resources were created or deployment/public URL claimed. Rotate the credential posted in chat and keep replacements out of source and shared logs.
+The successful access/provisioning used the official API and CLI 5.63.3; no
+callable Railway connector was available. The ordinary sandbox network route
+returned HTTP 403, while the supported route reached the API with HTTP 200 and
+verified workspace-scoped access. The active blocker is now Docker build
+compatibility and subsequent application acceptance, rather than credentials.
 
 ## Pilot replicas and admission limits
 

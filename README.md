@@ -122,7 +122,7 @@ Further details and limitations are recorded in [capabilities](docs/capabilities
 
 The current hosting target is Railway. The [Railway guide](docs/railway.md)
 covers Web, private API, Jobs, Retention, PostgreSQL and Redis, production settings,
-startup ordering and the current authentication blocker. New Railway services
+startup ordering and the current build blocker. New Railway services
 require current service settings or Infrastructure as Code; the legacy JSON
 manifests alone do not configure a new service.
 
@@ -133,8 +133,9 @@ HTTPS origins. [Create the Render Blueprint](https://render.com/deploy?repo=http
 only after reviewing those values and the paid pilot resource plan.
 
 GitHub Actions validate backend/PostgreSQL/Redis, clients/browser/native exports,
-built containers, dependencies and SBOMs. The release workflow deploys the tested
-current `main` commit after all gates pass, and verifies public/private readiness.
+built containers, dependencies and SBOMs. The configured Render release workflow
+deploys the tested current `main` commit after all gates pass, and verifies
+public/private readiness.
 Configure the protected Render secret and actual service IDs as described in the
 [Actions guide](docs/github-actions.md); provider autodeploy remains off to preserve
 the test gate. A green CI run alone does not establish a hosted application.
@@ -142,10 +143,17 @@ the test gate. A green CI run alone does not establish a hosted application.
 Source is published on [GitHub main](https://github.com/hemantsatishjadhav06-ai/whatsapp-history-ai-/tree/main).
 The 7 October hardening adds bounded request/storage admission, concurrent SQL authority,
 authentication cleanup, private-result reconciliation and measured capacity reports.
-Railway rejected the supplied credential as both a project and account token;
-a valid securely configured project token is required before deployment.
-No hosted application URL is available.
-The current deployment exceeded its limits in the larger local load stages; 50,000
+Railway workspace authentication succeeded with the securely configured credential.
+A dedicated Milo project/environment and Web, API, Jobs and Retention services
+were created. PostgreSQL 18 and Redis 8.2 deployments succeeded with private routing
+and ready persistent volumes. The API build from `72df83c` failed before startup
+because Railway does not support its Docker bind/secret mounts; migrations have
+not run there. The mount-free `Dockerfile.web.railway` and
+`services/api/Dockerfile.railway` require their own exact-source CI and hosted
+acceptance before release. Source autodeploy remains off.
+The reserved domain `web-production-bde60.up.railway.app` is not a verified live
+application URL yet.
+The larger local load stages exceeded the measured pilot capacity; 50,000
 simultaneous users is unverified. Known native/build and container advisories remain
 documented in the [security review](docs/SECURITY_REVIEW.md).
 Personal WhatsApp pairing/sync, Calendar/Gmail adapters and a live general-action

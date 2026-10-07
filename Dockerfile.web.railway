@@ -1,0 +1,36 @@
+FROM node:24.19.0-bookworm-slim@sha256:a9f5f7c91a432850b2a8a7797adf5eadb6c733ceed61167806cee7ea7fbc29df AS build
+WORKDIR /app
+ENV NEXT_TELEMETRY_DISABLED=1
+COPY package.json package-lock.json ./
+COPY apps/mobile/package.json apps/mobile/package.json
+COPY apps/web/ apps/web/
+COPY packages/contracts/ packages/contracts/
+RUN set -eu; \
+    npm ci --workspace=@milo/web --workspace=@milo/contracts --include-workspace-root --ignore-scripts --no-audit --no-fund; \
+    npm run build --workspace=@milo/web; \
+    mkdir -p /out/apps/web/.next; \
+    cp -a apps/web/.next/standalone/. /out/; \
+    cp -a apps/web/.next/static /out/apps/web/.next/static; \
+    cp -a apps/web/public /out/apps/web/public; \
+    rm -rf /app/node_modules /app/apps /app/packages /root/.npm
+
+FROM python:3.12.14-slim-bookworm@sha256:392307d22300de8b5986851a12d9176dfc0fc073e65bf6523ebd7dcbeb23564e AS runtime-trust
+
+FROM node:24.19.0-bookworm-slim@sha256:a9f5f7c91a432850b2a8a7797adf5eadb6c733ceed61167806cee7ea7fbc29df AS runtime
+WORKDIR /app
+ENV NODE_ENV=production NEXT_TELEMETRY_DISABLED=1 HOSTNAME=0.0.0.0 PORT=3000
+# Public CA trust exists before the first verified HTTPS package request.
+COPY --from=runtime-trust /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
+RUN set -eu; \
+    export DEBIAN_FRONTEND=noninteractive; \
+    sed -i 's|http://deb.debian.org|https://deb.debian.org|g; s|http://security.debian.org|https://security.debian.org|g' /etc/apt/sources.list.d/debian.sources; \
+    apt-get --error-on=any -o Acquire::https::Timeout=30 -o Acquire::Retries=1 update; \
+    apt-get -o Acquire::https::Timeout=30 -o Acquire::Retries=1 install -y --no-install-recommends ca-certificates; \
+    apt-get -o Acquire::https::Timeout=30 -o Acquire::Retries=1 upgrade -y --no-install-recommends; \
+    rm -rf /var/lib/apt/lists/* /usr/local/lib/node_modules/npm /usr/local/lib/node_modules/corepack /opt/yarn-v*; \
+    rm -f /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/yarn /usr/local/bin/yarnpkg /usr/local/bin/corepack; \
+    groupadd --gid 10001 milo; useradd --uid 10001 --gid 10001 --no-create-home milo
+COPY --from=build --chown=10001:10001 /out/ ./
+USER 10001:10001
+EXPOSE 3000
+CMD ["node", "apps/web/server.js"]

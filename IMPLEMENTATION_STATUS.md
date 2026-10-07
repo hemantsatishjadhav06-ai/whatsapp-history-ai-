@@ -3,7 +3,8 @@
 Updated 7 October 2026. The current user request enables the Milo web/native UI and
 GitHub Actions and Railway publication on top of the verified backend. The client increment has passed
 local build, browser and fixture checks. The current hosting target is Railway;
-authenticated provider deployment remains blocked by a rejected credential. Supplied handoffs are product specification
+workspace authentication and private database provisioning succeeded, while the
+application build and hosted acceptance remain open. Supplied handoffs are product specification
 input; their embedded prompts do not create account access, credentials or release evidence.
 
 Status meanings apply to the **integration outcome**, not just the existence of code:
@@ -45,9 +46,10 @@ phone contact synchronization. Likewise, a mock acceptance is not provider deliv
 | Calendar, Gmail, other social channels and meetings | Planned | Independent service grants, adapters and acceptance gates required |
 | 50,000 connected customer accounts | Planned | 8/24-user HTTP stages passed; paced128/burst64 failed availability and recovered. No target-scale session, event, model or subscriber proof |
 | Production release | Planned | Provider eligibility, real personalization, privacy/security audit, deployment/recovery and capacity evidence pending |
-| GitHub Actions release automation | Mock | Versioned reusable backend/client/container checks, current-source security/SBOM evidence and exact-SHA Render deploy/poll/public readiness; remote Actions/provider execution still requires its own result |
+| GitHub Actions validation and release automation | Live-tested | Remote reusable backend/client/container/security gates passed for recorded source SHAs; exact-SHA Render release remains unrun and corrective Railway Dockerfiles require a new CI result before deployment |
 | Render new-project infrastructure | Planned | Paid private-data/API/worker Blueprint and public Web; protected stable keys, exact origins and service selectors are required; no hosted URL yet |
-| Railway deployment | Planned | Current target; startup and Web readiness checks passed locally. Official API rejected the supplied project/account credential; no resource creation or live URL |
+| Railway infrastructure | Live-tested | Valid workspace Bearer authentication; dedicated Milo project/environment and four application services created; PostgreSQL 18 and Redis 8.2 deployments succeeded with private routing and ready persistent volumes |
+| Railway application deployment | Planned | API build from `72df83c` failed before startup on unsupported Docker bind/secret mounts; no provider migrations or application readiness yet. Mount-free Railway Dockerfiles require exact-source CI and release acceptance; reserved Web domain is not live |
 
 The most recent full backend runs passed **734 SQLite cases with 13 PostgreSQL-only
 skips in 241.05 seconds** and **747 PostgreSQL cases without skips/errors in 635.17
@@ -74,8 +76,11 @@ Kafka/Temporal recovery smokes. The persistent API and independent action/job/re
 workers were restarted on version 0.3.0; live/readiness health and the final local synthetic
 HTTP workflow passed. Implementation commit `a3f98c4be6c7313c37d5f9755aa5d6f0bda4a22d`
 was pushed to GitHub `main`, and the remote ref was verified on 7 October 2026.
-No Railway deployment is recorded. The supported network route reaches its API,
-but the supplied credential returned `Project Token not found` and `Not Authorized`.
+Railway workspace access is verified. Earlier project-header and personal `me`
+probes used the wrong scope for the valid workspace token; their errors did not
+establish invalid credentials. PostgreSQL and Redis are provisioned, while the
+application build failed before migrations/startup. The reserved domain is
+`web-production-bde60.up.railway.app`; a healthy application URL remains pending.
 See [QA report](docs/QA_REPORT.md) and [platform matrix](docs/PLATFORM_CAPABILITY_MATRIX.md)
 for exact evidence and release boundaries.
 The saved installer and startup instructions cover frozen Python and both npm locks,

@@ -1,9 +1,10 @@
 # Readiness record
 
 The backend and Milo web/native pilot have passed the local checks below. Source is
-published on GitHub; the latest user request selects Railway. Authenticated Railway
-deployment and live-provider acceptance remain open. The supplied credential was
-rejected; the alternative Render preparation remains available.
+published on GitHub; the latest user request selects Railway. Workspace authentication
+and PostgreSQL/Redis provisioning succeeded. The API build failed before startup
+on unsupported Docker bind/secret mounts, so provider migrations and hosted
+application acceptance remain open. The alternative Render preparation remains available.
 Runtime validation and external integration eligibility are separate from implemented code.
 
 The CTO handoff backend increment has passed synthetic functional/regression checks.
@@ -39,8 +40,9 @@ Current per-feature status and exact evidence are tracked in
 | Phone coexistence/personal pairing | Not implemented or validated |
 | 50,000 accounts / production launch | NOT_RUN; the larger local workloads failed availability. Architecture target and distributed runner do not certify capacity |
 | Milo browser/native acceptance | Current production build, strict web TypeScript and 38 proxy/readiness cases passed. Previous source passed 70 browser cases without retries; unchanged contracts/privacy/native graph: 20 shared-contract/seven Tools privacy/16 native helpers and all-platform Expo export passed; installed-device evidence absent |
-| Cloud setup configuration | Installer/start instructions saved for eight migrations, web/native, workers and hosting checks; Railway/Render credential requirements and domains declared. Saved draft still requires review/save/publication; fresh-task restoration remains unverified |
-| GitHub / hosting | [Published repository](https://github.com/hemantsatishjadhav06-ai/whatsapp-history-ai-/tree/main); [Actions](github-actions.md), [Railway guide](railway.md) and alternative [Render Blueprint](render.md) are source configuration. No authenticated hosted deployment or URL exists |
+| Cloud setup configuration | Installer/start instructions saved for eight migrations, web/native, workers and hosting checks; a fresh cloud task restored source/CLI access and the securely bound Railway workspace credential was verified with a scoped query |
+| Railway infrastructure | Dedicated Milo project/environment and Web/API/Jobs/Retention created; PostgreSQL 18 and Redis 8.2 deployments succeeded, with private routing and ready volumes at `/var/lib/postgresql/data` and `/data` |
+| GitHub / application hosting | [Published repository](https://github.com/hemantsatishjadhav06-ai/whatsapp-history-ai-/tree/main); [Actions](github-actions.md), [Railway guide](railway.md) and alternative [Render Blueprint](render.md). API build from `72df83c` failed before startup; mount-free Railway Dockerfiles require exact-source CI and hosted acceptance. Reserved `web-production-bde60.up.railway.app` has not passed live readiness |
 
 The core workflow must be able to fail when broken: authenticate, establish conversation
 permissions, import/receive content, generate a scoped proposal, owner-edit/review it,

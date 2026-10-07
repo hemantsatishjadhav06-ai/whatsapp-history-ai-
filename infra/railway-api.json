@@ -2,7 +2,7 @@
   "$schema": "https://railway.com/railway.schema.json",
   "build": {
     "builder": "DOCKERFILE",
-    "dockerfilePath": "services/api/Dockerfile",
+    "dockerfilePath": "services/api/Dockerfile.railway",
     "watchPatterns": ["/services/api/**", "/db/**", "/pyproject.toml", "/uv.lock", "/alembic.ini", "/infra/railway-api.json"]
   },
   "deploy": {

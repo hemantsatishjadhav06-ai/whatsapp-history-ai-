@@ -1,12 +1,12 @@
 {
   "web": {
-    "dockerfilePath": "Dockerfile.web",
+    "dockerfilePath": "Dockerfile.web.railway",
     "watchPatterns": [
       "/apps/web/**",
       "/packages/contracts/**",
       "/package.json",
       "/package-lock.json",
-      "/Dockerfile.web",
+      "/Dockerfile.web.railway",
       "/railway.json",
       "/infra/railway-service-settings.json"
     ],
@@ -18,7 +18,7 @@
     "startCommand": "node apps/web/server.js"
   },
   "api": {
-    "dockerfilePath": "services/api/Dockerfile",
+    "dockerfilePath": "services/api/Dockerfile.railway",
     "watchPatterns": [
       "/services/api/**",
       "/db/**",
@@ -39,7 +39,7 @@
     "restartPolicyMaxRetries": 3
   },
   "jobs": {
-    "dockerfilePath": "services/api/Dockerfile",
+    "dockerfilePath": "services/api/Dockerfile.railway",
     "watchPatterns": [
       "/services/api/**",
       "/db/**",
@@ -55,7 +55,7 @@
     "restartPolicyMaxRetries": 3
   },
   "retention": {
-    "dockerfilePath": "services/api/Dockerfile",
+    "dockerfilePath": "services/api/Dockerfile.railway",
     "watchPatterns": [
       "/services/api/**",
       "/db/**",
