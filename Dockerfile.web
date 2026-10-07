@@ -19,9 +19,13 @@ RUN --mount=type=bind,source=.,target=/src,ro \
     cp -a apps/web/public /out/apps/web/public; \
     rm -rf /app/node_modules /app/apps /app/packages /root/.npm
 
+FROM python:3.12.14-slim-bookworm@sha256:392307d22300de8b5986851a12d9176dfc0fc073e65bf6523ebd7dcbeb23564e AS runtime-trust
+
 FROM node:24.19.0-bookworm-slim@sha256:a9f5f7c91a432850b2a8a7797adf5eadb6c733ceed61167806cee7ea7fbc29df AS runtime
 WORKDIR /app
 ENV NODE_ENV=production NEXT_TELEMETRY_DISABLED=1 HOSTNAME=0.0.0.0 PORT=3000
+# Bootstrap HTTPS from a pinned official image before installing managed trust.
+COPY --from=runtime-trust /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
 # Keep signed Debian security updates, without shipping unused package managers.
 RUN --mount=type=secret,id=trusted_ca,target=/run/secrets/trusted_ca,mode=0444 \
     set -eu; \
@@ -29,9 +33,11 @@ RUN --mount=type=secret,id=trusted_ca,target=/run/secrets/trusted_ca,mode=0444 \
     sed -i 's|http://deb.debian.org|https://deb.debian.org|g; s|http://security.debian.org|https://security.debian.org|g' /etc/apt/sources.list.d/debian.sources; \
     if [ -s /run/secrets/trusted_ca ]; then \
       apt-get --error-on=any -o Acquire::https::Timeout=30 -o Acquire::Retries=1 -o Acquire::https::CaInfo=/run/secrets/trusted_ca update; \
+      apt-get -o Acquire::https::Timeout=30 -o Acquire::Retries=1 -o Acquire::https::CaInfo=/run/secrets/trusted_ca install -y --no-install-recommends ca-certificates; \
       apt-get -o Acquire::https::Timeout=30 -o Acquire::Retries=1 -o Acquire::https::CaInfo=/run/secrets/trusted_ca upgrade -y --no-install-recommends; \
     else \
       apt-get --error-on=any -o Acquire::https::Timeout=30 -o Acquire::Retries=1 update; \
+      apt-get -o Acquire::https::Timeout=30 -o Acquire::Retries=1 install -y --no-install-recommends ca-certificates; \
       apt-get -o Acquire::https::Timeout=30 -o Acquire::Retries=1 upgrade -y --no-install-recommends; \
     fi; \
     rm -rf /var/lib/apt/lists/* /usr/local/lib/node_modules/npm /usr/local/lib/node_modules/corepack /opt/yarn-v*; \

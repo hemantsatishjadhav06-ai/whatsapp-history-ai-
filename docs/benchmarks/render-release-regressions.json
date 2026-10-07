@@ -15,7 +15,7 @@
       "warnings": 5
     }
   },
-  "base_commit": "8afbdd601fc4c6b0adb63e56e5a134bdb9461eff",
+  "base_commit": "fbd00f2716ea00cc43035aa3a229f20d8fed905a",
   "browser": {
     "display_duration": "2.3m",
     "passed": 70,
@@ -24,10 +24,17 @@
     "skipped": 0
   },
   "capacity_50000": "NOT_VALIDATED; earlier larger local load stages failed availability; no rebenchmark in this increment",
+  "certificate_bootstrap": {
+    "default_branch_test": "PASS no trusted_ca secret with managed proxy root in test-only system store",
+    "github_first_run_detected": "Node slim missing system trust; supplied local build secret had masked portability defect",
+    "public_trust_only_proxy_test": "FAIL_CLOSED on managed private issuer as expected",
+    "remote_public_CA_cold_build": "Must be verified on subsequent exact-SHA GitHub run",
+    "source": "same digest-pinned official Python image public trust bundle copied before HTTPS APT; managed ca-certificates installed with signed metadata"
+  },
   "container_acceptance": {
     "api": "PASS actual local HTTP; mock import/style/approval/deduplicated send/Pause; final tracked30s readiness harness",
     "runtime_uid": 10001,
-    "web": "PASS actual local HTTP; assets/auth/proxy/readyz; owned schema removal returns503",
+    "web": "PASS CA-bootstrap corrected exactimage; actual HTTP assets/auth/proxy/readyz; own missing schema returns503",
     "workers": "PASS network none; migration gate then jobs/lifecycle --once"
   },
   "exact_image_scan_summary": {
@@ -106,7 +113,7 @@
       "UpdatedAt": "2026-10-07T07:38:55.515026687Z",
       "Version": 2
     },
-    "web": {
+    "prior_web": {
       "image": {
         "id": "sha256:01974256d6f58e5ddbba67030433186faeaff0b54a73affd9fb5773930c68a5c",
         "image": "milo-web:render-20261007",
@@ -138,6 +145,49 @@
             "UNKNOWN": 1
           },
           "total": 222,
+          "type": "debian"
+        },
+        {
+          "available_fixed_versions": 0,
+          "material_findings": [],
+          "severity": {},
+          "total": 0,
+          "type": "node-pkg"
+        }
+      ]
+    },
+    "web": {
+      "image": {
+        "id": "sha256:2edb6757ce7f269710c5de359c647be402cb80285118ca5d476724ca71844e3e",
+        "image": "milo-web:render-ca-20261007",
+        "size_bytes": 305823506,
+        "user": "10001:10001"
+      },
+      "os": {
+        "Family": "debian",
+        "Name": "12.15"
+      },
+      "results": [
+        {
+          "available_fixed_versions": 0,
+          "material_findings": [
+            {
+              "FixedVersion": null,
+              "InstalledVersion": "1:1.2.13.dfsg-1",
+              "PkgName": "zlib1g",
+              "Severity": "CRITICAL",
+              "Status": "will_not_fix",
+              "VulnerabilityID": "CVE-2023-45853"
+            }
+          ],
+          "severity": {
+            "CRITICAL": 1,
+            "HIGH": 50,
+            "LOW": 81,
+            "MEDIUM": 103,
+            "UNKNOWN": 1
+          },
+          "total": 236,
           "type": "debian"
         },
         {
@@ -213,10 +263,10 @@
       "source_tree_sha256": "be96e4320abae2e32451f900917eb21e0d8f5fc20a6c9524f8e39c89b636674c"
     },
     "web": {
-      "base_commit": "8afbdd601fc4c6b0adb63e56e5a134bdb9461eff",
+      "base_commit": "fbd00f2716ea00cc43035aa3a229f20d8fed905a",
       "input_count": 42,
       "inputs": {
-        "Dockerfile.web": "9d149d06093ed413cf86cf9cf35a7f81e54b9afc926449c458dcca69b3dc9a83",
+        "Dockerfile.web": "05cc2642156bfee66c82d2ab6fa3230978c23cfe46e8ba4b91a25d1c982639e7",
         "apps/mobile/package.json": "7f3f640e8733b04fcc14b5b5c49caaaa9f244dbca1c24b3ebf564903fcffc4e5",
         "apps/web/app/[[...path]]/page.tsx": "d7c07cbccf87e8ce96b063c893f40903f0f1875019d0e1a6c27a5e99d990b637",
         "apps/web/app/api/[...path]/route.ts": "94ab3efe5760733fdf562a489a5582488a0365eecf4731e0fcc60388f06c56c8",
@@ -260,7 +310,7 @@
         "packages/contracts/tsconfig.json": "96e1c49bca4a6ab2b3665a19b8f8abd39f1053129169f2be2da6bfbb5dbad97f"
       },
       "scope": "web",
-      "source_tree_sha256": "970f39706f7e5cee181c0553a571ea2281399e7843a826cfc0a1bb524f3da626"
+      "source_tree_sha256": "721c17183e4baab8819fb807445b3f2673dd277443910be8cc127eecb58a7cef"
     }
   },
   "known_findings": "OPEN; full exact-image OS/Cargo findings and native/build advisory baseline retained",
@@ -309,7 +359,7 @@
     "waiter_exit_code": 0
   },
   "production_web_build": "PASS",
-  "recorded_utc": "2026-10-07T11:33:17.584614+00:00",
+  "recorded_utc": "2026-10-07T11:48:50.206133+00:00",
   "references": [
     "../QA_REPORT.md",
     "../render-container-validation.md",
@@ -318,7 +368,32 @@
     "../SECURITY_REVIEW.md",
     "../LOAD_TEST_REPORT.md"
   ],
-  "remote_github_actions": "Tracked separately after publication; local acceptance does not establish runner result.",
+  "remote_github_actions": {
+    "corrective_run": "Track actual Actions results for the commit containing this CA bootstrap fix; no inferred pass",
+    "first_run": {
+      "browser": {
+        "passed": 70,
+        "retries": 0,
+        "seconds": 49.2
+      },
+      "container_failure": "Web HTTPS certificate bootstrap; API build passed",
+      "deployment": "SKIPPED",
+      "id": 37615089841,
+      "overall": "failure",
+      "postgres": {
+        "passed": 747,
+        "seconds": 469.62
+      },
+      "redis_and_startup": "PASS",
+      "source_commit": "fbd00f2716ea00cc43035aa3a229f20d8fed905a",
+      "sqlite": {
+        "passed": 734,
+        "seconds": 144.02,
+        "skipped": 13
+      },
+      "url": "https://github.com/hemantsatishjadhav06-ai/whatsapp-history-ai-/actions/runs/37615089841"
+    }
+  },
   "render_hosted_deployment": "NOT_RUN; protected authentication and service IDs absent",
   "ruff": "PASS",
   "scope": "Render release and fresh-owner local acceptance; synthetic identities/content/providers",

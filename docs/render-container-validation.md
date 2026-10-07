@@ -1,6 +1,6 @@
 # Render container validation — 7 October 2026
 
-The current API and Web sources were rebuilt and accepted locally after the Render startup, provider-owner binding, history onboarding and Web readiness changes. These are new artifacts; scans of the earlier `b9f6c1a…` API and `bab173cf…` Web images were not substituted for the results below.
+The current API and Web sources were rebuilt and accepted locally after the Render startup, provider-owner binding, history onboarding and Web readiness changes. Web was rebuilt again after the GitHub cold builder exposed a missing system-CA bootstrap. The primary Web artifact below includes that correction. Scans of the earlier `b9f6c1a…` API, `bab173cf…` Web or pre-correction `01974256…` Web images were not substituted for its scan.
 
 This is local container validation. It does not establish that Render created services, built these artifacts, connected production credentials or passed public live acceptance. No external provider calls or billable Render operations were performed. It does not certify 50,000-user capacity.
 
@@ -9,20 +9,30 @@ This is local container validation. It does not establish that Render created se
 | Artifact | Immutable Docker image ID | Bytes | Runtime user |
 | --- | --- | ---: | --- |
 | `relationship-assistant-api:render-20261007` | `sha256:bec67b6124de221ae3b978e37fe934f0412248e1503af500257e06142d3958b2` | 334,468,280 | `10001:10001` |
-| `milo-web:render-20261007` | `sha256:01974256d6f58e5ddbba67030433186faeaff0b54a73affd9fb5773930c68a5c` | 298,000,256 | `10001:10001` |
+| `milo-web:render-ca-20261007` | `sha256:2edb6757ce7f269710c5de359c647be402cb80285118ca5d476724ca71844e3e` | 305,823,506 | `10001:10001` |
 
-The existing Dockerfiles were retained. Builds used the frozen Python/npm locks, official digest-pinned Python 3.12.14 and Node 24.19.0 bases, verified HTTPS and signed APT metadata. The managed proxy and trusted public CA bundle were supplied through the previously verified build configuration. TLS or package-signature checks were not disabled. Builds ran sequentially after the full database suites and frontend freeze.
+The API artifact is unchanged. The prior Web artifact `milo-web:render-20261007`, immutable ID `sha256:01974256d6f58e5ddbba67030433186faeaff0b54a73affd9fb5773930c68a5c`, 298,000,256 bytes, remains preserved as the artifact before the CA correction.
 
-The API runtime probe confirmed Python **3.12.14**, cryptography **50.0.2**, UID **10001**, and absence of unused global uv/pip executables. The Web probe confirmed Node **v24.19.0**, UID **10001**, and absence of global npm/npx/yarn/corepack executables.
+Builds used the frozen Python/npm locks, official digest-pinned Python 3.12.14 and Node 24.19.0 bases, verified HTTPS and signed APT metadata. The managed proxy and trusted public CA bundle were supplied through the previously verified local build configuration. TLS or package-signature checks were not disabled. Builds ran sequentially after the full database suites and frontend freeze. Only Web was rebuilt for the CA correction; application sources and the API Dockerfile remained unchanged.
+
+The API runtime probe confirmed Python **3.12.14**, cryptography **50.0.2**, UID **10001**, and absence of unused global uv/pip executables. The corrected Web probe confirmed Node **v24.19.0**, UID **10001**, managed `ca-certificates 20250419~deb12u1`, and absence of global npm/npx/yarn/corepack executables. Its BuildKit CA secret is absent at runtime, and no local extra CA anchors were shipped.
+
+## Cold-builder CA correction
+
+The downloaded GitHub container-job log showed API build success and Web APT failure: certificate issuer unknown, with **"No system certificates available"**. The Node slim runtime did not contain the system trust required by HTTPS APT. The earlier local `trusted_ca` mount supplied trust explicitly, masking this missing default bootstrap.
+
+Web now uses a trust stage from the same pinned official `python:3.12.14-slim-bookworm` digest as API. It copies **only** `/etc/ssl/certs/ca-certificates.crt` into Node before APT. Both the optional custom-CA branch and the default branch run fail-closed signed HTTPS index updates, install the managed Debian `ca-certificates` package, then upgrade. No Python executable, Python dependency or private CA is copied from that stage. No HTTP bootstrap or TLS/signature bypass was introduced.
+
+The public-CA-only, no-secret APT probe through this environment's managed proxy correctly rejected that proxy's private issuer; the missing-system-certificates error disappeared. A separate test-only fixture added the already trusted managed proxy roots to its system store, preserving the pinned public bootstrap, and exercised the **default branch without any `trusted_ca` BuildKit secret**. Signed HTTPS update, certificate-package installation and upgrade passed; the APT build step took **15.9 seconds**. Those additional roots existed only in the test fixture, not the production artifact. This verifies the default APT branch with configured system trust. The next actual GitHub cold build remains the check of the public-CA path without this managed proxy.
 
 ## Source evidence
 
-Build-input manifests were captured before each build and checked again afterward. They were identical. The base checkout was `8afbdd601fc4c6b0adb63e56e5a134bdb9461eff`; the manifests describe the frozen working-tree changes being prepared for the Render release, rather than claiming that this older base commit contains them.
+Build-input manifests were captured before each build and checked again afterward. They were identical. API was built from a working tree based on `8afbdd601fc4c6b0adb63e56e5a134bdb9461eff`; corrected Web was built from a working tree based on `fbd00f2716ea00cc43035aa3a229f20d8fed905a` plus the Dockerfile correction. The manifests describe those exact build inputs rather than claiming that the base commits already contain subsequent changes.
 
 | Scope | Build-input files | SHA-256 of sorted path-to-content-hash manifest |
 | --- | ---: | --- |
 | API | 51 | `be96e4320abae2e32451f900917eb21e0d8f5fc20a6c9524f8e39c89b636674c` |
-| Web | 42 | `970f39706f7e5cee181c0553a571ea2281399e7843a826cfc0a1bb524f3da626` |
+| Corrected Web | 42 | `721c17183e4baab8819fb807445b3f2673dd277443910be8cc127eecb58a7cef` |
 
 API inputs comprise `pyproject.toml`, `uv.lock`, `alembic.ini`, the API Dockerfile, `services/api/` and `db/`. Web inputs comprise the root npm manifests, Web Dockerfile, mobile workspace manifest, `apps/web/` and `packages/contracts/`. Only source files were included; ignored caches, compiled bytecode, dependency directories and environment files were excluded. Each file was hashed with SHA-256, then the sorted compact JSON mapping was hashed.
 
@@ -65,8 +75,10 @@ Counts are scanner rows, not unique CVEs. Unfixed findings were retained.
 | New API Debian 12.15 packages | 2 | 53 | 107 | 101 | 1 | 264 |
 | New API Python packages | 0 | 0 | 0 | 0 | 0 | 0 |
 | New API vendored Rust dependencies | 0 | 0 | 1 | 0 | 0 | 1 |
-| New Web Debian 12.15 packages | 1 | 48 | 95 | 77 | 1 | 222 |
+| Corrected Web Debian 12.15 packages | 1 | 50 | 103 | 81 | 1 | 236 |
 | New Web Node packages | 0 | 0 | 0 | 0 | 0 | 0 |
+
+The prior Web image had 222 Debian rows. Installing the managed certificate package added OpenSSL runtime dependencies: the corrected image has seven additional `libssl3` rows and seven `openssl` rows. The resulting increase is recorded openly; providing system trust is not presented as removing these advisories.
 
 Neither Debian scan reported an available Debian 12 fixed package version. This describes patch availability and does not mean the OS findings are resolved. Material remaining findings include:
 
@@ -78,6 +90,6 @@ The package-manager/native graph findings and remediation constraints remain doc
 
 ## Local evidence and cleanup
 
-Task-local evidence includes `/tmp/milo-render-{api,web}-image.json`, input manifests `/tmp/milo-render-{api,web}-source-proof.json`, `/tmp/milo-render-release-runtime.json`, both `*-functional.json` files, the protected API runtime log, full reports `/tmp/milo-render-scans/{api,web}.json`, and `/tmp/milo-render-scan-summary.json`. These temporary paths are inspection artifacts in this workspace, not a promise of permanent external artifact hosting.
+Task-local current evidence includes `/tmp/milo-render-api-image.json`, `/tmp/milo-render-ca-web-image.json`, source manifests `/tmp/milo-render-api-source-proof.json` and `/tmp/milo-render-ca-web-source-proof.json`, `/tmp/milo-render-release-runtime.json`, API HTTP evidence `/tmp/milo-render-api-functional.json`, corrected Web HTTP evidence `/tmp/milo-render-ca-web-functional.json`, full current reports `/tmp/milo-render-scans/api.json` and `/tmp/milo-render-scans/web-ca.json`, and combined summary `/tmp/milo-render-ca-scan-summary.json`. The summary retains the prior Web metadata separately. Default-branch fixture results and timing are in `/tmp/milo-web-ca-default-system-result.json`; its build log and the failing public-CA-only proxy probe log were retained. These temporary paths are inspection artifacts in this workspace, not a promise of permanent external artifact hosting.
 
 All disposable acceptance containers and their temporary application databases were removed. Accepted prior image tags and all infrastructure containers, images and volumes were preserved. No provider credentials were stored in the validation document or logs returned to the user. Actual Render provisioning, protected settings, Google sign-in, history upload through a public production origin and provider-side release acceptance remain separate deployment steps.

@@ -2,6 +2,16 @@
 
 This review covers the locked Python environment, npm workspaces, the independent connector gateway, and the actual API/web container filesystems. Package-manager audits and container scans have different scopes. A zero package-manager result does not mean the container or application has no vulnerabilities.
 
+The following tables retain the earlier hardening artifacts. The later Render
+increment has new exact-image evidence in [Render container validation](render-container-validation.md):
+API `bec67b6124de221ae3b978e37fe934f0412248e1503af500257e06142d3958b2`
+retains 264 OS rows and one medium vendored Rust row; the CA-fixed Web
+`2edb6757ce7f269710c5de359c647be402cb80285118ca5d476724ca71844e3e`
+has 236 OS rows (one critical, 50 high, 103 medium, 81 low, one unknown),
+with zero Node package rows. Installing managed certificate/OpenSSL packages
+increased Web's inventory and scanner rows; it did not remove the open findings.
+The locked Python/npm graphs were unchanged.
+
 ## Verified updates
 
 - `cryptography` is locked to **50.0.2** (`>=50,<51`). This addresses four unique advisories affecting the former 47.0.0 lock, including certificate-name handling, PKCS7 RSA decryption, certificate-chain handling and bundled OpenSSL. The isolated frozen environment passed the existing functional suite; final application validation is recorded in the security review.

@@ -26,8 +26,8 @@ WhatsApp and model calls were zero.
 | Full desktop/mobile-web acceptance | 70 passed, no retries or skips; 2.3m | `.local/render-browser-final.log`; real SQL fixture and final production Next build, all existing privacy/owner/control cases included |
 | Workspace TypeScript and web build | PASS | Final strict workspace check and production web build; native graph/export remains the prior unchanged-source result below |
 | Fresh production API image | PASS, MOCK_ONLY transport | `bec67b6124de221ae3b978e37fe934f0412248e1503af500257e06142d3958b2`; UID10001, installed module/source proof, actual HTTP import/style/approval/deduplication/Pause, network-disabled startup and both Render workers |
-| Fresh production web image | PASS, MOCK_ONLY identity/provider | `01974256d6f58e5ddbba67030433186faeaff0b54a73affd9fb5773930c68a5c`; actual HTTP assets/auth/proxy, `/readyz` and synthetic commit exposure; removal of only its temporary backend schema changed readiness to 503 |
-| Exact-image vulnerability scans | OPEN findings retained | API 264 OS rows including two critical plus one medium vendored Rust finding; Web 222 OS rows including one critical. Python/Node runtime package findings zero; no available Debian12 fixed versions in these scans. [Container evidence](render-container-validation.md) |
+| Fresh production web image | PASS, MOCK_ONLY identity/provider | `2edb6757ce7f269710c5de359c647be402cb80285118ca5d476724ca71844e3e`; verified CA bootstrap, actual HTTP assets/auth/proxy, `/readyz` and synthetic commit exposure; removal of only its temporary backend schema changed readiness to 503 |
+| Exact-image vulnerability scans | OPEN findings retained | API 264 OS rows including two critical plus one medium vendored Rust finding; CA-fixed Web 236 OS rows including one critical. Python/Node runtime package findings zero; no available Debian12 fixed versions in these scans. [Container evidence](render-container-validation.md) |
 | GitHub workflows | Local actionlint/Ruff checks PASS | Full reusable tests, image audits/SBOMs and exact-source Render release configured; remote run outcomes are recorded separately |
 | Render deployment and live URL | NOT_RUN | API is reachable but protected Render authentication and provisioned service IDs are absent; Blueprint provider validation and hosted readiness are unverified |
 | Live replies and 50,000 simultaneous users | NOT_VALIDATED | Personal WhatsApp syncing and production general-action transport remain unimplemented; larger prior load stages failed availability |
@@ -45,6 +45,17 @@ cause is unproven. Subsequent bounded checks completed the full HTTP journey;
 an instrumented run observed readiness at 4.061s with no runtime error. The
 tracked harness now uses a 30-second monotonic startup deadline and exact 200.
 This result does not measure production throughput.
+
+The first exact-SHA GitHub release run also reproduced a Web build portability
+defect: Node slim lacked the system CA bundle needed for HTTPS APT. A public
+trust bundle from the pinned official Python image now bootstraps verified
+HTTPS before installing managed `ca-certificates`; TLS and signed indexes remain
+required. The corrected Web image passed local HTTP acceptance and a fresh scan.
+Its OS rows increased from 222 to 236 with the added certificate/OpenSSL packages;
+that change is not described as advisory removal. That first GitHub run passed
+747 PostgreSQL, 734 SQLite and 70 browser cases, but failed overall on the Web
+build and skipped deployment. [Actions evidence](github-actions.md) records the
+failed attempt and the required new exact-SHA verification separately.
 
 A [redacted current regression summary](benchmarks/render-release-regressions.json)
 records source hashes and local evidence. GitHub builds and Render builds are
