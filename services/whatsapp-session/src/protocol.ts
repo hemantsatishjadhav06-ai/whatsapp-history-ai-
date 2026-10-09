@@ -13,6 +13,27 @@ export class Blocked extends Error {
   readonly reason_code: string;
   constructor(reason: string) { super(reason); this.reason_code = reason; }
 }
+/** Python answered and refused; `denial` is its content-free reason (for example lease_expired or revoked). */
+export class Denied extends Blocked {
+  readonly denial: string;
+  constructor(denial: string) { super("AUTHORITY_DENIED"); this.denial = denial; }
+}
+export type SyncOrigin = "live" | "history" | "replay" | "backfill";
+/** `contact_only` rows come from the address book: they name chats but never create one. */
+export type SyncChat = { jid: string; alt_jid?: string; title?: string;
+  title_source?: "contact" | "verified" | "chat" | "push"; unread_count?: number; archived?: boolean; contact_only?: boolean };
+export type SyncMessage = { id: string; chat_jid: string; chat_alt_jid?: string; from_me: boolean; timestamp: string;
+  event: "created" | "edited" | "deleted";
+  kind: "text" | "media" | "location" | "contact" | "poll" | "event" | "call" | "other";
+  text: string; push_name?: string; reply_to?: string; revision?: number };
+export type SyncProgress = { phase: "initial" | "recent" | "full" | "on_demand" | "push_name" | "complete" | "live";
+  percent?: number };
+export type SyncBatch = Identity & Readonly<{ origin: SyncOrigin; chats: SyncChat[]; messages: SyncMessage[];
+  progress?: SyncProgress }>;
+export type BackfillTarget = Readonly<{ jid: string; oldest_id: string; oldest_from_me: boolean; oldest_at: string }>;
+export type BackfillReport = Readonly<{ jid: string; outcome: "requested" | "exhausted" | "failed" }>;
+/** HTTP status from the private authority; 0 means the request never got an answer. */
+export type Answer = Readonly<{ status: number; body: unknown }>;
 export function parseIdentity(value: unknown, send = false): Identity | SendEnvelope {
   if (!value || typeof value !== "object" || Array.isArray(value)) throw new Blocked("INVALID_REQUEST");
   const row = value as Record<string, unknown>;
@@ -39,6 +60,9 @@ export function canonicalJid(value: string): string {
 export function checkAuthority(value: unknown, identity: Identity, now = Date.now()): Authority {
   if (!value || typeof value !== "object") throw new Blocked("AUTHORITY_UNAVAILABLE");
   const row = value as Record<string, unknown>;
+  if (row.schema_version === 1 && row.allowed === false) {
+    throw new Denied(typeof row.reason_code === "string" && /^[a-z_]{1,40}$/.test(row.reason_code) ? row.reason_code : "denied");
+  }
   if (row.schema_version !== 1 || row.allowed !== true ||
       ["workspace_id", "connector_id", "connector_fence", "account_id"].some(key =>
         row[key] !== identity[key as keyof Identity]) || typeof row.authority_expires_at !== "string") {

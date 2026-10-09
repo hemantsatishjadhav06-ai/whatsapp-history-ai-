@@ -1,10 +1,21 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { Fragment, useEffect, useRef, useState } from 'react';
 import { ApiError, draftRiskWarning, stateLabel } from '@milo/contracts';
-import { shortTime, textValue, useMilo } from '@/lib/state';
+import { dayKey, dayLabel, listTime, shortTime, textValue, useMilo } from '@/lib/state';
 import type { DataRecord, Message } from '@/lib/types';
 import { Icon, Milo } from './icons';
+
+const PAGE = 50;
+type SearchHit = { id: string; title: string; kind: string; control_state: string; preview: string; timestamp: string };
+const older = (row: Message, than: Message) => row.provider_timestamp < than.provider_timestamp
+  || (row.provider_timestamp === than.provider_timestamp && row.id < than.id);
+/** A refreshed newest page replaces that window; older pages the owner already loaded stay. */
+function mergeLatest(previous: Message[], latest: Message[]) {
+  if (!latest.length) return previous.filter(row => latest.some(item => item.id === row.id));
+  const first = latest[0]!;
+  return [...previous.filter(row => older(row, first) && !latest.some(item => item.id === row.id)), ...latest];
+}
 
 export function Inbox({ selectedId, openAssistant }: { selectedId?: string; openAssistant(contextId: string): void }) {
   const { state, actions, messages, composers, setComposer } = useMilo();
@@ -18,7 +29,11 @@ export function Inbox({ selectedId, openAssistant }: { selectedId?: string; open
   const [inspector, setInspector] = useState(false);
   const [receipt, setReceipt] = useState('');
   const [editingDraftId, setEditingDraftId] = useState<string | null>(null);
+  const [hasOlder, setHasOlder] = useState(false);
+  const [loadingOlder, setLoadingOlder] = useState(false);
+  const [remote, setRemote] = useState<SearchHit[]>([]);
   const threadScope = useRef<string | null>(null);
+  const logRef = useRef<HTMLDivElement>(null);
   const chat = state.data.conversations.find(item => item.id === selectedId);
   const body = selectedId ? composers[selectedId] ?? '' : '';
   const riskWarning = draftRiskWarning(review);
@@ -29,9 +44,11 @@ export function Inbox({ selectedId, openAssistant }: { selectedId?: string; open
     setError(''); setReceipt(''); setEditingDraftId(null); setReview(state.data.drafts.find(draft => draft.conversation_id === selectedId && ['needs_approval','approved','ready'].includes(String(draft.status))) ?? null);
     if (!chat) { setThread([]); return; }
     let alive = true;
-    if (threadScope.current !== chat.id) { threadScope.current = chat.id; setThread(messages[chat.id] ?? []); }
-    const update = () => actions.request<Message[]>('GET', `/conversations/${chat.id}/messages`).then(items => {
-      if (alive) setThread(items.map(item => ({ ...item, conversation_id: chat.id })));
+    if (threadScope.current !== chat.id) { threadScope.current = chat.id; setThread(messages[chat.id] ?? []); setHasOlder(false); }
+    const update = () => actions.request<Message[]>('GET', `/conversations/${chat.id}/messages?limit=${PAGE}`).then(items => {
+      if (!alive) return;
+      setThread(previous => mergeLatest(previous, items.map(item => ({ ...item, conversation_id: chat.id }))));
+      if (items.length === PAGE) setHasOlder(true);
     }).catch(failure => { if (alive) { if (failure instanceof ApiError && [401,403,404].includes(failure.status)) setThread([]); setError(`Thread could not refresh. ${failure instanceof Error ? failure.message : ''}`); } });
     void update();
     const timer = state.mode === 'live' ? window.setInterval(() => { void update(); },15000) : null;
@@ -41,6 +58,30 @@ export function Inbox({ selectedId, openAssistant }: { selectedId?: string; open
     const source = new URLSearchParams(window.location.search).get('message');
     if (source) document.getElementById(`message-${source}`)?.scrollIntoView({ block: 'center' });
   }, [thread.length, selectedId]);
+  useEffect(() => {
+    const query = search.trim();
+    if (state.mode !== 'live' || query.length < 2 || !state.workspaceId) { setRemote([]); return; }
+    let alive = true;
+    const timer = window.setTimeout(() => {
+      void actions.request<SearchHit[]>('GET', `/ui/conversations/search?workspace_id=${encodeURIComponent(state.workspaceId)}&q=${encodeURIComponent(query)}`)
+        .then(hits => { if (alive) setRemote(hits); }).catch(() => { if (alive) setRemote([]); });
+    }, 250);
+    return () => { alive = false; window.clearTimeout(timer); };
+  }, [search, state.mode, state.workspaceId, actions]);
+  async function loadOlder() {
+    const first = thread[0];
+    if (!chat || !first || loadingOlder) return;
+    setLoadingOlder(true); setError('');
+    const log = logRef.current; const fromBottom = log ? log.scrollHeight - log.scrollTop : 0;
+    try {
+      const items = await actions.request<Message[]>('GET', `/conversations/${chat.id}/messages?limit=${PAGE}&before=${encodeURIComponent(first.provider_timestamp)}&before_id=${encodeURIComponent(first.id)}`);
+      if (threadScope.current !== chat.id) return;
+      setThread(previous => [...items.map(item => ({ ...item, conversation_id: chat.id })).filter(row => !previous.some(item => item.id === row.id)), ...previous]);
+      setHasOlder(items.length === PAGE);
+      window.requestAnimationFrame(() => { if (log) log.scrollTop = log.scrollHeight - fromBottom; });
+    } catch (failure) { setError(`Earlier messages are unavailable. ${failure instanceof Error ? failure.message : ''}`); }
+    finally { setLoadingOlder(false); }
+  }
   const filtered = state.data.conversations.filter(item => item.title.toLowerCase().includes(search.toLowerCase())
     && (account === 'all' || item.connector_id === account)
     && (mode === 'all' || (mode === 'group' ? item.kind === 'group' : mode === 'takeover' ? item.control_state === 'HUMAN_TAKEOVER' : item.control_state === mode)));
@@ -87,15 +128,19 @@ export function Inbox({ selectedId, openAssistant }: { selectedId?: string; open
       <label className="list-search"><Icon name="search" size={17}/><input aria-label="Search conversations" placeholder="Find a conversation" value={search} onChange={event => setSearch(event.target.value)}/></label>
       <div className="inbox-filters"><label className="sr-only" htmlFor="account-filter">Account filter</label><select id="account-filter" value={account} onChange={event => setAccount(event.target.value)}><option value="all">All accounts</option>{state.data.connections.map(item => <option key={item.id} value={item.id}>{item.label}</option>)}</select><label className="sr-only" htmlFor="mode-filter">Mode filter</label><select id="mode-filter" value={mode} onChange={event => setMode(event.target.value)}><option value="all">All modes</option><option value="AUTO_ENABLED">Auto</option><option value="DRAFT_MODE">Draft</option><option value="group">Groups</option><option value="takeover">Phone takeover</option></select></div>
       <div className="conversation-items">{filtered.map(item => <button className={`conversation-row ${chat?.id === item.id ? 'selected' : ''}`} key={item.id} onClick={() => actions.selectConversation(item.id)} aria-current={chat?.id === item.id ? 'page' : undefined}>
-        <span className="person-avatar" style={{ background: item.avatar_color }}>{item.kind === 'group' ? <Icon name="memory" size={20}/> : item.title.slice(0,1)}</span><span className="conversation-description"><span className="conversation-name">{item.title}<time>{shortTime(item.timestamp, state.timezone)}</time></span><span className="conversation-preview">{item.preview || 'No available messages yet'}</span><span className={`mode-tag ${item.control_state === 'HUMAN_TAKEOVER' ? 'takeover' : ''}`}>{stateLabel(item.control_state)}</span></span>{item.unread > 0 && <span className="unread-count">{item.unread}</span>}
-      </button>)}{!filtered.length && <div className="empty-list">No conversations match these filters.</div>}</div>
+        <span className="person-avatar" style={{ background: item.avatar_color }}>{item.kind === 'group' ? <Icon name="memory" size={20}/> : item.title.slice(0,1)}</span><span className="conversation-description"><span className="conversation-name">{item.title}<time>{listTime(item.timestamp, state.timezone)}</time></span><span className="conversation-preview">{item.preview || 'No available messages yet'}</span><span className={`mode-tag ${item.control_state === 'HUMAN_TAKEOVER' ? 'takeover' : ''}`}>{stateLabel(item.control_state)}</span></span>{item.unread > 0 && <span className="unread-count">{item.unread}</span>}
+      </button>)}{!filtered.length && !remote.length && <div className="empty-list">No conversations match these filters.</div>}
+        {remote.filter(hit => !filtered.some(item => item.id === hit.id)).map(hit => <button className="conversation-row" key={`search-${hit.id}`} onClick={() => actions.selectConversation(hit.id)}>
+          <span className="person-avatar">{hit.title.slice(0,1)}</span><span className="conversation-description"><span className="conversation-name">{hit.title}<time>{listTime(hit.timestamp, state.timezone)}</time></span><span className="conversation-preview">{hit.preview || 'No available messages yet'}</span><span className="mode-tag">{stateLabel(hit.control_state)}</span></span>
+        </button>)}</div>
       {state.hasMore && <button className="button secondary load-more" onClick={() => { void actions.loadMore().catch(failure => setError(failure instanceof Error ? failure.message : 'More conversations are unavailable.')); }}>Load more conversations</button>}
-      <div className="list-footnote"><Icon name="shield" size={14}/> Selected, readable conversations only</div>
+      <div className="list-footnote"><Icon name="shield" size={14}/> Chats Milo may read, newest first</div>
     </section>
     {chat ? <section className="conversation-thread" aria-labelledby="thread-heading"><header className="thread-header"><button className="icon-button thread-back" aria-label="Back to inbox" onClick={() => actions.navigate('/inbox')}><Icon name="back"/></button><span className="person-avatar" style={{ background:chat.avatar_color }}>{chat.title.slice(0,1)}</span><div className="thread-identity"><h2 id="thread-heading">{chat.title}</h2><p><Icon name="whatsapp" size={13}/> {chat.account_label} · {chat.kind === 'group' ? 'Group audience' : 'Direct conversation'}</p></div><span className={`pill ${chat.control_state === 'HUMAN_TAKEOVER' ? 'warning' : ''}`}>{stateLabel(chat.control_state)}</span><button className="icon-button" onClick={() => setInspector(!inspector)} aria-label={inspector ? 'Hide conversation context' : 'Show conversation context'} aria-expanded={inspector}><Icon name="info"/></button></header>
       {(chat.control_state === 'HUMAN_TAKEOVER' || state.paused) && <div className="takeover-banner"><Icon name="pause" size={18}/><div><strong>{state.paused ? 'Replies & actions are paused.' : 'Your phone has the floor.'}</strong><p>{state.paused ? 'Global pause is acknowledged. Already submitted actions have their own receipts.' : `You replied to ${chat.title}. Auto stays paused until you explicitly resume.`}</p></div>{!state.paused && <button className="button secondary" onClick={resume} disabled={busy}>Resume this chat</button>}</div>}
-      <div className="thread-messages" role="log" aria-label={`Messages with ${chat.title}`}><div className="thread-day">{state.mode === 'demo' ? 'SYNTHETIC CONVERSATION' : 'CURRENT AVAILABLE HISTORY'}</div>
-        {thread.length ? thread.map(message => <div id={`message-${message.id}`} className={`message-row ${message.direction === 'outbound' ? 'outgoing' : ''}`} key={message.id}><div className="message-bubble">{message.reply_to && <div className="quoted-source">Reply to source · {message.reply_to}</div>}<p>{message.text}</p><div className="message-meta"><span>{message.author_kind === 'assistant' ? 'Milo · authorized reply' : message.author_kind === 'human_owner' ? 'You · human' : message.author_kind === 'other_authorized_operator' ? 'Authorized operator' : message.author_kind === 'unknown_owner_outgoing' ? 'Unverified owner activity' : chat.title}</span><time>{shortTime(message.provider_timestamp, state.timezone)}</time><button className="message-source" onClick={() => actions.navigate(`/inbox/${chat.id}?message=${encodeURIComponent(message.id)}`)} aria-label={`Open source message ${message.id}`}>Source</button></div></div></div>) : <div className="thread-empty"><Milo size={75}/><h3>A little context would help.</h3><p>No available messages in this selected conversation. Import history or wait for a verified connector observation.</p></div>}
+      <div className="thread-messages" role="log" aria-label={`Messages with ${chat.title}`} ref={logRef}>{state.mode === 'demo' && <div className="thread-day">SYNTHETIC CONVERSATION</div>}
+        {hasOlder && thread.length > 0 && <button className="button secondary load-older" onClick={() => { void loadOlder(); }} disabled={loadingOlder}>{loadingOlder ? 'Loading earlier messages…' : 'Load earlier messages'}</button>}
+        {thread.length ? thread.map((message, index) => <Fragment key={message.id}>{state.mode === 'live' && dayKey(message.provider_timestamp, state.timezone) !== dayKey(thread[index - 1]?.provider_timestamp, state.timezone) && <div className="thread-day">{dayLabel(message.provider_timestamp, state.timezone)}</div>}<div id={`message-${message.id}`} className={`message-row ${message.direction === 'outbound' ? 'outgoing' : ''}`}><div className="message-bubble">{message.reply_to && <div className="quoted-source">Reply to source · {message.reply_to}</div>}<p>{message.text}</p><div className="message-meta"><span>{message.author_kind === 'assistant' ? 'Milo · authorized reply' : message.author_kind === 'human_owner' ? 'You · human' : message.author_kind === 'other_authorized_operator' ? 'Authorized operator' : message.author_kind === 'unknown_owner_outgoing' ? 'Unverified owner activity' : chat.title}</span><time>{shortTime(message.provider_timestamp, state.timezone)}</time><button className="message-source" onClick={() => actions.navigate(`/inbox/${chat.id}?message=${encodeURIComponent(message.id)}`)} aria-label={`Open source message ${message.id}`}>Source</button></div></div></div></Fragment>) : <div className="thread-empty"><Milo size={75}/><h3>A little context would help.</h3><p>No available messages in this selected conversation. Import history or wait for a verified connector observation.</p></div>}
       </div>
       <div className="chat-assistant-launch"><span><Milo size={27}/> Need a little help with {chat.title}?</span><button className="text-button" onClick={() => openAssistant(chat.id)}>Ask Milo <Icon name="sparkles" size={15}/></button></div>
       <div aria-live="polite">{error && <p className="notice error composer-notice">{error}</p>}{receipt && <p className="notice composer-notice">{receipt}</p>}</div>

@@ -170,6 +170,31 @@ does not officially support third-party linked-device clients, so test with a nu
 you are prepared to have restricted. `OWNER_ACCESS_CODE` (API) enables a single
 operator sign-in for pilots without Google; Google sign-in remains the customer path.
 
+### Full chat sync
+
+The session links as a desktop companion with full history requested, so the phone pushes
+its one-to-one chats and their history when a device is first linked. By default
+(`import_mode` "all", changeable per workspace under Connections) every one-to-one chat is
+imported with read, keep, learn and draft permissions; sending always stays a per-chat
+owner decision. Groups, status and channels are ignored. Owner choices win: a chat whose
+reading the owner switched off is never re-enabled, and address-book contacts only rename
+chats. On the first full-sync link a workspace still on the default 30-day raw retention
+is moved to 3650 days so the mirror is not wiped; an owner-chosen policy is kept.
+
+- History, replay and backfill batches go to `/internal/whatsapp-session-sync` in bounded
+  batches (UTF-8 budgeted, 2 MiB API cap) without per-message automation or audit rows;
+  live messages keep the canonical ingest path (phone takeover, drafts, outbox).
+- After the initial push settles, older history is fetched on demand from the phone,
+  newest chats first, one 50-message page every few seconds (`/internal/whatsapp-session-backfill`).
+  A session linked before full sync existed sends one full-history request; if the phone
+  does not answer, unlink "Milo" on the phone and link again to import everything.
+- Python failures never end the WhatsApp socket: batches retry with backoff, an invalid
+  record is isolated by halving and dropped, an expired lease is re-announced, and only an
+  explicit revocation stops the session. The service logs content-free JSON events
+  (`session_open`, `session_close` with the disconnect code, `sync_batch_failed`, `backfill_page`).
+- Only chats with pending drafts, schedules, actions or automation are put into reconnect
+  review after a connection gap; idle chats stay readable.
+
 ## Authentication and release
 
 The official Railway CLI supports `RAILWAY_TOKEN` for a project/environment token

@@ -9258,6 +9258,71 @@
         }
       }
     },
+    "/ui/conversations/search": {
+      "get": {
+        "tags": [
+          "UI bootstrap",
+          "client configuration"
+        ],
+        "summary": "Search Conversations",
+        "description": "Find readable chats by name or number across every page, newest activity first.",
+        "operationId": "search_conversations_ui_conversations_search_get",
+        "parameters": [
+          {
+            "name": "workspace_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Workspace Id"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 2,
+              "maxLength": 80,
+              "title": "Q"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 50,
+              "minimum": 1,
+              "default": 20,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/ui/resolve": {
       "get": {
         "tags": [
@@ -9521,6 +9586,71 @@
                 }
               ],
               "title": "Conversation Cursor"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/ui/conversations/search": {
+      "get": {
+        "tags": [
+          "UI bootstrap",
+          "client configuration"
+        ],
+        "summary": "Search Conversations",
+        "description": "Find readable chats by name or number across every page, newest activity first.",
+        "operationId": "search_conversations_v1_ui_conversations_search_get",
+        "parameters": [
+          {
+            "name": "workspace_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Workspace Id"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 2,
+              "maxLength": 80,
+              "title": "Q"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 50,
+              "minimum": 1,
+              "default": 20,
+              "title": "Limit"
             }
           }
         ],
@@ -10979,6 +11109,322 @@
         }
       }
     },
+    "/internal/whatsapp-session-sync": {
+      "post": {
+        "tags": [
+          "whatsapp-personal-sync"
+        ],
+        "summary": "Session Sync",
+        "operationId": "session_sync_internal_whatsapp_session_sync_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SyncBatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/internal/whatsapp-session-backfill": {
+      "post": {
+        "tags": [
+          "whatsapp-personal-sync"
+        ],
+        "summary": "Session Backfill",
+        "description": "Older history, newest chats first: report outcomes, receive the next anchors.",
+        "operationId": "session_backfill_internal_whatsapp_session_backfill_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BackfillInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/integrations/whatsapp/personal/sync": {
+      "get": {
+        "tags": [
+          "whatsapp-personal-sync"
+        ],
+        "summary": "Sync Status",
+        "operationId": "sync_status_integrations_whatsapp_personal_sync_get",
+        "parameters": [
+          {
+            "name": "workspace_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Workspace Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/integrations/whatsapp/personal/preferences": {
+      "put": {
+        "tags": [
+          "whatsapp-personal-sync"
+        ],
+        "summary": "Set Preferences",
+        "operationId": "set_preferences_integrations_whatsapp_personal_preferences_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PreferenceInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/internal/whatsapp-session-sync": {
+      "post": {
+        "tags": [
+          "whatsapp-personal-sync"
+        ],
+        "summary": "Session Sync",
+        "operationId": "session_sync_v1_internal_whatsapp_session_sync_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SyncBatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/internal/whatsapp-session-backfill": {
+      "post": {
+        "tags": [
+          "whatsapp-personal-sync"
+        ],
+        "summary": "Session Backfill",
+        "description": "Older history, newest chats first: report outcomes, receive the next anchors.",
+        "operationId": "session_backfill_v1_internal_whatsapp_session_backfill_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BackfillInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/integrations/whatsapp/personal/sync": {
+      "get": {
+        "tags": [
+          "whatsapp-personal-sync"
+        ],
+        "summary": "Sync Status",
+        "operationId": "sync_status_v1_integrations_whatsapp_personal_sync_get",
+        "parameters": [
+          {
+            "name": "workspace_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Workspace Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/integrations/whatsapp/personal/preferences": {
+      "put": {
+        "tags": [
+          "whatsapp-personal-sync"
+        ],
+        "summary": "Set Preferences",
+        "operationId": "set_preferences_v1_integrations_whatsapp_personal_preferences_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PreferenceInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/conversations/{conversation_id}/automatic-drafts": {
       "get": {
         "tags": [
@@ -11550,6 +11996,94 @@
           "expires_at"
         ],
         "title": "AutomationGrant"
+      },
+      "BackfillInput": {
+        "properties": {
+          "schema_version": {
+            "type": "integer",
+            "const": 1,
+            "title": "Schema Version",
+            "default": 1
+          },
+          "workspace_id": {
+            "type": "string",
+            "maxLength": 36,
+            "minLength": 36,
+            "title": "Workspace Id"
+          },
+          "connector_id": {
+            "type": "string",
+            "maxLength": 36,
+            "minLength": 36,
+            "title": "Connector Id"
+          },
+          "connector_fence": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Connector Fence"
+          },
+          "account_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 120
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Account Id"
+          },
+          "reports": {
+            "items": {
+              "$ref": "#/components/schemas/BackfillReport"
+            },
+            "type": "array",
+            "maxItems": 50,
+            "title": "Reports"
+          },
+          "limit": {
+            "type": "integer",
+            "maximum": 50.0,
+            "minimum": 0.0,
+            "title": "Limit",
+            "default": 5
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "workspace_id",
+          "connector_id",
+          "connector_fence"
+        ],
+        "title": "BackfillInput"
+      },
+      "BackfillReport": {
+        "properties": {
+          "jid": {
+            "type": "string",
+            "maxLength": 160,
+            "minLength": 5,
+            "title": "Jid"
+          },
+          "outcome": {
+            "type": "string",
+            "enum": [
+              "requested",
+              "exhausted",
+              "failed"
+            ],
+            "title": "Outcome"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "jid",
+          "outcome"
+        ],
+        "title": "BackfillReport"
       },
       "BudgetInput": {
         "properties": {
@@ -12900,6 +13434,31 @@
         "type": "object",
         "title": "PermissionInput"
       },
+      "PreferenceInput": {
+        "properties": {
+          "workspace_id": {
+            "type": "string",
+            "maxLength": 36,
+            "minLength": 36,
+            "title": "Workspace Id"
+          },
+          "import_mode": {
+            "type": "string",
+            "enum": [
+              "all",
+              "selected"
+            ],
+            "title": "Import Mode"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "workspace_id",
+          "import_mode"
+        ],
+        "title": "PreferenceInput"
+      },
       "ReactionContent": {
         "properties": {
           "target_provider_message_id": {
@@ -13404,6 +13963,177 @@
         "type": "object",
         "title": "StyleEdit"
       },
+      "SyncBatch": {
+        "properties": {
+          "schema_version": {
+            "type": "integer",
+            "const": 1,
+            "title": "Schema Version",
+            "default": 1
+          },
+          "workspace_id": {
+            "type": "string",
+            "maxLength": 36,
+            "minLength": 36,
+            "title": "Workspace Id"
+          },
+          "connector_id": {
+            "type": "string",
+            "maxLength": 36,
+            "minLength": 36,
+            "title": "Connector Id"
+          },
+          "connector_fence": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Connector Fence"
+          },
+          "account_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 120
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Account Id"
+          },
+          "origin": {
+            "type": "string",
+            "enum": [
+              "live",
+              "history",
+              "replay",
+              "backfill"
+            ],
+            "title": "Origin"
+          },
+          "chats": {
+            "items": {
+              "$ref": "#/components/schemas/SyncChat"
+            },
+            "type": "array",
+            "maxItems": 1000,
+            "title": "Chats"
+          },
+          "messages": {
+            "items": {
+              "$ref": "#/components/schemas/SyncMessage"
+            },
+            "type": "array",
+            "maxItems": 500,
+            "title": "Messages"
+          },
+          "progress": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SyncProgress"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "workspace_id",
+          "connector_id",
+          "connector_fence",
+          "origin"
+        ],
+        "title": "SyncBatch"
+      },
+      "SyncChat": {
+        "properties": {
+          "jid": {
+            "type": "string",
+            "maxLength": 160,
+            "minLength": 5,
+            "title": "Jid"
+          },
+          "alt_jid": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 160,
+                "minLength": 5
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Alt Jid"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 160
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "title_source": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "contact",
+                  "verified",
+                  "chat",
+                  "push"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title Source"
+          },
+          "unread_count": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 1000000.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unread Count"
+          },
+          "archived": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Archived"
+          },
+          "contact_only": {
+            "type": "boolean",
+            "title": "Contact Only",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "jid"
+        ],
+        "title": "SyncChat"
+      },
       "SyncInput": {
         "properties": {
           "connector_id": {
@@ -13417,6 +14147,151 @@
           "connector_id"
         ],
         "title": "SyncInput"
+      },
+      "SyncMessage": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "maxLength": 180,
+            "minLength": 1,
+            "title": "Id"
+          },
+          "chat_jid": {
+            "type": "string",
+            "maxLength": 160,
+            "minLength": 5,
+            "title": "Chat Jid"
+          },
+          "chat_alt_jid": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 160,
+                "minLength": 5
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chat Alt Jid"
+          },
+          "from_me": {
+            "type": "boolean",
+            "title": "From Me"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Timestamp"
+          },
+          "event": {
+            "type": "string",
+            "enum": [
+              "created",
+              "edited",
+              "deleted"
+            ],
+            "title": "Event",
+            "default": "created"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "text",
+              "media",
+              "location",
+              "contact",
+              "poll",
+              "event",
+              "call",
+              "other"
+            ],
+            "title": "Kind",
+            "default": "text"
+          },
+          "text": {
+            "type": "string",
+            "maxLength": 20000,
+            "title": "Text",
+            "default": ""
+          },
+          "push_name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 160
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Push Name"
+          },
+          "reply_to": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 180
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reply To"
+          },
+          "revision": {
+            "type": "integer",
+            "maximum": 2147483647.0,
+            "minimum": 1.0,
+            "title": "Revision",
+            "default": 1
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "chat_jid",
+          "from_me",
+          "timestamp"
+        ],
+        "title": "SyncMessage"
+      },
+      "SyncProgress": {
+        "properties": {
+          "phase": {
+            "type": "string",
+            "enum": [
+              "initial",
+              "recent",
+              "full",
+              "on_demand",
+              "push_name",
+              "complete",
+              "live"
+            ],
+            "title": "Phase"
+          },
+          "percent": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 100.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Percent"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "phase"
+        ],
+        "title": "SyncProgress"
       },
       "TaskCreate": {
         "properties": {

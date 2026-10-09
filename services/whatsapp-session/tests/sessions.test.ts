@@ -6,14 +6,16 @@ import { setTimeout as wait } from "node:timers/promises";
 import { initAuthCreds } from "@whiskeysockets/baileys";
 import type { WASocket, UserFacingSocketConfig } from "@whiskeysockets/baileys";
 import { Sessions } from "../src/sessions.ts";
-import { Blocked } from "../src/protocol.ts";
-import type { Authority, Identity, Grant, SendEnvelope, SessionEvent, Operation } from "../src/protocol.ts";
+import { Blocked, Denied } from "../src/protocol.ts";
+import type { Answer, Authority, Identity, Grant, SendEnvelope, SessionEvent, Operation, SyncBatch } from "../src/protocol.ts";
 const initial: Identity = { schema_version: 1, workspace_id: "synthetic_owner", connector_id: "synthetic_connector", connector_fence: 1, account_id: null };
 const account = "15550000001@s.whatsapp.net", peer = "15550000002@s.whatsapp.net";
 const connected: Identity = { ...initial, account_id: account };
 function fixture(options: { enabled?: boolean; clock?: () => number; max?: number } = {}) {
   const events: SessionEvent[] = [], configs: UserFacingSocketConfig[] = [], emitter = new EventEmitter();
+  const batches: SyncBatch[] = []; let syncStatus: (batch: SyncBatch) => number = () => 200;
   const calls: string[] = []; let grants: Grant[] = [], denied: Operation | null = null;
+  let denial: Blocked | null = null;
   let sendMode: "accept" | "throw" | "mismatch" = "accept", logoutMode: "ok" | "throw" | "hang" = "ok";
   let ended = 0, clears = 0, lost = () => {};
   let rejectEvent: ((event: SessionEvent) => boolean) | null = null;
@@ -28,17 +30,25 @@ function fixture(options: { enabled?: boolean; clock?: () => number; max?: numbe
   const sessions = new Sessions({ enabled: options.enabled ?? true,
     ...(options.clock ? { clock: options.clock } : {}), ...(options.max ? { maxSessions: options.max } : {}),
     authority: { async authorize(operation, identity) {
-      calls.push(`authority:${operation}`); if (denied === operation) throw new Blocked("AUTHORITY_DENIED");
+      calls.push(`authority:${operation}`); if (denied === operation) throw denial ?? new Blocked("AUTHORITY_DENIED");
       return { ...identity, allowed: true, reason_code: "ALLOWED", grants,
         authority_expires_at: new Date(Date.now() + 4000).toISOString() } as Authority;
     }, async event(event) { calls.push(`event:${String(event.data.status ?? event.data.state ?? event.event_type)}`);
-      if (rejectEvent?.(event)) throw new Blocked("EVENT_DENIED"); events.push(event); } },
+      if (rejectEvent?.(event)) throw new Blocked("EVENT_DENIED"); events.push(event); },
+    async sync(batch): Promise<Answer> {
+      const status = syncStatus(batch); calls.push(`sync:${batch.origin}:${status}`);
+      if (status === 200) batches.push(batch);
+      return { status, body: status === 200 ? { status: "accepted" } : null };
+    }, async backfill(): Promise<Answer> { calls.push("backfill"); return { status: 200, body: { targets: [] } }; } },
     stores: async (_identity, onLost) => { lost = onLost; return { state: { creds: initAuthCreds(), keys: { async get() { return {}; }, async set() {} } },
       async saveCreds() {}, async assertLive() {}, async clear() { clears += 1; }, async release() {} }; },
     socketFactory: config => { configs.push(config); return socket; },
   });
-  return { sessions, events, configs, emitter, calls, lost: () => lost(),
-    grant: (value: Grant[]) => { grants = value; }, deny: (value: Operation | null) => { denied = value; },
+  return { sessions, events, configs, emitter, calls, batches, lost: () => lost(),
+    synced: () => batches.flatMap(batch => batch.messages.map(row => ({ ...row, origin: batch.origin }))),
+    syncStatus: (value: (batch: SyncBatch) => number) => { syncStatus = value; },
+    grant: (value: Grant[]) => { grants = value; },
+    deny: (value: Operation | null, reason: Blocked | null = null) => { denied = value; denial = reason; },
     mode: (value: typeof sendMode) => { sendMode = value; }, reject: (value: typeof rejectEvent) => { rejectEvent = value; },
     logoutMode: (value: typeof logoutMode) => { logoutMode = value; },
     ended: () => ended, clears: () => clears };
@@ -85,19 +95,29 @@ test("startup restoration is bounded, rechecks authority, and never replays a pr
   assert.deepEqual(await disabled.sessions.restore([connected]), { restored: 0, rejected: 0 });
   assert.equal(disabled.configs.length, 0); await disabled.sessions.close();
 });
-test("SDK blind retries, full history and online phone notification suppression are disabled", async () => {
+test("full history is requested as a desktop companion; no blind resend and no online-presence suppression of phone alerts", async () => {
   const f = fixture(); await f.sessions.start(initial); const config = f.configs[0]!;
-  assert.equal(config.maxMsgRetryCount, 0); assert.equal(config.enableRecentMessageCache, false);
-  assert.equal(config.enableAutoSessionRecreation, false); assert.equal(await config.getMessage?.({ id: "any" }), undefined);
-  assert.equal(config.syncFullHistory, false); assert.equal(config.markOnlineOnConnect, false);
-  assert.equal(config.shouldIgnoreJid?.("15550000000@g.us"), true);
+  assert.equal(config.syncFullHistory, true); assert.deepEqual(config.browser?.slice(0, 2), ["Milo", "Desktop"]);
+  assert.equal(config.shouldSyncHistoryMessage?.({ syncType: 2 } as never), true);
+  // Decryption retries use SDK defaults so delayed messages recover; nothing can be resent from here.
+  assert.equal(config.maxMsgRetryCount, undefined); assert.equal(config.enableRecentMessageCache, false);
+  assert.equal(await config.getMessage?.({ id: "any" }), undefined); assert.equal(config.markOnlineOnConnect, false);
+  assert.equal(config.shouldIgnoreJid?.("15550000000@g.us"), true); assert.equal(config.shouldIgnoreJid?.(peer), false);
   await f.sessions.close();
 });
 test("an account is bound by Python before any text is ingested", async () => {
   const f = fixture(); f.reject(event => event.event_type === "connection"); await paired(f);
   f.emitter.emit("messages.upsert", { type: "notify", messages: [message()] }); await wait(10);
-  assert.equal(f.events.filter(row => row.event_type === "message").length, 0);
+  assert.equal(f.batches.length, 0); assert.equal(f.calls.some(call => call.startsWith("sync:")), false);
   assert.equal((await f.sessions.status(initial)).state, "failed"); assert.equal(f.ended(), 1); await f.sessions.close();
+});
+test("messages arriving with the open event wait for account binding instead of being dropped", async () => {
+  const f = fixture(); await f.sessions.start(initial);
+  f.emitter.emit("connection.update", { connection: "open" });
+  f.emitter.emit("messages.upsert", { type: "append", messages: [message()] });
+  await wait(20); await f.sessions.settlePendingEvents();
+  assert.deepEqual(f.synced().map(row => [row.id, row.origin]), [["synthetic_message", "replay"]]);
+  await f.sessions.close();
 });
 test("first account binding uses the authorized null envelope and the observed account only in connection data", async () => {
   const f = fixture(); await paired(f);
@@ -105,31 +125,67 @@ test("first account binding uses the authorized null envelope and the observed a
   assert.equal(binding?.account_id, null); assert.equal(binding?.data.account_id, account);
   assert.equal((await f.sessions.status(connected)).account_id, account); await f.sessions.close();
 });
-test("ungranted text and read-without-retain text never reaches persistence", async () => {
-  const f = fixture(); await paired(f); f.emitter.emit("messages.upsert", { type: "notify", messages: [message()] }); await wait(10);
-  f.grant([{ conversation_id: "conversation", provider_chat_id: peer, read: true, retain: false, send: false }]);
-  f.emitter.emit("messages.upsert", { type: "notify", messages: [message()] }); await wait(10);
-  assert.equal(f.events.filter(row => row.event_type === "message").length, 0); await f.sessions.close();
-});
-test("granted live, replay and history events retain their actual origin; fromMe is unreviewed", async () => {
-  const f = fixture(); await paired(f); f.grant([{ conversation_id: "conversation", provider_chat_id: peer, read: true, retain: true, send: false }]);
+test("every one-to-one chat streams to Python, which alone decides what is kept; no per-message event path", async () => {
+  const f = fixture(); await paired(f);
   f.emitter.emit("messages.upsert", { type: "notify", messages: [message()] });
-  f.emitter.emit("messages.upsert", { type: "append", messages: [message(true)] });
-  f.emitter.emit("messaging-history.set", { chats: [], messages: [message()] }); await wait(20);
-  const rows = f.events.filter(row => row.event_type === "message"); assert.equal(rows.length, 3);
-  assert.deepEqual(rows.map(row => row.data.origin), ["live", "replay", "history"]);
-  assert.equal(rows[1]?.data.author_kind, "unknown_owner_outgoing"); await f.sessions.close();
+  f.emitter.emit("messages.upsert", { type: "append", messages: [{ ...message(true), key: { id: "own", remoteJid: peer, fromMe: true } }] });
+  f.emitter.emit("messaging-history.set", { chats: [], contacts: [], messages: [{ ...message(), key: { id: "old", remoteJid: peer, fromMe: false } }],
+    syncType: 3, progress: 40 });
+  await wait(20); await f.sessions.settlePendingEvents();
+  const rows = f.synced();
+  assert.deepEqual(rows.map(row => [row.id, row.origin, row.from_me]), [["synthetic_message", "live", false], ["own", "replay", true], ["old", "history", false]]);
+  assert.equal(rows[0]?.chat_jid, peer); assert.equal(rows[0]?.text, "Synthetic test text");
+  assert.equal(f.events.some(row => row.event_type === "message"), false);
+  assert.deepEqual(f.batches.find(batch => batch.progress)?.progress, { phase: "recent", percent: 40 });
+  assert.equal(f.calls.some(call => call.startsWith("authority:ingest")), false); await f.sessions.close();
 });
-test("group, media, wrapped ephemeral and future-dated payloads are not ingested", async () => {
-  const f = fixture(); await paired(f); f.grant([{ conversation_id: "conversation", provider_chat_id: peer, read: true, retain: true, send: false }]);
+test("media becomes readable placeholders, ephemeral wrappers unwrap, groups and future dates are skipped", async () => {
+  const f = fixture(); await paired(f);
   f.emitter.emit("messages.upsert", { type: "notify", messages: [{ ...message(), key: { id: "group", remoteJid: "123456@g.us" } },
-    { ...message(), message: { imageMessage: { caption: "ignore" } } }, { ...message(), message: { ephemeralMessage: { message: { conversation: "ignore" } } } },
-    { ...message(), messageTimestamp: Math.floor(Date.now() / 1000) + 1000 }] }); await wait(10);
-  assert.equal(f.events.filter(row => row.event_type === "message").length, 0); await f.sessions.close();
+    { ...message(), key: { id: "photo", remoteJid: peer }, message: { imageMessage: { caption: "beach" } } },
+    { ...message(), key: { id: "voice", remoteJid: peer }, message: { audioMessage: { ptt: true, seconds: 75 } } },
+    { ...message(), key: { id: "wrapped", remoteJid: peer }, message: { ephemeralMessage: { message: { conversation: "kept" } } } },
+    { ...message(), key: { id: "future", remoteJid: peer }, messageTimestamp: Math.floor(Date.now() / 1000) + 1000 }] });
+  await wait(20); await f.sessions.settlePendingEvents();
+  assert.deepEqual(f.synced().map(row => [row.id, row.kind, row.text]), [["photo", "media", "📷 Photo beach"],
+    ["voice", "media", "🎤 Voice message (1:15)"], ["wrapped", "text", "kept"]]);
+  await f.sessions.close();
+});
+test("an LID-addressed message joins the phone-number chat, and the owner's own chat is never synced", async () => {
+  const f = fixture(); await paired(f);
+  f.emitter.emit("messages.upsert", { type: "notify", messages: [
+    { ...message(), key: { id: "via-lid", remoteJid: "777777777777777@lid", remoteJidAlt: peer, fromMe: false } },
+    { ...message(), key: { id: "note-to-self", remoteJid: account, fromMe: true } }] });
+  await wait(20); await f.sessions.settlePendingEvents();
+  assert.deepEqual(f.synced().map(row => [row.id, row.chat_jid, row.chat_alt_jid]), [["via-lid", peer, "777777777777777@lid"]]);
+  await f.sessions.close();
+});
+test("edits and deletions update the original message instead of creating new ones", async () => {
+  const f = fixture(); await paired(f);
+  f.emitter.emit("messages.upsert", { type: "notify", messages: [
+    { ...message(), key: { id: "edit-envelope", remoteJid: peer }, message: { protocolMessage: { type: 14, key: { id: "synthetic_message" },
+      editedMessage: { conversation: "Edited text" } } } },
+    { ...message(), key: { id: "revoke-envelope", remoteJid: peer }, message: { protocolMessage: { type: 0, key: { id: "gone" } } } }] });
+  await wait(20); await f.sessions.settlePendingEvents();
+  assert.deepEqual(f.synced().map(row => [row.id, row.event, row.text]), [["synthetic_message", "edited", "Edited text"], ["gone", "deleted", ""]]);
+  await f.sessions.close();
+});
+test("Python failures never kill the WhatsApp session: transient batches retry, an invalid record is isolated", async () => {
+  const f = fixture(); await paired(f);
+  let failures = 1;
+  f.syncStatus(batch => batch.messages.some(row => row.id === "poison") ? 422 : failures-- > 0 ? 503 : 200);
+  f.emitter.emit("messages.upsert", { type: "append", messages: ["a", "poison", "b"].map(id => ({ ...message(), key: { id, remoteJid: peer } })) });
+  await wait(1300); await f.sessions.settlePendingEvents();
+  assert.deepEqual(f.synced().map(row => row.id).sort(), ["a", "b"]);
+  assert.equal((await f.sessions.status(connected)).state, "connected"); assert.equal(f.ended(), 0);
+  await f.sessions.close();
 });
 test("discovery stores at most 200 minimal contacts and verifies selected IDs", async () => {
   const f = fixture(); await paired(f); f.emitter.emit("contacts.upsert", Array.from({ length: 300 }, (_, i) => ({ id: `${15550000000 + i}@s.whatsapp.net`, name: "x".repeat(200) })));
+  await wait(20); await f.sessions.settlePendingEvents();
   const rows = (await f.sessions.chats(connected)).chats; assert.equal(rows.length, 200);
+  // Every contact name still reaches Python for all-chat titles.
+  assert.equal(f.batches.reduce((total, batch) => total + batch.chats.length, 0), 299);
   assert.equal(rows[0]?.title.length, 160); assert.deepEqual(Object.keys(rows[0]!).sort(), ["kind", "provider_chat_id", "title"]);
   assert.equal((await f.sessions.chats(connected, rows[0]!.provider_chat_id)).chats.length, 1);
   assert.equal((await f.sessions.chats(connected, "19999999999@s.whatsapp.net")).chats.length, 0); await f.sessions.close();
@@ -197,6 +253,15 @@ test("idle SQL authority revocation stops the socket without inbound messages", 
   const f = fixture(); await paired(f); f.deny("status");
   await wait(5100); await f.sessions.settlePendingEvents();
   assert.equal(f.ended(), 1); await assert.rejects(f.sessions.send(send())); await f.sessions.close();
+});
+test("an expired SQL lease re-announces the connection and an unreachable authority keeps the socket", async () => {
+  const f = fixture(); await paired(f); f.deny("status", new Denied("lease_expired"));
+  await wait(5100); await f.sessions.settlePendingEvents();
+  assert.equal(f.ended(), 0); assert.ok(f.events.filter(row => row.data.state === "connected").length >= 2);
+  f.deny("status", new Blocked("AUTHORITY_UNAVAILABLE"));
+  await wait(5100);
+  assert.equal(f.ended(), 0); assert.equal((await f.sessions.chats(connected)).state, "connected");
+  await f.sessions.close();
 });
 test("a pairing phone requests one link code on the first QR, exposes it only to the owner view, and expires", async () => {
   let now = Date.now(); const f = fixture({ clock: () => now }); await f.sessions.start(initial, "15550000001");

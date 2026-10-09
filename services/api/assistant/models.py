@@ -70,7 +70,8 @@ class Connector(Entity, Tenant, Base):
 
 class Conversation(Entity, Tenant, Base):
     __tablename__ = "conversations"
-    __table_args__ = (UniqueConstraint("connector_id", "provider_chat_id", name="uq_conversation_provider"),)
+    __table_args__ = (UniqueConstraint("connector_id", "provider_chat_id", name="uq_conversation_provider"),
+                      Index("ix_conversations_activity", "workspace_id", "last_message_at", "id"))
     connector_id: Mapped[str] = mapped_column(ForeignKey("connectors.id"), index=True)
     provider_chat_id: Mapped[str] = mapped_column(String(160))
     title: Mapped[str] = mapped_column(String(160))
@@ -82,6 +83,8 @@ class Conversation(Entity, Tenant, Base):
     recipient_opted_out: Mapped[bool] = mapped_column(Boolean, default=False)
     last_inbound_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     group_send_allowed: Mapped[bool] = mapped_column(Boolean, default=False)
+    # Newest observed message (any direction or origin); orders the inbox by recent activity.
+    last_message_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
 
 class Permission(Entity, Tenant, Base):
