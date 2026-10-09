@@ -9,9 +9,14 @@ from assistant.db import now
 from assistant.lifecycle_models import RetentionPolicy
 from assistant.models import AuditEvent, Connector, Conversation, Message, Outbox, Permission
 from assistant.whatsapp_personal_models import PersonalChatAlias, PersonalChatSync, PersonalWhatsAppSession
+import test_whatsapp_personal as personal_suite
 from test_messaging import make_draft
-from test_whatsapp_personal import (CONTACT, INTERNAL, OWNER, OWNER_LID, PREFIX, envelope, personal,  # noqa: F401
-                                    personal_chat, post_event)
+from test_whatsapp_personal import CONTACT, INTERNAL, OWNER, OWNER_LID, PREFIX, post_event
+
+# Reuse the linked-owner session fixtures: `personal` (a connected phone) and `personal_chat`
+# (plus one explicitly authorized contact).
+personal = personal_suite.personal
+personal_chat = personal_suite.personal_chat
 
 FRIEND = "919800000001@s.whatsapp.net"
 FRIEND_LID = "123456789012345@lid"
