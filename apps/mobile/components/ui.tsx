@@ -15,6 +15,7 @@ export const styles=StyleSheet.create({page:{flex:1,backgroundColor:c.canvas},co
 export function Heading({children}:{children:React.ReactNode}){return <Text accessibilityRole="header" style={styles.heading}>{children}</Text>;}
 export function Body({children,small=false}:{children:React.ReactNode;small?:boolean}){return <Text style={small?styles.small:styles.text}>{children}</Text>;}
 export function Card({children}:{children:React.ReactNode}){return <View style={styles.card}>{children}</View>;}
+export function Warning({children}:{children:React.ReactNode}){return <View accessible accessibilityRole="alert" style={styles.banner}><Text style={styles.text}>{children}</Text></View>;}
 export function Button({label,onPress,secondary=false,disabled=false}:{label:string;onPress:()=>void;secondary?:boolean;disabled?:boolean}){
   return <Pressable accessibilityRole="button" accessibilityLabel={label} accessibilityState={{disabled}} disabled={disabled}
     style={[styles.button,secondary&&{backgroundColor:c.selected},disabled&&{opacity:0.55}]} onPress={onPress}>

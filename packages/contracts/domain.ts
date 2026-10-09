@@ -32,6 +32,19 @@ export function modeFor(conversation: Conversation, grants: RecordEntity[] = [])
   if(grants.some(grant=>grant.conversation_id===conversation.id&&grant.enabled&&grant.mode==='AUTO'))return 'Auto';
   return conversation.mode ?? ({AUTO_ENABLED: 'Auto', READ_ONLY: 'read-only', AI_OFF: 'disabled'} as Record<string, ConversationMode>)[conversation.control_state] ?? 'draft';
 }
+// Server-computed, deterministic review warnings on outward draft text. They never
+// change approval semantics: the owner still approves the exact displayed text.
+export type DraftRiskFlag = 'link' | 'payment' | 'phone_number' | 'commitment';
+export const draftRiskLabels: Record<DraftRiskFlag, string> = {link: 'contains a link', payment: 'mentions a payment or bank details',
+  phone_number: 'contains a phone number', commitment: 'makes a promise or confirmation'};
+export function draftRiskFlags(draft: RecordEntity | null | undefined): string[] {
+  const flags: unknown = draft?.risk_flags;
+  return Array.isArray(flags) ? [...new Set(flags.filter((flag): flag is string => typeof flag === 'string' && flag.length > 0))] : [];
+}
+export function draftRiskWarning(draft: RecordEntity | null | undefined): string | null {
+  const flags = draftRiskFlags(draft);
+  return flags.length ? `Check before sending: ${flags.map(flag => draftRiskLabels[flag as DraftRiskFlag] ?? `mentions ${flag.replaceAll('_', ' ')}`).join(' · ')}` : null;
+}
 export function canCancel(status: string): boolean { return ['ready', 'prepared', 'scheduled', 'held', 'needs_approval', 'approved'].includes(status); }
 export function resolveObject(snapshot: MiloSnapshot, kind: string, id: string): RecordEntity | undefined {
   const groups: Record<string, RecordEntity[]> = {conversation: snapshot.conversations, action: snapshot.actions,

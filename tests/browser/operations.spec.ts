@@ -45,6 +45,23 @@ test('uncertain receipt deep link never offers a blind resend', async ({ page })
   expect(audit.violations).toEqual([]);
 });
 
+test('flagged draft warns in plain language beside exact-text approval', async ({ page }) => {
+  await page.goto('/inbox/chat_mom');
+  const review = page.locator('.draft-review');
+  await expect(review.getByRole('heading', { name: 'Review this exact message' })).toBeVisible();
+  const warning = 'Check before sending: contains a link · mentions a payment or bank details · makes a promise or confirmation';
+  await expect(review.getByText(warning, { exact: true })).toBeVisible();
+  await expect(review.getByRole('button', { name: 'Approve exact text', exact: true })).toHaveAccessibleDescription(warning);
+  const audit = await new AxeBuilder({ page }).include('#draft-risk-warning').withTags(['wcag2a','wcag2aa','wcag21aa','wcag22aa']).analyze();
+  expect(audit.violations).toEqual([]);
+  await review.getByRole('button', { name: 'Edit locally', exact: true }).click();
+  await page.getByRole('textbox', { name: 'Message Mom', exact: true }).fill('I’ll call you this evening.');
+  await page.getByRole('button', { name: 'Prepare message', exact: true }).click();
+  await expect(review.getByRole('button', { name: 'Approve exact text', exact: true })).toBeVisible();
+  await expect(review.getByText(/Check before sending/)).toHaveCount(0);
+  await expect(review.getByRole('button', { name: 'Approve exact text', exact: true })).not.toHaveAccessibleDescription(/Check before sending/);
+});
+
 test('recipient text survives switching chats and asks for exact review', async ({ page }) => {
   await page.goto('/inbox/chat_maya');
   await page.getByRole('textbox', { name: 'Message Maya', exact: true }).fill('This text belongs only to Maya.');

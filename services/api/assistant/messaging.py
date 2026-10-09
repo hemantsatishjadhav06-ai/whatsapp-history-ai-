@@ -7,6 +7,7 @@ content, and both immediate and scheduled sends use the same ledger and checks.
 import asyncio
 import hashlib
 import hmac
+import re
 import threading
 from contextlib import contextmanager
 from datetime import UTC, datetime, timedelta
@@ -419,10 +420,74 @@ def serialized_draft(function):
     return guarded
 
 
+# Deterministic review warnings for outward draft text. A prompt-injected source can
+# steer a model draft toward a link, payment detail, contact number or promise; these
+# codes help the owner notice that before approving. They never approve, block or send.
+DRAFT_RISK_FLAGS = ("link", "payment", "phone_number", "commitment")
+_IDIOM = r"(?!\s+(?:attention|heed|tribute|homage|respects?|a visit|a compliment)\b)"
+_TLDS = ("com|net|org|info|biz|io|co|me|ly|in|us|uk|ai|app|dev|link|xyz|site|online|shop|store|top|club|live|pro|"
+         "page|gg|cc|tk|ml|ga|cf|gq|ru|cn|de|fr|nl|ae|sg|au|ca|pk|bd|lk|np|click|cash|pay|money|finance|bank")
+RISK_LINK = re.compile(r"\b(?:https?|ftp)://|\bwww\.[a-z0-9-]|(?<![\w@.-])(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+"
+                       rf"(?P<tld>{_TLDS})(?:\.[a-z]{{2}})?(?![\w-])", re.I)
+RISK_PAYMENT = re.compile(
+    r"(?<![\w.-])[\w.-]{2,64}@[a-z]{2,24}(?![\w@-])(?!\.[a-z])"  # A UPI address; an email domain has a dot.
+    r"|\b(?:upi|iban|ifsc|swift code|sort code|routing number|cvv|otp|neft|rtgs|imps|gpay|google pay|phonepe|"
+    r"paytm|bhim|paypal|venmo|zelle|cash ?app|a/c|acct|invoice|refund\w*|repay\w*|prepay\w*|deposit|send money|"
+    r"payment link|(?:bank|card|account) (?:no|number|details)|bank account|net ?banking"
+    r"|(?:bank|wire|money|upi|online) transfer)\b"
+    rf"|\bpa(?:y|ys|ying|id|yment|yments|yable|yee)\b{_IDIOM}"
+    r"|\btransfer (?:the |your |my |some )?(?:money|amount|funds?|payment|balance|deposit|fees?|rent)\b"
+    r"|\btransfer (?:it |them )?(?:to|into) (?:my|this|our) (?:bank )?account\b"
+    r"|[₹$€£¥]\s?\d|\d\s?[₹$€£¥]|\b(?:rs\.?|inr|usd|eur|gbp|aed)\s?\d"
+    r"|\d\s?(?:rs|inr|usd|eur|gbp|aed|rupees?|dollars?|euros?|bucks|lakhs?|crores?)\b|\b(?:inr|usd|eur|gbp)\b", re.I)
+# IBAN and IFSC codes are uppercase by specification.
+RISK_BANK_CODE = re.compile(r"\b[A-Z]{2}\d{2}(?: ?[A-Z0-9]{4}){2,7}(?: ?[A-Z0-9]{1,3})?\b|\b[A-Z]{4}0[A-Z0-9]{6}\b")
+RISK_NOT_PHONE = re.compile(  # Dates, year and time ranges, IPs and decimals are not contact numbers.
+    r"(?<!\d)(?:(?:19|20)\d{2}[-/.](?:0?[1-9]|1[0-2])[-/.](?:0?[1-9]|[12]\d|3[01])"
+    r"|(?:0?[1-9]|[12]\d|3[01])[-/.](?:0?[1-9]|[12]\d|3[01])[-/.](?:19|20)\d{2}"
+    r"|(?:19|20)\d{2}\s?[-–]\s?(?:(?:19|20)\d{2}|\d{2})"
+    r"|(?:[01]?\d|2[0-3])[:.][0-5]\d\s?[-–]\s?(?:[01]?\d|2[0-3])[:.][0-5]\d"
+    r"|(?:\d{1,3}\.){3}\d{1,3}|\d+\.\d+(?!\.?\d))(?!\d)")
+RISK_DIGITS = re.compile(r"(?<![\w+₹$€£¥.,])\+?\(?\d(?:[ ().-]{0,2}\d){7,}(?!\w)")
+RISK_COMMITMENT = re.compile(
+    r"\b(?:i|we)(?:['’]ll| will| shall| can| promise to| agree to)\s+(?:\w+\s+){0,2}?(?:"
+    rf"pay\b{_IDIOM}|(?:transfer|refund|reimburse|deposit|lend|cover|sponsor|sign|guarantee|book|confirm|accept|approve"
+    r"|commit)\b"
+    r"|send (?:you |the |it |some )?(?:money|cash|funds?|amount|payment|advance|deposit)\b)"
+    r"|\b(?:i|we) (?:promise|guarantee|agree|accept|confirm|commit|swear)\b"
+    r"|\b(?:confirmed|booked|agreed|guaranteed|promised)\b"
+    r"|\b(?:it|that)['’]?s a deal\b|\bdone deal\b|\bdeal(?: is|['’]s)? (?:done|final|confirmed)\b|\bdeal is on\b"
+    r"|(?:^|[.!?,;]\s*)deal\s*[.!]*\s*(?:$|[.!?,;])|\byou have my word\b", re.I | re.M)
+
+
+def _luhn(digits: str) -> bool:
+    return sum(value if index % 2 == 0 else value * 2 - 9 * (value > 4)
+               for index, value in enumerate(map(int, reversed(digits)))) % 10 == 0
+
+
+def draft_risk_flags(text: str) -> list[str]:
+    """Stable, ordered warning codes for exact draft text; the owner still approves the exact content."""
+    flags = set()
+    if any(not (match["tld"] or "").istitle() for match in RISK_LINK.finditer(text)):  # "Ok.In" is a missing space.
+        flags.add("link")
+    if RISK_PAYMENT.search(text) or RISK_BANK_CODE.search(text):
+        flags.add("payment")
+    for match in RISK_DIGITS.finditer(RISK_BANK_CODE.sub(" ; ", RISK_NOT_PHONE.sub(" ; ", text))):
+        digits = re.sub(r"\D", "", match[0])
+        if len(digits) >= 16 or len(digits) >= 13 and not match[0].startswith("+") and _luhn(digits):
+            flags.add("payment")  # Card-like, or longer than any E.164 number.
+        if len(digits) <= 15:
+            flags.add("phone_number")
+    if RISK_COMMITMENT.search(text):
+        flags.add("commitment")
+    return [flag for flag in DRAFT_RISK_FLAGS if flag in flags]
+
+
 def draft_payload(draft: Draft) -> dict:
     return {"id": draft.id, "conversation_id": draft.conversation_id, "recipient_id": draft.recipient_id,
             "text": draft.text, "status": draft.status, "content_hash": draft.content_hash,
             "missing_facts": draft.missing_facts, "evidence_message_ids": draft.evidence_message_ids,
+            "risk_flags": draft_risk_flags(draft.text or ""),
             "approved_hash": draft.approved_hash, "approval_expires_at": draft.approval_expires_at}
 
 

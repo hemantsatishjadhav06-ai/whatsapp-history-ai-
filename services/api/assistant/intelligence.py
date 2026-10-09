@@ -1086,8 +1086,10 @@ def create_draft(conversation_id: str, request: Request, body: DraftRequest,
     audit(db, conversation.workspace_id, user.id, "draft.create", row.id,
           model_version=model_version, evidence_count=len(result.evidence_message_ids))
     db.commit()
+    from .messaging import draft_risk_flags
     return {"id": row.id, "conversation_id": row.conversation_id, "text": row.text,
             "evidence_message_ids": row.evidence_message_ids, "missing_facts": row.missing_facts,
+            "risk_flags": draft_risk_flags(row.text),
             "model_version": row.model_version, "profile_version": row.profile_version,
             "status": row.status, "content_hash": row.content_hash,
             "development_mock": row.model_version == "mock-v1",
