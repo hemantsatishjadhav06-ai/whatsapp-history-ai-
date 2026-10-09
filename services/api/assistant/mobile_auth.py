@@ -137,13 +137,30 @@ def native_login(body: NativeLoginInput, request: Request, response: Response, d
     return create_native_session(claims, challenge.platform, challenge.device_name, request, response, db)
 
 
+REFRESH_REUSE_DETAIL = "Refresh token reuse detected; sign in again"
+
+
+def _revoke_reused_refresh(db, presented_hash):
+    """Revoke the device whose rotated-out refresh token was presented again.
+
+    The server cannot tell which holder is the thief, so both must sign in again
+    (OAuth 2.0 Security BCP, RFC 9700). Only the latest rotated-out hash is kept.
+    """
+    reused = db.execute(delete(NativeSession).where(NativeSession.previous_refresh_token_hash == presented_hash)
+                        .execution_options(synchronize_session=False))
+    db.commit()
+    return reused.rowcount > 0
+
+
 @router.post("/auth/native/refresh")
 def native_refresh(body: NativeRefreshInput, request: Request, response: Response, db=Depends(get_db)):
     _native_request(request)
-    previous_hash = digest(body.refresh_token)
-    session = db.scalar(select(NativeSession).where(NativeSession.refresh_token_hash == previous_hash,
+    presented_hash = digest(body.refresh_token)
+    session = db.scalar(select(NativeSession).where(NativeSession.refresh_token_hash == presented_hash,
                                                    NativeSession.refresh_expires_at > now()))
     if session is None:
+        if _revoke_reused_refresh(db, presented_hash):
+            raise HTTPException(401, REFRESH_REUSE_DETAIL)
         raise HTTPException(401, "Refresh session is invalid, revoked or expired")
     user = db.get(User, session.user_id)
     if user is None:
@@ -155,12 +172,17 @@ def native_refresh(body: NativeRefreshInput, request: Request, response: Respons
     expires = min(now() + timedelta(seconds=request.app.state.settings.native_session_ttl_seconds),
                   aware(session.refresh_expires_at))
     changed = db.execute(update(NativeSession).where(NativeSession.id == session.id,
-                         NativeSession.refresh_token_hash == previous_hash,
+                         NativeSession.refresh_token_hash == presented_hash,
                          NativeSession.refresh_expires_at > now())
-                         .values(token_hash=digest(access), refresh_token_hash=digest(refresh), expires_at=expires)
+                         .values(token_hash=digest(access), refresh_token_hash=digest(refresh), expires_at=expires,
+                                 previous_refresh_token_hash=presented_hash)
                          .execution_options(synchronize_session=False))
     if changed.rowcount != 1:
         db.rollback()
+        # The loser of a concurrent double-submit arrives here after the winner
+        # committed; like any replay it revokes the device, winner included.
+        if _revoke_reused_refresh(db, presented_hash):
+            raise HTTPException(401, REFRESH_REUSE_DETAIL)
         raise HTTPException(401, "Refresh token was already consumed or expired")
     result = {"access_token": access, "token_type": "Bearer", "expires_at": expires.isoformat(),
               "session_id": session.id, "user": user_payload(user), "refresh_supported": True,
@@ -180,9 +202,11 @@ def native_logout(request: Request, user=Depends(get_current_user), db=Depends(g
 
 @router.post("/auth/native/revoke", status_code=204)
 def native_revoke(body: NativeRefreshInput, request: Request, db=Depends(get_db)):
-    """Possession of the refresh secret can revoke a device after access expiry."""
+    """Possession of the current or just-rotated refresh secret revokes a device."""
     _native_request(request)
-    db.execute(delete(NativeSession).where(NativeSession.refresh_token_hash == digest(body.refresh_token)))
+    presented_hash = digest(body.refresh_token)
+    db.execute(delete(NativeSession).where(or_(NativeSession.refresh_token_hash == presented_hash,
+                                               NativeSession.previous_refresh_token_hash == presented_hash)))
     db.commit()
 
 

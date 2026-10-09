@@ -7,7 +7,7 @@ from sqlalchemy import select, text
 
 from assistant import auth
 from assistant.db import now
-from assistant.mobile_auth import proof_challenge
+from assistant.mobile_auth import REFRESH_REUSE_DETAIL, proof_challenge
 from assistant.mobile_models import NativeLoginChallenge, NativeSession
 from conftest import login
 
@@ -142,11 +142,48 @@ def test_native_refresh_rotates_access_and_refresh_without_extending_deadline(cl
     assert current["refresh_expires_at"] == original["refresh_expires_at"]
     assert client.get("/v1/me", headers={"Authorization": f"Bearer {original['access_token']}"}).status_code == 401
     assert client.get("/v1/me", headers={"Authorization": f"Bearer {current['access_token']}"}).status_code == 200
-    assert client.post("/v1/auth/native/refresh", json={"refresh_token": original["refresh_token"]}).status_code == 401
     with app.state.session_factory() as db:
         row = db.scalar(select(NativeSession))
         assert row.refresh_token_hash == auth.digest(current["refresh_token"])
+        assert row.previous_refresh_token_hash == auth.digest(original["refresh_token"])
         assert current["refresh_token"] not in row.refresh_token_hash
+        assert original["refresh_token"] not in row.previous_refresh_token_hash
+    assert client.post("/v1/auth/native/refresh", json={"refresh_token": original["refresh_token"]}).status_code == 401
+
+
+def test_rotated_refresh_replay_revokes_both_holders(client, app, monkeypatch):
+    original = native_login(client, app, monkeypatch)
+    stolen = client.post("/v1/auth/native/refresh", json={"refresh_token": original["refresh_token"]}).json()
+    replay = client.post("/v1/auth/native/refresh", json={"refresh_token": original["refresh_token"]})
+    assert replay.status_code == 401 and replay.json()["detail"] == REFRESH_REUSE_DETAIL
+    assert original["refresh_token"] not in replay.text and stolen["refresh_token"] not in replay.text
+    assert client.get("/v1/me", headers={"Authorization": f"Bearer {stolen['access_token']}"}).status_code == 401
+    rotated = client.post("/v1/auth/native/refresh", json={"refresh_token": stolen["refresh_token"]})
+    assert rotated.status_code == 401 and rotated.json()["detail"] != REFRESH_REUSE_DETAIL
+    with app.state.session_factory() as db:
+        assert db.scalar(select(NativeSession)) is None
+
+
+def test_unknown_refresh_token_revokes_nothing(client, app, monkeypatch):
+    original = native_login(client, app, monkeypatch)
+    current = client.post("/v1/auth/native/refresh", json={"refresh_token": original["refresh_token"]}).json()
+    unknown = client.post("/v1/auth/native/refresh", json={"refresh_token": "nr_" + "x" * 43})
+    assert unknown.status_code == 401 and unknown.json()["detail"] != REFRESH_REUSE_DETAIL
+    assert client.post("/v1/auth/native/revoke", json={"refresh_token": "nr_" + "y" * 43}).status_code == 204
+    assert client.get("/v1/me", headers={"Authorization": f"Bearer {current['access_token']}"}).status_code == 200
+    assert client.post("/v1/auth/native/refresh", json={"refresh_token": current["refresh_token"]}).status_code == 200
+
+
+def test_revoke_accepts_current_or_just_rotated_refresh_token(client, app, monkeypatch):
+    original = native_login(client, app, monkeypatch)
+    current = client.post("/v1/auth/native/refresh", json={"refresh_token": original["refresh_token"]}).json()
+    other = native_login(client, app, monkeypatch, subject="other-native-owner")
+    assert client.post("/v1/auth/native/revoke", json={"refresh_token": original["refresh_token"]}).status_code == 204
+    assert client.get("/v1/me", headers={"Authorization": f"Bearer {current['access_token']}"}).status_code == 401
+    assert client.post("/v1/auth/native/refresh", json={"refresh_token": current["refresh_token"]}).status_code == 401
+    assert client.get("/v1/me", headers={"Authorization": f"Bearer {other['access_token']}"}).status_code == 200
+    assert client.post("/v1/auth/native/revoke", json={"refresh_token": other["refresh_token"]}).status_code == 204
+    assert client.get("/v1/me", headers={"Authorization": f"Bearer {other['access_token']}"}).status_code == 401
 
 
 def test_concurrent_refresh_has_one_winner_and_rejects_replay(client, app, monkeypatch):
@@ -157,6 +194,10 @@ def test_concurrent_refresh_has_one_winner_and_rejects_replay(client, app, monke
                    json={"refresh_token": original["refresh_token"]}) for _ in range(2)]
         responses = [future.result() for future in futures]
     assert sorted(response.status_code for response in responses) == [200, 401]
+    # The loser presented a token the winner just rotated out: treated as reuse.
+    winner, loser = sorted(responses, key=lambda response: response.status_code)
+    assert loser.json()["detail"] == REFRESH_REUSE_DETAIL
+    assert client.get("/v1/me", headers={"Authorization": f"Bearer {winner.json()['access_token']}"}).status_code == 401
 
 
 def test_refresh_after_access_expiry_and_revocation(client, app, monkeypatch):
