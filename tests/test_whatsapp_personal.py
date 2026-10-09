@@ -121,9 +121,15 @@ def test_verified_google_is_required_in_production(app, owner_client, monkeypatc
     google_login(owner_client, app, monkeypatch, "personal-google-owner")
     wid = workspace(owner_client)
     app.state.settings.environment = "production"
-    monkeypatch.setattr("assistant.whatsapp_personal.private_request",
-                        lambda *_: {"schema_version": 1, "state": "starting", "account_id": None})
-    assert owner_client.post(PREFIX + "/start", json={"workspace_id": wid}).status_code == 200
+    sent = []
+    monkeypatch.setattr("assistant.whatsapp_personal.private_request", lambda _settings, operation, payload: sent.append(
+        payload) or {"schema_version": 1, "state": "starting", "account_id": None})
+    # Production binds pairing to the owner's own number before any private session starts.
+    assert owner_client.post(PREFIX + "/start", json={"workspace_id": wid}).status_code == 422
+    assert sent == []
+    result = owner_client.post(PREFIX + "/start", json={"workspace_id": wid, "phone_number": "+91 76978 74277"})
+    assert result.status_code == 200, result.text
+    assert sent[-1]["pairing_phone"] == "917697874277"
 
 
 def test_pairing_owner_scope_short_expiry_and_no_secret_logs(app, personal, caplog):

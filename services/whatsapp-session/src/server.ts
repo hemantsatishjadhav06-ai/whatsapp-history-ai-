@@ -42,7 +42,12 @@ export function privateServer(options: { token: string; sessions: Sessions; read
     if (inFlight >= limit) { respond(response, 503, { reason_code: "GATEWAY_BUSY" }); return; }
     inFlight += 1;
     try {
-      let raw = await readBody(request); let filter: string | undefined;
+      let raw = await readBody(request); let filter: string | undefined; let pairingPhone: string | undefined;
+      if (request.url === "/v1/sessions/start" && raw && typeof raw === "object" && !Array.isArray(raw) && Object.hasOwn(raw, "pairing_phone")) {
+        const row = raw as Record<string, unknown>;
+        if (typeof row.pairing_phone !== "string" || !/^[1-9][0-9]{7,14}$/.test(row.pairing_phone)) throw new Blocked("INVALID_REQUEST");
+        pairingPhone = row.pairing_phone; const { pairing_phone: _phone, ...rest } = row; raw = rest;
+      }
       if (request.url === "/v1/sessions/chats" && raw && typeof raw === "object" && !Array.isArray(raw)) {
         const row = raw as Record<string, unknown>;
         if (Object.hasOwn(row, "provider_chat_id")) {
@@ -51,7 +56,7 @@ export function privateServer(options: { token: string; sessions: Sessions; read
         }
       }
       const identity = parseIdentity(raw, request.url === "/v1/messages/send");
-      const result = request.url === "/v1/sessions/start" ? await options.sessions.start(identity) :
+      const result = request.url === "/v1/sessions/start" ? await options.sessions.start(identity, pairingPhone) :
         request.url === "/v1/sessions/status" ? await options.sessions.status(identity) :
         request.url === "/v1/sessions/chats" ? await options.sessions.chats(identity, filter) :
         request.url === "/v1/sessions/disconnect" ? await options.sessions.disconnect(identity) :

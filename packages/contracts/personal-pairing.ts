@@ -10,6 +10,7 @@ export type PersonalStatus = {
 };
 export type PersonalPairing = {
   connector_id: string; state: string; qr: null | { value: string; expires_at: string }; poll_after_seconds: number;
+  pairing_code?: null | { code: string; expires_at: string };
 };
 export type PersonalConsent = { read: boolean; retain: boolean; learn: boolean; draft: boolean; send: boolean; recipient_opted_in: boolean };
 export type PersonalChat = {
@@ -39,6 +40,23 @@ export function usablePersonalQR(pairing: PersonalPairing | null, connectorId: s
   if (!Number.isFinite(expiresAt) || expiresAt <= now || expiresAt > now + 60_000
     || typeof value !== 'string' || !value.length || value.length > 4096 || /[\x00-\x20\x7f]/.test(value)) return null;
   return { value, expiresAt };
+}
+
+/** A WhatsApp link code for the owner's own number, shown only while pairing and briefly valid. */
+export function usablePersonalPairingCode(pairing: PersonalPairing | null, connectorId: string | undefined, now = Date.now()): { code: string; expiresAt: number } | null {
+  const code = pairing?.pairing_code;
+  if (!pairing || !code || pairing.connector_id !== connectorId || pairing.state !== 'pairing') return null;
+  const expiresAt = Date.parse(code.expires_at);
+  if (!Number.isFinite(expiresAt) || expiresAt <= now || expiresAt > now + 180_000 || !/^[A-Z0-9]{4}-?[A-Z0-9]{4}$/.test(code.code)) return null;
+  return { code: code.code.replace('-', '').replace(/^(.{4})/, '$1-'), expiresAt };
+}
+
+/** Normalizes an owner-entered international number; null unless it has a + country code and 8–15 digits. */
+export function internationalPhoneNumber(value: string): string | null {
+  const trimmed = value.trim();
+  if (!/^\+[0-9][0-9 ()-]{6,24}$/.test(trimmed)) return null;
+  const digits = trimmed.replace(/\D/g, '');
+  return digits.length >= 8 && digits.length <= 15 && !digits.startsWith('0') ? `+${digits}` : null;
 }
 
 /** Draw only a standard QR matrix, with a four-module quiet zone. */

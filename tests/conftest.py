@@ -27,6 +27,21 @@ def app(tmp_path):
 
 
 @pytest.fixture
+def frozen_rate_window(monkeypatch):
+    """Keep fixed-window request counters in one window for the whole test.
+
+    Counters key on int(time.time() // window); a test that crosses a window
+    boundary would otherwise see its counts reset between requests.
+    """
+    import time as real_time
+    from types import SimpleNamespace
+    from assistant import request_security
+    fixed = real_time.time()
+    monkeypatch.setattr(request_security, "time", SimpleNamespace(time=lambda: fixed, monotonic=real_time.monotonic))
+    return fixed
+
+
+@pytest.fixture
 def client(app):
     with TestClient(app) as value:
         yield value

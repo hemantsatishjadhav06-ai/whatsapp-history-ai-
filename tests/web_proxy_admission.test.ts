@@ -17,10 +17,10 @@ function setup(t:TestContext) {
       if(value===undefined)delete process.env[name!];else process.env[name!]=value;
     }
   });
-  const request=(path:string,method='GET',body?:ReadableStream<Uint8Array>|string)=>{
+  const request=(path:string,method='GET',body?:ReadableStream<Uint8Array>|string,cookie='session_token=synthetic-owner')=>{
     const controller=new AbortController();controllers.push(controller);
     const value=new Request('https://milo.example.test/api/'+path,{method,body,signal:controller.signal,
-      headers:{Origin:'https://milo.example.test'},...(body instanceof ReadableStream?{duplex:'half'}:{})} as RequestInit);
+      headers:{Origin:'https://milo.example.test',...(cookie?{Cookie:cookie}:{})},...(body instanceof ReadableStream?{duplex:'half'}:{})} as RequestInit);
     Object.defineProperty(value,'nextUrl',{value:new URL(value.url)});
     return {value:value as NextRequest,controller};
   };
@@ -100,9 +100,42 @@ test('response consumption, cancellation and deadline release stream leases with
   }
 });
 
+test('six stalled public logins cannot borrow session capacity, and full session capacity cannot block login',async t=>{
+  const request=setup(t);let fetched=0;globalThis.fetch=async()=>{fetched++;return new Response('{}');};
+  const stalled=Array.from({length:6},()=>request('auth/google','POST',new ReadableStream<Uint8Array>({pull(){}},{highWaterMark:0}),''));
+  const pending=stalled.map(entry=>POST(entry.value,context('auth/google')));
+  await tick();
+  let reads=0;const input=new ReadableStream<Uint8Array>({pull(){reads++;}},{highWaterMark:0});
+  const busy=await POST(request('auth/google','POST',input,'').value,context('auth/google'));
+  assert.equal(busy.status,503);assert.equal((await busy.json()).reason_code,'PROXY_BUSY');assert.equal(reads,0);
+  assert.equal((await GET(request('auth/nonce','GET',undefined,'').value,context('auth/nonce'))).status,503);
+  const owner=await GET(request('me').value,context('me'));assert.equal(owner.status,200);await owner.text();
+  const control=await POST(request('pause-all','POST','{}').value,context('pause-all'));assert.equal(control.status,200);await control.text();
+  stalled.forEach(entry=>entry.controller.abort());
+  assert.deepEqual((await Promise.all(pending)).map(response=>response.status),[400,400,400,400,400,400]);
+  const held=[...Array.from({length:28},()=>acquireProxyLease(false,false)!),...Array.from({length:4},()=>acquireProxyLease(true,false)!)];
+  t.after(()=>held.forEach(lease=>lease.release()));
+  assert.equal((await GET(request('me').value,context('me'))).status,503);
+  const login=await GET(request('auth/nonce','GET',undefined,'').value,context('auth/nonce'));assert.equal(login.status,200);await login.text();
+  assert.equal(fetched,3);
+});
+
 test('an upstream transport failure releases a request lease and yields an honest unconfirmed response',async t=>{
   const request=setup(t);globalThis.fetch=async()=>{throw new Error('socket failed');};
   for(let attempt=0;attempt<40;attempt++)assert.equal((await GET(request('me').value,context('me'))).status,504);
   globalThis.fetch=async()=>new Response('{}');const recovered=await GET(request('me').value,context('me'));
   assert.equal(recovered.status,200);await recovered.text();
+});
+
+test('one verified client address is capped across pools while other clients still get slots',()=>{
+  const held=[];
+  for(let index=0;index<10;index++){const lease=acquireProxyLease(false,false,index%2===0,'203.0.113.50');assert.ok(lease);held.push(lease);}
+  assert.equal(acquireProxyLease(false,false,false,'203.0.113.50'),null);
+  assert.equal(acquireProxyLease(true,false,false,'203.0.113.50'),null);
+  const other=acquireProxyLease(false,false,false,'198.51.100.7');assert.ok(other);other.release();
+  held.pop()!.release();
+  const again=acquireProxyLease(false,false,false,'203.0.113.50');assert.ok(again);again.release();
+  held.forEach(lease=>lease.release());
+  const unsourced=Array.from({length:12},()=>acquireProxyLease(false,false));assert.ok(unsourced.every(Boolean));
+  unsourced.forEach(lease=>lease!.release());
 });

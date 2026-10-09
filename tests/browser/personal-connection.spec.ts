@@ -9,7 +9,7 @@ function snapshot(owner = 'owner-a', workspace = 'workspace-a', version = 'v1') 
     styles: [], grants: [], routes: [], activity: [], contacts: [], budget: null, retention: null, simulation: false,
     generated_at: '2026-10-07T12:00:00Z', snapshot_version: version };
 }
-async function fixture(page: Page, options: { enabled?: boolean; connected?: boolean; expiresAfter?: number; savedChat?: boolean; automaticExpiresAfter?: number } = {}) {
+async function fixture(page: Page, options: { enabled?: boolean; connected?: boolean; expiresAfter?: number; savedChat?: boolean; automaticExpiresAfter?: number; linkCode?: boolean } = {}) {
   let currentSnapshot: Record<string, unknown> = snapshot(); let enabled = options.enabled ?? true;
   let connected = options.connected ?? false; let started = connected; let hold: Promise<void> | null = null;
   const expiresAt = new Date(Date.now() + (options.expiresAfter ?? 45_000)).toISOString();
@@ -31,7 +31,7 @@ async function fixture(page: Page, options: { enabled?: boolean; connected?: boo
     if (path.endsWith('/personal/config')) return route.fulfill({ json: { enabled, configured: enabled, status: enabled ? 'configured' : 'disabled', simulation: false, google_verified_required: true, capabilities: {}, live_verified: false } });
     if (path.endsWith('/personal/status')) return route.fulfill(statusUnavailable ? { status: 503, json: { detail: 'Synthetic status outage' } } : { json: status() });
     if (path.endsWith('/personal/pairing')) {
-      pairingCount++; const held = hold; const body = { connector_id: 'personal-fixture', state: 'pairing', qr: { value: syntheticQR, expires_at: expiresAt }, poll_after_seconds: 3 };
+      pairingCount++; const held = hold; const body = { connector_id: 'personal-fixture', state: 'pairing', qr: { value: syntheticQR, expires_at: expiresAt }, poll_after_seconds: 3, pairing_code: options.linkCode ? { code: 'ABCD2345', expires_at: new Date(Date.now() + 120_000).toISOString() } : null };
       if (held) await held; return route.fulfill({ json: body });
     }
     if (path.endsWith('/personal/chats')) return route.fulfill({ json: { connector_id: 'personal-fixture', chats: [{ provider_chat_id: 'synthetic-peer', title: 'Synthetic person', kind: 'contact', conversation_id: options.savedChat ? 'saved-personal-chat' : null, permissions: options.savedChat ? { read: true, retain: true, draft: true } : {} }, { provider_chat_id: 'unsupported-group', title: 'Unsupported group', kind: 'group', conversation_id: null }], limit: 50, has_more: false } });
@@ -56,11 +56,15 @@ async function fixture(page: Page, options: { enabled?: boolean; connected?: boo
     switchOwner: () => { enabled = false; currentSnapshot = snapshot('owner-b', 'workspace-b', 'changed-owner'); } };
 }
 const panel = (page: Page) => page.getByRole('region', { name: 'WhatsApp phone connection', exact: true });
+async function startLinking(page: Page, number = '+1 555 000 0000') {
+  await panel(page).getByRole('textbox', { name: 'Your WhatsApp number, with country code', exact: true }).fill(number);
+  await panel(page).getByRole('button', { name: 'Get my link code', exact: true }).click();
+}
 
 test('an unavailable pilot cannot show a pairing code or start a connection', async ({ page }) => {
   const data = await fixture(page, { enabled: false }); await page.goto('/connections');
   await expect(panel(page)).toContainText('Phone linking is not available in this deployment yet.');
-  await expect(panel(page).getByRole('button', { name: 'Start phone linking', exact: true })).toHaveCount(0);
+  await expect(panel(page).getByRole('button', { name: 'Get my link code', exact: true })).toHaveCount(0);
   await expect(panel(page).getByRole('img')).toHaveCount(0); expect(data.changes).toEqual([]);
 });
 
@@ -79,24 +83,36 @@ test('a failed status refresh cannot keep claiming a currently linked phone or s
 test('linking draws the real supplied code locally and never exposes its text or image URL', async ({ page }) => {
   const data = await fixture(page); const external: string[] = [];
   page.on('request', request => { if (!request.url().startsWith('http://127.0.0.1') && !request.url().startsWith('http://localhost')) external.push(request.url()); });
-  await page.goto('/connections'); await panel(page).getByRole('button', { name: 'Start phone linking', exact: true }).click();
+  await page.goto('/connections'); await startLinking(page);
   await expect(panel(page).getByRole('img', { name: 'Temporary WhatsApp linking QR code', exact: true })).toBeVisible();
   expect(await panel(page).innerHTML()).not.toContain(syntheticQR);
   expect(await page.evaluate(() => JSON.stringify({ local: { ...localStorage }, session: { ...sessionStorage } }))).not.toContain(syntheticQR);
-  expect(external).toEqual([]); expect(data.changes).toEqual([{ path: '/api/integrations/whatsapp/personal/start', body: { workspace_id: 'workspace-a' } }]);
+  expect(external).toEqual([]); expect(data.changes).toEqual([{ path: '/api/integrations/whatsapp/personal/start', body: { workspace_id: 'workspace-a', phone_number: '+15550000000' } }]);
   await page.goto('/'); await expect(page.getByRole('img', { name: 'Temporary WhatsApp linking QR code', exact: true })).toHaveCount(0);
+});
+
+test('a number-bound link code is shown with phone steps and the QR stays a secondary option', async ({ page }) => {
+  const data = await fixture(page, { linkCode: true }); await page.goto('/connections');
+  await expect(panel(page).getByRole('button', { name: 'Get my link code', exact: true })).toBeDisabled();
+  await panel(page).getByRole('textbox', { name: 'Your WhatsApp number, with country code', exact: true }).fill('7697874277');
+  await expect(panel(page).getByRole('button', { name: 'Get my link code', exact: true })).toBeDisabled();
+  await startLinking(page, '+91 76978 74277');
+  await expect(panel(page).getByText('ABCD-2345', { exact: true })).toBeVisible();
+  await expect(panel(page)).toContainText('Link with phone number instead');
+  await expect(panel(page).getByRole('img')).toBeHidden();
+  expect(data.changes).toEqual([{ path: '/api/integrations/whatsapp/personal/start', body: { workspace_id: 'workspace-a', phone_number: '+917697874277' } }]);
 });
 
 test('an expired pairing code is removed without being kept ready to scan', async ({ page }) => {
   await page.clock.install(); await fixture(page, { expiresAfter: 2_500 }); await page.goto('/connections');
-  await panel(page).getByRole('button', { name: 'Start phone linking', exact: true }).click();
+  await startLinking(page);
   await expect(panel(page).getByRole('img')).toBeVisible(); await page.clock.fastForward(2_600);
   await expect(panel(page).getByRole('img')).toHaveCount(0); await expect(panel(page)).toContainText('Expired codes are removed automatically.');
 });
 
 test('a backgrounded browser clears pairing material and requests a current code on return', async ({ page }) => {
   const data = await fixture(page); await page.goto('/connections');
-  await panel(page).getByRole('button', { name: 'Start phone linking', exact: true }).click();
+  await startLinking(page);
   await expect(panel(page).getByRole('img')).toBeVisible(); const count = data.pairingCount();
   await page.evaluate(() => { Object.defineProperty(document, 'visibilityState', { configurable: true, value: 'hidden' }); document.dispatchEvent(new Event('visibilitychange')); });
   await expect(panel(page).getByRole('img')).toHaveCount(0);
@@ -106,7 +122,7 @@ test('a backgrounded browser clears pairing material and requests a current code
 
 test('an owner switch drops an older pairing response and its private material', async ({ page }) => {
   const data = await fixture(page); let release!: () => void; const held = new Promise<void>(resolve => { release = resolve; }); data.hold(held);
-  await page.goto('/connections'); await panel(page).getByRole('button', { name: 'Start phone linking', exact: true }).click();
+  await page.goto('/connections'); await startLinking(page);
   await expect.poll(() => data.pairingCount()).toBeGreaterThan(0); data.switchOwner(); data.hold(null);
   const updated = page.waitForResponse(response => response.url().includes('/api/ui/bootstrap'));
   await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange'))); await updated;

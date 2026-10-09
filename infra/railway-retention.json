@@ -8,7 +8,6 @@
   "deploy": {
     "numReplicas": 1,
     "startCommand": "/bin/sh -c '/app/.venv/bin/python -m assistant.render_entrypoint wait-schema --timeout 300 && exec /app/.venv/bin/python -m assistant.lifecycle'",
-    "restartPolicyType": "ON_FAILURE",
-    "restartPolicyMaxRetries": 3
+    "restartPolicyType": "ALWAYS"
   }
 }

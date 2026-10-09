@@ -39,8 +39,9 @@ export function createDemoSnapshot(): MiloSnapshot {
   ];
   return {user: {id: 'owner_hemant', display_name: 'Hemant', email: 'demo@example.test'}, workspaces: [workspace], workspace,
     connections: [connection], conversations, messages, actions, drafts: [{id: 'demo-draft-mom', conversation_id: 'chat_mom',
-      text: 'I’ll call you this evening.', status: 'needs_approval', content_hash: 'synthetic-exact-hash', missing_facts: ['Exact time'],
-      evidence_message_ids: ['demo-message-6']}],
+      text: 'I’ll call you this evening. The grocery list is at example.com/list, and I’ll pay the ₹500 tomorrow.', status: 'needs_approval',
+      content_hash: 'synthetic-exact-hash', missing_facts: ['Exact time'], evidence_message_ids: ['demo-message-6'],
+      risk_flags: ['link', 'payment', 'commitment']}],
     tasks: [{id: 'demo-task-neha', workspace_id: workspace.id, conversation_id: 'chat_neha', title: 'Call Neha about the weekend',
       due_at: '2026-10-06T13:00:00Z', timezone: 'Asia/Kolkata', status: 'pending', version: 1}], jobs: [{id: 'demo-job-reminder', workspace_id: workspace.id, conversation_id: null, action_kind: 'REMINDER', purpose: 'An owner reminder', content: 'Review the weekend plan.', due_at: '2026-10-07T03:30:00Z', expires_at: '2026-10-08T03:30:00Z', timezone: 'Asia/Kolkata', recurrence: 'none', max_runs: 1, version: 1, status: 'scheduled', simulation: true}],
     memories: [{id: 'demo-memory-maya', conversation_id: 'chat_maya', text: 'Maya prefers brief, friendly replies.',
@@ -212,7 +213,7 @@ export function createDemoClient(seed = createDemoSnapshot()): ApiClient & {snap
       else if (segments[2] === 'dispatch') {
         const existing = data.actions.find(row => row.draft_id === draft.id); if (existing) result = existing;
         else { if (draft.status !== 'approved' || data.workspace.paused || chat.control_state === 'HUMAN_TAKEOVER') failed(409, 'CONTEXT_STALE', 'Current permission and exact draft approval are required.'); const action: RecordEntity = {id: id('action'), draft_id: draft.id, conversation_id: chat.id, destination_conversation_id: chat.id, recipient_id: chat.provider_chat_id, kind: 'SEND_TEXT', intent: 'owner_authored', payload: {text: draft.text}, status: 'accepted', transport: 'simulation_only', created_at: stamp(), simulation: true}; data.actions.unshift(action); draft.status = 'accepted'; data.messages.push({id: id('message'), conversation_id: chat.id, text: String(draft.text), direction: 'outbound', author_kind: 'assistant', provider_timestamp: stamp(), revision: 1, origin: 'live'}); audit('action.accepted.synthetic', action); result = action; }
-      } else if (method === 'PATCH') { draft.text = String(body.text || ''); draft.content_hash = id('hash'); draft.status = 'needs_approval'; result = draft; }
+      } else if (method === 'PATCH') { draft.text = String(body.text || ''); draft.content_hash = id('hash'); draft.status = 'needs_approval'; delete draft.risk_flags; result = draft; } // Only the server screens edited text.
       else failed(409, 'CAPABILITY_UNAVAILABLE', 'This draft operation is unavailable.');
     } else if (path === '/memories' && method === 'GET') result = data.memories;
     else if (segments[0] === 'memories') {

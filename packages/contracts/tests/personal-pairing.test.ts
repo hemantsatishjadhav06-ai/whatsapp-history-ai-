@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { emptyPersonalConsent, personalConsentFor, personalQRDrawing, personalWritingExamples, usablePersonalQR, validPersonalConsent, type PersonalPairing } from '../personal-pairing';
+import { emptyPersonalConsent, internationalPhoneNumber, personalConsentFor, personalQRDrawing, personalWritingExamples, usablePersonalPairingCode, usablePersonalQR, validPersonalConsent, type PersonalPairing } from '../personal-pairing';
 
 const now = Date.parse('2026-10-07T12:00:00Z');
 const pairing: PersonalPairing = { connector_id: 'owner-connector', state: 'pairing', poll_after_seconds: 3,
@@ -50,4 +50,21 @@ test('phone writing review excludes assistant, peer and other-chat text and neve
   assert.equal(personalWritingExamples(Array.from({ length: 31 }, (_, index) => ({ ...row, id: String(index) })), 'selected-chat').length, 30);
   assert.deepEqual(personalWritingExamples([{ ...row, text: 'x'.repeat(20001) }, { ...row, text: '' }], 'selected-chat'), []);
   assert.throws(() => personalWritingExamples({ messages: [row] }, 'selected-chat'));
+});
+
+test('a link code is shown only for the exact connector while pairing and briefly valid', () => {
+  const coded: PersonalPairing = { ...pairing, pairing_code: { code: 'ABCD2345', expires_at: new Date(now + 120_000).toISOString() } };
+  assert.deepEqual(usablePersonalPairingCode(coded, 'owner-connector', now), { code: 'ABCD-2345', expiresAt: now + 120_000 });
+  assert.equal(usablePersonalPairingCode(coded, 'other-connector', now), null);
+  assert.equal(usablePersonalPairingCode({ ...coded, state: 'connected' }, 'owner-connector', now), null);
+  assert.equal(usablePersonalPairingCode(coded, 'owner-connector', now + 120_000), null);
+  assert.equal(usablePersonalPairingCode({ ...coded, pairing_code: { code: 'abcd<23>', expires_at: coded.pairing_code!.expires_at } }, 'owner-connector', now), null);
+  assert.equal(usablePersonalPairingCode({ ...coded, pairing_code: { code: 'ABCD2345', expires_at: new Date(now + 600_000).toISOString() } }, 'owner-connector', now), null);
+  assert.equal(usablePersonalPairingCode(pairing, 'owner-connector', now), null);
+});
+
+test('pairing numbers must be international with a country code', () => {
+  assert.equal(internationalPhoneNumber(' +91 76978 74277 '), '+917697874277');
+  assert.equal(internationalPhoneNumber('+1 (555) 000-0000'), '+15550000000');
+  for (const value of ['7697874277', '+0 1234 5678', '+12', '+91 7697 x', '+1555000000012345']) assert.equal(internationalPhoneNumber(value), null);
 });

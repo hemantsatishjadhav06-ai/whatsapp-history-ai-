@@ -40,6 +40,7 @@ def auth_config(settings):
     from .native_oauth import broker_configured
     native_broker_ready = broker_configured(settings)
     return {"backend_configured": True, "google_configured": bool(settings.google_client_id),
+            "access_code_enabled": bool(settings.owner_access_code),
             "client_id": settings.google_client_id or None,
             "google": {"client_id": settings.google_client_id or None,
                        "android_client_id": settings.google_android_client_id or None,

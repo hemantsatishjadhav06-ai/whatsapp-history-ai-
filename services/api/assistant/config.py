@@ -4,6 +4,13 @@ from cryptography.fernet import Fernet
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
+OPENAI_API_URL = "https://api.openai.com/v1"
+OPENROUTER_API_URL = "https://openrouter.ai/api/v1"
+# Platform variables that identify a hosted runtime, where ENVIRONMENT must be explicit.
+HOSTING_MARKERS = ("RAILWAY_ENVIRONMENT_NAME", "RAILWAY_PROJECT_ID", "RENDER_SERVICE_ID", "FLY_APP_NAME",
+                   "K_SERVICE", "DYNO")
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
     environment: str = "development"
@@ -22,10 +29,15 @@ class Settings(BaseSettings):
     native_refresh_ttl_seconds: int = 2592000
     allowed_origins: str = "http://localhost:3000"
     internal_service_token: str = ""
+    # Dedicated token for the private WhatsApp session service's two authority
+    # routes. It never authorizes other /internal routes (connector events, jobs).
+    whatsapp_personal_authority_token: str = ""
+    # Optional pilot owner sign-in: one high-entropy operator secret (>= 32 chars).
+    owner_access_code: str = ""
     model_provider: str = "disabled"
     model_api_key: str = ""
     model_name: str = ""
-    model_api_url: str = "https://api.openai.com/v1"
+    model_api_url: str = OPENAI_API_URL
     model_timeout_seconds: int = 30
     model_max_input_chars: int = 24000
     model_processing_region: str = "unconfigured"
@@ -34,6 +46,16 @@ class Settings(BaseSettings):
     model_pricing_model_name: str = ""
     model_input_cost_microusd_per_million: int | None = None
     model_output_cost_microusd_per_million: int | None = None
+    # Applies to each owner when no explicit workspace token budget exists, so a
+    # newly signed-in account cannot spend the operator's model key without limit.
+    # 0 disables the default ceiling.
+    model_default_daily_tokens: int = 1_000_000
+    # Process-local provider concurrency, separate from ordinary request admission.
+    model_max_concurrency: int = 4
+    model_max_concurrency_per_owner: int = 1
+    # Optional OpenRouter attribution headers; the referer defaults to the first allowed origin.
+    model_app_url: str = ""
+    model_app_title: str = "Milo"
     whatsapp_app_secret: str = ""
     whatsapp_verify_token: str = ""
     whatsapp_access_token: str = ""
@@ -102,6 +124,11 @@ class Settings(BaseSettings):
                 raise ValueError("Native Google callback must use an exact HTTPS application callback URL")
         if self.environment not in {"development", "test", "production"}:
             raise ValueError("Unknown environment")
+        import os
+        hosted = any(os.environ.get(name) for name in HOSTING_MARKERS)
+        if hosted and "environment" not in self.model_fields_set:
+            # The development default would silently skip every production guard.
+            raise ValueError("Set ENVIRONMENT explicitly on hosted deployments")
         if self.whatsapp_authorized_owner_subject:
             subject = self.whatsapp_authorized_owner_subject
             if (len(subject) > 248 or subject.startswith("google:")
@@ -121,6 +148,8 @@ class Settings(BaseSettings):
             "request_rate_memory_keys": (10, 100000), "db_pool_size": (1, 100),
             "db_max_overflow": (0, 100), "db_pool_timeout_seconds": (0.01, 30),
             "db_pool_recycle_seconds": (30, 86400), "db_statement_timeout_ms": (100, 120000),
+            "model_default_daily_tokens": (0, 2_000_000_000), "model_max_concurrency": (1, 256),
+            "model_max_concurrency_per_owner": (1, 64),
         }
         for field, (minimum, maximum) in bounds.items():
             value = getattr(self, field)
@@ -154,8 +183,16 @@ class Settings(BaseSettings):
             raise ValueError("Personal WhatsApp timeout must be between 1 and 30 seconds")
         if self.whatsapp_personal_enabled and (
                 not self.whatsapp_personal_session_url or len(self.whatsapp_personal_session_token.encode()) < 32
-                or not self.internal_service_token):
+                or not (self.whatsapp_personal_authority_token or self.internal_service_token)):
             raise ValueError("Personal WhatsApp requires a private session service and strong service token")
+        secrets = [value for value in (self.internal_service_token, self.whatsapp_personal_authority_token,
+                                       self.whatsapp_personal_session_token, self.owner_access_code) if value]
+        if len(secrets) != len(set(secrets)):
+            raise ValueError("Service tokens and the owner access code must all be different secrets")
+        for name in ("whatsapp_personal_authority_token", "owner_access_code"):
+            value = getattr(self, name)
+            if value and (len(value.encode()) < 32 or any(character.isspace() for character in value)):
+                raise ValueError(f"{name} must contain at least 32 non-whitespace bytes")
         if self.connector_gateway_url:
             from urllib.parse import urlsplit
             endpoint = urlsplit(self.connector_gateway_url)
@@ -167,6 +204,10 @@ class Settings(BaseSettings):
                 raise ValueError("Connector gateway requires its service token")
         if not 1 <= self.connector_gateway_timeout_seconds <= 60:
             raise ValueError("Connector gateway timeout must be between 1 and 60 seconds")
+        if self.model_provider == "openrouter" and self.model_api_url == OPENAI_API_URL:
+            self.model_api_url = OPENROUTER_API_URL
+        if self.model_max_concurrency_per_owner > self.model_max_concurrency:
+            raise ValueError("Per-owner model concurrency cannot exceed total model concurrency")
         for rate in (self.model_input_cost_microusd_per_million, self.model_output_cost_microusd_per_million):
             if rate is not None and not 0 <= rate <= 2_000_000_000:
                 raise ValueError("Model pricing must be a bounded nonnegative micro-USD rate")
@@ -179,6 +220,10 @@ class Settings(BaseSettings):
                 raise ValueError("Mock model is unavailable in production")
             if self.request_limits_mode != "redis":
                 raise ValueError("Production requires shared Redis request limits")
+            if self.internal_service_token and len(self.internal_service_token.encode()) < 32:
+                raise ValueError("Production internal service token must contain at least 32 bytes")
+            if self.whatsapp_personal_enabled and not self.whatsapp_personal_authority_token:
+                raise ValueError("Production personal WhatsApp requires a dedicated session authority token")
             from urllib.parse import urlsplit
             origins = [value.strip() for value in self.allowed_origins.split(",") if value.strip()]
             if not origins:

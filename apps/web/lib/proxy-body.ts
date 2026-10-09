@@ -1,7 +1,10 @@
 /** Bound bytes and time before the browser proxy opens an upstream request. */
 export class UploadTimeoutError extends Error {}
+// Small JSON bodies must arrive promptly; only authenticated history imports get longer.
+export const JSON_UPLOAD_DEADLINE_MS = 5_000;
+export const IMPORT_UPLOAD_DEADLINE_MS = 10_000;
 
-export async function boundedProxyBody(request: Request, maxBytes: number, timeoutMs = 10_000): Promise<ArrayBuffer | undefined> {
+export async function boundedProxyBody(request: Request, maxBytes: number, timeoutMs = JSON_UPLOAD_DEADLINE_MS): Promise<ArrayBuffer | undefined> {
   const declared = request.headers.get('content-length');
   if (declared && (!/^\d+$/.test(declared) || Number(declared) > maxBytes)) throw new RangeError('Upload is too large');
   if (!request.body) return undefined;

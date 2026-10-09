@@ -125,7 +125,7 @@ Configure API, Jobs and Retention using Railway's protected runtime variables. A
 | `GOOGLE_CLIENT_SECRET` | Server-held secret for the registered Web OAuth client; required by the native HTTPS broker |
 | `GOOGLE_NATIVE_REDIRECT_URI` | `https://web-production-bde60.up.railway.app/api/auth/native/google/callback`, registered exactly with Google |
 | `GOOGLE_NATIVE_APP_REDIRECT_URI` | `milo://oauth`; only an opaque single-use handoff is returned here |
-| `MODEL_PROVIDER` | `disabled` until a verified model configuration is supplied |
+| `MODEL_PROVIDER` | `disabled` until a verified model configuration is supplied; `openrouter` with `MODEL_API_KEY` and a structured-output `MODEL_NAME` (for example `openai/gpt-4o-mini`) on both API and Jobs |
 | `ENABLE_EXTERNAL_SENDS` | `false` until the provider account and send capability are verified |
 
 Keep secrets outside Git, image layers, build arguments and command output. API and all database workers must use the same encryption key; changing it without a migration makes existing encrypted data unreadable. Add the web HTTPS origin to Google OAuth's authorized origins. Publishing the frontend does not verify Google authentication, WhatsApp pairing, history sync or provider delivery.
@@ -140,9 +140,35 @@ do not configure the broker. The signed Meta callback is also on public Web at
 [connectivity setup](connectivity-setup.md). Real Google/Meta and installed-device
 acceptance must pass before enabling their public operations.
 
-For separate browser source buckets, configure the same dedicated secret as Web `BACKEND_PROXY_KEY` and API `TRUSTED_PROXY_KEY`. Keep Web `TRUST_PROXY_HOPS=0` until Railway ingress behavior has been verified; this ignores requester forwarding headers. An enabled hop count must select a provider-verified forwarding suffix, never a client-supplied prefix. Until trusted source forwarding is configured, browser requests share the private Web peer's source bucket, which is conservative but restricts large cohorts. Use private database/Redis routing and remove unneeded public TCP proxies from newly provisioned data services.
+For separate browser source buckets, configure the same dedicated secret as Web `BACKEND_PROXY_KEY` and API `TRUSTED_PROXY_KEY`, and set Web `TRUST_PROXY_HEADER=x-real-ip`: Railway's edge documents `X-Real-IP` as the connecting client's address. Otherwise keep Web `TRUST_PROXY_HOPS=0` until Railway forwarding behavior has been verified; this ignores requester forwarding headers. An enabled hop count must select a provider-verified forwarding suffix, never a client-supplied prefix. Until trusted source forwarding is configured, browser requests share the private Web peer's source bucket, which is conservative but restricts large cohorts. Use private database/Redis routing and remove unneeded public TCP proxies from newly provisioned data services.
 
 The API pre-deploy step applies the repository's Alembic migrations before traffic. Its startup override binds both IPv4 and IPv6, which supports Railway ingress and private service DNS; the installed Uvicorn version was verified with HTTP on both local address families. Deploy Jobs and Retention after API migrations succeed, using the same database and production settings. Neither worker needs a public domain or an HTTP health route. Retention visits workspaces in pages of 100 and sleeps 30 seconds between completed cycles; query batches are bounded, while full-cycle duration depends on the tenant count and retention backlog. A stopped Retention service allows expired authentication metadata to accumulate, so monitor its process, restart history, cycle age and cleanup output. Jobs' SQL timers work without Temporal. The Actions manifest is preparation for a later verified adapter/planner release and is not part of the enabled pilot topology. The existing Temporal worker, registrar and Kafka relay are optional independent processes; their development plaintext clients require supported production TLS/authentication configuration before connecting to external infrastructure.
+
+## Personal WhatsApp session service
+
+The optional linked-device pilot runs as a sixth private service built from
+`services/whatsapp-session/Dockerfile` (`infra/railway-whatsapp-session.json`) with no
+public domain and private endpoint `whatsapp-session`. Configure:
+
+| Service | Variable | Value |
+| --- | --- | --- |
+| WhatsApp Session | `ENABLE_PERSONAL_WHATSAPP` | `true` |
+| WhatsApp Session | `PORT` | `8091` |
+| WhatsApp Session | `DATABASE_URL` | `${{Postgres.DATABASE_URL}}` (private network) |
+| WhatsApp Session | `SESSION_ENCRYPTION_KEY` | base64 of 32 random bytes; losing it unlinks every session |
+| WhatsApp Session | `SESSION_GATEWAY_TOKEN` | random, at least 32 bytes |
+| WhatsApp Session | `PYTHON_AUTHORITY_URL` | `http://api.railway.internal:8000` |
+| WhatsApp Session | `PYTHON_INTERNAL_TOKEN` | the API's `WHATSAPP_PERSONAL_AUTHORITY_TOKEN` |
+| API and Jobs | `WHATSAPP_PERSONAL_ENABLED` | `true` |
+| API and Jobs | `WHATSAPP_PERSONAL_SESSION_URL` | `http://whatsapp-session.railway.internal:8091` |
+| API and Jobs | `WHATSAPP_PERSONAL_SESSION_TOKEN` | the session service's `SESSION_GATEWAY_TOKEN` |
+| API and Jobs | `WHATSAPP_PERSONAL_AUTHORITY_TOKEN` | random, at least 32 bytes, distinct from every other secret |
+
+Owners enter their own number with the country code; the service requests a WhatsApp
+link code for it and the API refuses a link completed by any other account. WhatsApp
+does not officially support third-party linked-device clients, so test with a number
+you are prepared to have restricted. `OWNER_ACCESS_CODE` (API) enables a single
+operator sign-in for pilots without Google; Google sign-in remains the customer path.
 
 ## Authentication and release
 

@@ -72,6 +72,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/auth/access-code": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Access Code Login
+         * @description Pilot operator sign-in with one high-entropy server secret, rate limited as an exchange.
+         */
+        post: operations["access_code_login_auth_access_code_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/auth/dev": {
         parameters: {
             query?: never;
@@ -151,6 +171,26 @@ export interface paths {
         put?: never;
         /** Google Login */
         post: operations["google_login_v1_auth_google_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/auth/access-code": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Access Code Login
+         * @description Pilot operator sign-in with one high-entropy server secret, rate limited as an exchange.
+         */
+        post: operations["access_code_login_v1_auth_access_code_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2877,7 +2917,7 @@ export interface paths {
         put?: never;
         /**
          * Native Revoke
-         * @description Possession of the refresh secret can revoke a device after access expiry.
+         * @description Possession of the current or just-rotated refresh secret revokes a device.
          */
         post: operations["native_revoke_auth_native_revoke_post"];
         delete?: never;
@@ -3050,7 +3090,7 @@ export interface paths {
         put?: never;
         /**
          * Native Revoke
-         * @description Possession of the refresh secret can revoke a device after access expiry.
+         * @description Possession of the current or just-rotated refresh secret revokes a device.
          */
         post: operations["native_revoke_v1_auth_native_revoke_post"];
         delete?: never;
@@ -3954,6 +3994,11 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** AccessCodeLogin */
+        AccessCodeLogin: {
+            /** Code */
+            code: string;
+        };
         /** ActionInput */
         ActionInput: {
             /**
@@ -4803,6 +4848,8 @@ export interface components {
         StartInput: {
             /** Workspace Id */
             workspace_id: string;
+            /** Phone Number */
+            phone_number?: string | null;
         };
         /** StyleEdit */
         StyleEdit: {
@@ -5225,6 +5272,41 @@ export interface operations {
             };
         };
     };
+    access_code_login_auth_access_code_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AccessCodeLogin"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     development_login_auth_dev_post: {
         parameters: {
             query?: never;
@@ -5332,6 +5414,41 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["GoogleLogin"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    access_code_login_v1_auth_access_code_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AccessCodeLogin"];
             };
         };
         responses: {

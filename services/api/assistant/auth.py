@@ -230,6 +230,28 @@ def google_login(body: GoogleLogin, request: Request, response: Response,
     return create_session(request, response, db, user)
 
 
+class AccessCodeLogin(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    code: str = Field(min_length=1, max_length=256)
+
+
+OPERATOR_SUBJECT = "operator:owner"
+
+
+@router.post("/auth/access-code")
+def access_code_login(body: AccessCodeLogin, request: Request, response: Response,
+                      db: Session = Depends(get_db)) -> dict:
+    """Pilot operator sign-in with one high-entropy server secret, rate limited as an exchange."""
+    expected = request.app.state.settings.owner_access_code
+    if not expected:
+        raise HTTPException(404, "Owner access-code sign-in is unavailable")
+    require_origin(request)
+    if not hmac.compare_digest(digest(body.code.strip()), digest(expected)):
+        raise HTTPException(401, "Owner access code is not valid")
+    user = identity_user(db, OPERATOR_SUBJECT, "owner@milo.invalid", "Owner")
+    return create_session(request, response, db, user)
+
+
 @router.post("/auth/dev")
 def development_login(body: DevelopmentLogin, request: Request, response: Response,
                       db: Session = Depends(get_db)) -> dict:

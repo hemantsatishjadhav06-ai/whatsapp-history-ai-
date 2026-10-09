@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import qrcode from 'qrcode-generator';
-import { emptyPersonalConsent, personalConsentFor, personalQRDrawing, usablePersonalQR, validPersonalConsent,
+import { emptyPersonalConsent, internationalPhoneNumber, personalConsentFor, personalQRDrawing, usablePersonalPairingCode, usablePersonalQR, validPersonalConsent,
   type PersonalChats, type PersonalConfig, type PersonalConsent, type PersonalPairing, type PersonalStatus } from '@milo/contracts';
 import type { MiloActions, MiloState } from '../lib/types';
 import { currentToolResult, toolAuthorizationVersion, type PrivateToolResult } from '../lib/tool-privacy';
@@ -40,20 +40,22 @@ export function PersonalConnection({ state, actions }: { state: MiloState; actio
   const [errorEntry, setErrorEntry] = useState<PrivateToolResult<string> | null>(null);
   const [notice, setNotice] = useState(''); const [busy, setBusy] = useState(false); const [loading, setLoading] = useState(true);
   const [selectedId, setSelectedId] = useState(''); const [consent, setConsent] = useState(emptyPersonalConsent);
-  const [now, setNow] = useState(Date.now()); const [attempt, setAttempt] = useState(0);
+  const [now, setNow] = useState(Date.now()); const [attempt, setAttempt] = useState(0); const [phone, setPhone] = useState('');
   const current = currentToolResult(entry, version); const pairing = currentToolResult(pairingEntry, version);
   const chats = currentToolResult(chatsEntry, version); const error = currentToolResult(errorEntry, version);
   const connector = current?.status.connector;
   const qr = !current?.status.connected && visible.current ? usablePersonalQR(pairing, connector?.id, now) : null;
+  const linkCode = !current?.status.connected && visible.current ? usablePersonalPairingCode(pairing, connector?.id, now) : null;
+  const phoneNumber = internationalPhoneNumber(phone);
   const selected = chats?.chats.find(chat => chat.provider_chat_id === selectedId && chat.kind === 'contact');
   const configured = Boolean(current?.config.enabled && current.config.configured && !current.config.simulation && !current.status.simulation);
   const statusRef = useRef(current?.status); statusRef.current = current?.status;
   useEffect(() => { setSelectedId(''); setConsent(emptyPersonalConsent()); setNotice(''); }, [version, connector?.id]);
   useEffect(() => {
-    if (!pairing?.qr) return;
-    const currentCode = usablePersonalQR(pairing, connector?.id);
-    if (!currentCode) { setPairingEntry(null); return; }
-    const timer = window.setTimeout(() => { setPairingEntry(null); setNow(Date.now()); }, currentCode.expiresAt - Date.now());
+    if (!pairing?.qr && !pairing?.pairing_code) return;
+    const expiries = [usablePersonalQR(pairing, connector?.id)?.expiresAt, usablePersonalPairingCode(pairing, connector?.id)?.expiresAt].filter((value): value is number => value !== undefined);
+    if (!expiries.length) { setPairingEntry(null); return; }
+    const timer = window.setTimeout(() => { setPairingEntry(null); setNow(Date.now()); }, Math.max(...expiries) - Date.now());
     return () => window.clearTimeout(timer);
   }, [pairing, connector?.id]);
 
@@ -105,14 +107,15 @@ export function PersonalConnection({ state, actions }: { state: MiloState; actio
   async function change(action: 'start' | 'disconnect' | 'chats/authorize') {
     if (flight.current || !state.online || !configured || (action !== 'disconnect' && (loading || error))) return;
     if (action !== 'start' && !connector) return;
+    if (action === 'start' && !phoneNumber) return;
     if (action === 'chats/authorize' && (!selected || !validPersonalConsent(consent))) return;
     const started = version; flight.current = true; sequence.current++; setBusy(true); setPairingEntry(null); setNotice(''); setErrorEntry(null);
     try {
-      const body = action === 'start' ? { workspace_id: state.workspaceId } : action === 'disconnect' ? { connector_id: connector!.id }
+      const body = action === 'start' ? { workspace_id: state.workspaceId, phone_number: phoneNumber } : action === 'disconnect' ? { connector_id: connector!.id }
         : { connector_id: connector!.id, provider_chat_id: selected!.provider_chat_id, title: selected!.title, ...consent };
       await actions.request('POST', `${route}/${action}`, body);
       if (!active.current || latest.current !== started) return;
-      setNotice(action === 'chats/authorize' ? 'Your conversation choices were acknowledged. Automatic replies need a separate rule.' : action === 'disconnect' ? 'Disconnect was acknowledged. Refresh linking to review its current state.' : 'Linking was requested. The current pairing code will appear when WhatsApp supplies it.');
+      setNotice(action === 'chats/authorize' ? 'Your conversation choices were acknowledged. Automatic replies need a separate rule.' : action === 'disconnect' ? 'Disconnect was acknowledged. Refresh linking to review its current state.' : 'Linking was requested. Your link code appears here in a few seconds and WhatsApp sends a notification to your phone.');
       await actions.refresh();
       if (active.current && latest.current === started) {
         const status = await actions.request<PersonalStatus>('GET', `${route}/status?workspace_id=${encodeURIComponent(state.workspaceId)}`);
@@ -126,15 +129,21 @@ export function PersonalConnection({ state, actions }: { state: MiloState; actio
   if (!state.workspaceId) return null;
   return <section className={styles.panel} aria-label="WhatsApp phone connection">
     <div className={styles.panelHeader}><div><span className={styles.eyebrow}>Linked-device pilot</span><h2>Link your WhatsApp phone</h2></div><button className="button secondary" disabled={busy || loading} onClick={reload}>Refresh phone linking</button></div>
-    <p className={styles.bodyMuted}>Use WhatsApp’s Linked devices from your phone to scan this screen. This pilot supports individual chats. Groups and native forwarding are unavailable.</p>
+    <p className={styles.bodyMuted}>Enter your own WhatsApp number to get a link code, then enter it in WhatsApp’s Linked devices on your phone. This pilot supports individual chats. Groups and native forwarding are unavailable.</p>
     {loading && <p role="status">Checking phone linking…</p>}{error && <p className={styles.warning} role="alert">{error}</p>}{notice && <p className={styles.meta} role="status">{notice}</p>}
     {current && <>
       {!configured ? <p role="status">Phone linking is not available in this deployment yet. You can connect an eligible Business number below or begin with an exported chat.</p>
         : <>
-          <p role="status">{error ? 'Current phone linking is unconfirmed. Refresh linking to review its current state.' : current.status.connected ? 'Your phone is linked. Choose one conversation to begin.' : current.status.status === 'pairing' ? 'Waiting for you to scan the current code.' : current.status.status === 'reconnecting' ? 'Reconnecting to WhatsApp. Replies remain subject to current connection checks.' : 'Your phone has not been confirmed as linked.'}</p>
-          {!current.status.connected && <button className="button" disabled={busy || loading || !!error || !state.online} onClick={() => void change('start')}>{busy ? 'Requesting linking…' : connector ? 'Resume phone linking' : 'Start phone linking'}</button>}
-          {qr && <div className={styles.coverage}><div><PairingQR value={qr.value}/><p>WhatsApp → Settings → Linked devices → Link a device. This code expires shortly; keep this screen open.</p><p className={styles.meta}>Do not share or save this pairing code. On one phone, open Milo on a second screen to scan it.</p></div></div>}
-          {!qr && current.status.status === 'pairing' && <p role="status">Waiting for a current pairing code. Expired codes are removed automatically.</p>}
+          <p role="status">{error ? 'Current phone linking is unconfirmed. Refresh linking to review its current state.' : current.status.connected ? 'Your phone is linked. Choose one conversation to begin.' : current.status.status === 'pairing' ? 'Waiting for you to enter the link code on your phone.' : current.status.status === 'reconnecting' ? 'Reconnecting to WhatsApp. Replies remain subject to current connection checks.' : 'Your phone has not been confirmed as linked.'}</p>
+          {!current.status.connected && <form onSubmit={event => { event.preventDefault(); void change('start'); }} aria-label="Link with your WhatsApp number">
+            <label className={styles.field}><span>Your WhatsApp number, with country code</span><input type="tel" inputMode="tel" autoComplete="tel" placeholder="+91 98765 43210" value={phone} disabled={busy} onChange={event => setPhone(event.target.value)} aria-describedby="personal-phone-help"/></label>
+            <p id="personal-phone-help" className={styles.meta}>Only this number can complete the link. A code or QR scanned by any other WhatsApp account is refused.</p>
+            <button className="button" disabled={busy || loading || !!error || !state.online || !phoneNumber}>{busy ? 'Requesting linking…' : connector ? 'Get a new link code' : 'Get my link code'}</button>
+          </form>}
+          {linkCode && <div className={styles.coverage}><div><p className={styles.eyebrow}>Your link code</p><p aria-label={`Link code ${linkCode.code.split('').join(' ')}`} style={{ font: '700 34px/1.1 var(--font-heading)', letterSpacing: '.18em', margin: '6px 0 10px' }}>{linkCode.code}</p><p>On your phone: tap the WhatsApp notification, or open WhatsApp → Settings → Linked devices → Link a device → <strong>Link with phone number instead</strong>, then enter this code.</p><p className={styles.meta}>Never share this code. It expires in about two minutes; request a new one if it does.</p></div></div>}
+          {qr && (linkCode ? <details className={styles.coverage}><summary>Or scan a QR code from another screen</summary><PairingQR value={qr.value}/><p>WhatsApp → Settings → Linked devices → Link a device. This code expires shortly; keep this screen open.</p></details>
+            : <div className={styles.coverage}><div><PairingQR value={qr.value}/><p>WhatsApp → Settings → Linked devices → Link a device. This code expires shortly; keep this screen open.</p><p className={styles.meta}>Do not share or save this pairing code. On one phone, open Milo on a second screen to scan it.</p></div></div>)}
+          {!qr && !linkCode && current.status.status === 'pairing' && <p role="status">Waiting for a current link code. Expired codes are removed automatically.</p>}
           {connector && <button className="button secondary" disabled={busy || !state.online} onClick={() => void change('disconnect')}>Disconnect this linked device</button>}
           {current.status.connected && chats && <form onSubmit={event => { event.preventDefault(); void change('chats/authorize'); }} aria-label="Choose one linked WhatsApp conversation">
             <h3>Choose one conversation</h3><p className={styles.meta}>New chats start with every choice off. Existing choices are shown for the selected chat. Linking never grants every conversation or enables Auto.</p>

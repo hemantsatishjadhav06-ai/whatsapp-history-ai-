@@ -20,7 +20,7 @@ from assistant.models import LoginNonce, Workspace
 
 
 @pytest.fixture
-def hardened_app(tmp_path):
+def hardened_app(tmp_path, frozen_rate_window):
     applications = []
 
     def make(**overrides):
