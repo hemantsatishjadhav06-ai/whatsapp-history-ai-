@@ -155,7 +155,7 @@ def test_openai_requests_keep_the_plain_payload(app, owner_client, chat, monkeyp
 
 @pytest.mark.parametrize("path", ["/pause-all", "/resume-all", "/auth/logout", "/v1/pause-all",
                                   "/conversations/synthetic/takeover"])
-def test_credential_free_control_requests_cannot_spend_shared_control_capacity(app, path):
+def test_credential_free_control_requests_cannot_spend_shared_control_capacity(app, path, frozen_rate_window):
     app.state.settings.request_limits_mode = "memory"
     app.state.settings.request_rate_control = 1
     app.state.settings.request_rate_source_control = 1
