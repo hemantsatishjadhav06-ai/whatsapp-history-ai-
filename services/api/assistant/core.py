@@ -181,7 +181,7 @@ def capabilities(provider):
     return values
 
 
-LABEL_PROVIDERS = frozenset({"export_only", "mock"})
+LABEL_PROVIDERS = frozenset({"export_only"})
 
 
 @router.post("/connectors", status_code=201)
