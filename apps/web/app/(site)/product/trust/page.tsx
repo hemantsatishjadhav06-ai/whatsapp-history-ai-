@@ -11,6 +11,12 @@ const review: [Severity, string, string][] = [
   ['Medium', 'A history-collection name used by one customer blocked every other customer', 'Fixed: names are now unique per workspace, so they can neither collide nor reveal another customer’s label.'],
   ['Low', 'Database error text could include internal identifiers', 'Fixed: SQL parameters are hidden from errors and logs.'],
   ['Low', 'Background workers stopped permanently after three crashes', 'Fixed: Jobs and Retention now always restart.'],
+  ['Medium', 'Slow uploads could tie up every web proxy slot', 'Fixed: requests without a session never take a slot, sign-in traffic has its own small pool, uploads must finish in seconds, and each visitor is capped.'],
+  ['Medium', 'The WhatsApp session service shared an all-purpose internal key', 'Fixed: it now has its own key that only opens its two routes.'],
+  ['Low', 'A pairing QR code could be relayed to someone else’s phone', 'Fixed: pairing is bound to the number you enter; any other account is unlinked and refused.'],
+  ['Low', 'The browser did not restrict which scripts could run', 'Fixed: a per-request Content Security Policy blocks injected scripts.'],
+  ['Low', 'A stolen mobile refresh token could keep a session alive', 'Fixed: reusing an old token signs out every holder.'],
+  ['Low', 'AI drafts were not screened before approval', 'Fixed: drafts with links, payment details, phone numbers or promises show a warning next to Approve.'],
 ];
 const sevClass: Record<Severity, string> = { High: styles.sevHigh, Medium: styles.sevMed, Low: styles.sevLow };
 
@@ -37,7 +43,7 @@ export default function Trust() {
           <tbody>{review.map(([severity, finding, fix]) => <tr key={finding}><td><span className={`${styles.sev} ${sevClass[severity]}`}>{severity}</span></td><td><strong>{finding}</strong></td><td>{fix}</td></tr>)}</tbody>
         </table>
       </div>
-      <p className={styles.fine} style={{ marginTop: 16 }}>Open hardening items — a stricter script policy, separate service tokens per internal service, phone-number checks for QR pairing and app-link sign-in for mobile — are tracked on the roadmap.</p>
+      <p className={styles.fine} style={{ marginTop: 16 }}>One item remains before the mobile apps ship: verified app links for mobile sign-in. Mobile sign-in is not enabled on the hosted service.</p>
     </section>
 
     <section className={`${styles.wrap} ${styles.section}`}>

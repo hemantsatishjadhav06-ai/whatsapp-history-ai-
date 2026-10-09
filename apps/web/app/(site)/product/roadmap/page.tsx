@@ -7,7 +7,7 @@ const rows: [string, string, Availability][] = [
   ['Milo web app (desktop & mobile web)', 'Home, Inbox, Actions, Memory, Rules, Settings — hosted on Railway', 'now'],
   ['Google sign-in & private workspaces', 'Verified owner identity, HttpOnly sessions, CSRF, per-owner isolation', 'now'],
   ['WhatsApp Business connection', 'Signed webhooks, per-contact consent, up to 180 days of eligible 1:1 history', 'now'],
-  ['Personal WhatsApp via QR', 'Private linked-device service with encrypted keys; 1:1 text', 'now'],
+  ['Personal WhatsApp via link code', 'Enter your number, type the code into WhatsApp; encrypted keys; 1:1 text', 'now'],
   ['Chat export import', 'Personal and group text history with explicit owner/date mapping', 'now'],
   ['Replies in your style', 'Per-chat style statistics, owner rules, draft + exact approval', 'now'],
   ['Background drafts & bounded Auto', 'Opt-in per chat, expiring grants, quiet hours, hourly budgets', 'now'],

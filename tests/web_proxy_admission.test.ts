@@ -126,3 +126,16 @@ test('an upstream transport failure releases a request lease and yields an hones
   globalThis.fetch=async()=>new Response('{}');const recovered=await GET(request('me').value,context('me'));
   assert.equal(recovered.status,200);await recovered.text();
 });
+
+test('one verified client address is capped across pools while other clients still get slots',()=>{
+  const held=[];
+  for(let index=0;index<10;index++){const lease=acquireProxyLease(false,false,index%2===0,'203.0.113.50');assert.ok(lease);held.push(lease);}
+  assert.equal(acquireProxyLease(false,false,false,'203.0.113.50'),null);
+  assert.equal(acquireProxyLease(true,false,false,'203.0.113.50'),null);
+  const other=acquireProxyLease(false,false,false,'198.51.100.7');assert.ok(other);other.release();
+  held.pop()!.release();
+  const again=acquireProxyLease(false,false,false,'203.0.113.50');assert.ok(again);again.release();
+  held.forEach(lease=>lease.release());
+  const unsourced=Array.from({length:12},()=>acquireProxyLease(false,false));assert.ok(unsourced.every(Boolean));
+  unsourced.forEach(lease=>lease!.release());
+});

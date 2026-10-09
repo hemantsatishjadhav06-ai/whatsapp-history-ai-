@@ -10,7 +10,7 @@ export default function HowItWorks() {
     <section className={`${styles.wrap} ${styles.section}`}>
       <SectionHead kicker="Six steps" title="What happens to a message."/>
       <div className={styles.steps}>
-        <div className={styles.step}><h3>Connect</h3><p>Link a WhatsApp Business number through Meta’s signed webhooks, pair a personal number with a private QR code, or import an exported chat. Nothing is read until you pick chats.</p></div>
+        <div className={styles.step}><h3>Connect</h3><p>Link a WhatsApp Business number through Meta’s signed webhooks, link your personal number with a one-time code typed into WhatsApp, or import an exported chat. Nothing is read until you pick chats.</p></div>
         <div className={styles.step}><h3>Choose per chat</h3><p>Each conversation has its own switches — read, retain, learn, draft, send and share. All start off. Turning one on never turns on another.</p></div>
         <div className={styles.step}><h3>Learn your style</h3><p>From messages you wrote (and reviewed, for shared business numbers) Milo measures your length, tone, emoji and phrasing per person. No model is fine-tuned on your data.</p></div>
         <div className={styles.step}><h3>Agents prepare</h3><p>When a new message arrives in an opted-in chat, a background worker prepares a draft, a follow-up or an answer — inside time, cost and quiet-hour limits you set.</p></div>
@@ -37,7 +37,7 @@ export default function HowItWorks() {
         <div className={styles.archCol}>
           <p className={styles.archTitle}>Where messages come from</p>
           <div className={styles.node}><strong>WhatsApp Business</strong><span>Signed Meta webhooks (HMAC verified)</span></div>
-          <div className={styles.node}><strong>Personal WhatsApp</strong><span>Private QR linked-device service, encrypted keys</span></div>
+          <div className={styles.node}><strong>Personal WhatsApp</strong><span>Private linked-device service bound to your number, encrypted keys</span></div>
           <div className={styles.node}><strong>Chat exports</strong><span>Imported text, deduplicated on re-import</span></div>
           <div className={styles.node}><strong>You</strong><span>Web app today; native apps in testing</span></div>
         </div>

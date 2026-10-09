@@ -50,7 +50,7 @@ async function forward(request: NextRequest, route: string, search: string, head
   const isControl = !isPublic && ((request.method === 'POST' && CONTROL.test(route))
     || (request.method === 'PUT' && /^conversations\/[^/]+\/permissions$/.test(route))
     || (request.method === 'DELETE' && /^(?:auth\/sessions\/[^/]+|memories\/[^/]+|automation\/grants\/[^/]+|connectors\/[^/]+|account-data)$/.test(route)));
-  const lease = acquireProxyLease(isControl, isImport, isPublic);
+  const lease = acquireProxyLease(isControl, isImport, isPublic, headers.get('x-milo-rate-source') ?? undefined);
   if (!lease) return Response.json({ detail: 'The proxy is busy. This request was not submitted.', reason_code: 'PROXY_BUSY' },
     { status: 503, headers: { ...SECURITY, 'Retry-After': '1' } });
   const aborted = () => lease.release();

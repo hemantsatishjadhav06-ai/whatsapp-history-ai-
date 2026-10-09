@@ -81,7 +81,7 @@ async function proxy(request: NextRequest, context: { params: Promise<{ path: st
   const isControl = (request.method === 'POST' && CONTROL_ROUTES.test(route))
     || (request.method === 'PUT' && /^conversations\/[^/]+\/permissions$/.test(route))
     || (request.method === 'DELETE' && /^(?:auth\/sessions\/[^/]+|memories\/[^/]+|automation\/grants\/[^/]+|connectors\/[^/]+|account-data)$/.test(route));
-  const lease = acquireProxyLease(isControl, isImport, Boolean(publicMethod));
+  const lease = acquireProxyLease(isControl, isImport, Boolean(publicMethod), headers.get('x-milo-rate-source') ?? undefined);
   if (!lease) return Response.json({detail:'The web proxy is busy. This request was not sent to the backend.',reason_code:'PROXY_BUSY'},
     {status:503,headers:{'Retry-After':'1','Cache-Control':'no-store'}});
   const aborted = () => lease.release();
