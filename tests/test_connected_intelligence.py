@@ -130,7 +130,8 @@ def test_retrieval_finds_older_matching_contact_evidence_and_excludes_private_ow
     assert response.status_code == 201, response.text
     assert relevant.id in {row["id"] for row in captured["messages"]}
     assert len(captured["messages"]) <= 40
-    assert owner.id not in json.dumps(captured) and "9381" not in json.dumps(captured)
+    # Match the private sentence itself: a bare "9381" also occurs in microsecond timestamps.
+    assert owner.id not in json.dumps(captured) and "Owner style secret" not in json.dumps(captured)
     assert "secret private group" not in json.dumps(captured)
     assert response.json()["status"] == "needs_approval"
 
