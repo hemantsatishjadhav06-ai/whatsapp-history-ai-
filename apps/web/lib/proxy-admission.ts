@@ -3,21 +3,28 @@ const TOTAL_LIMIT = 32;
 const CONTROL_LIMIT = 4;
 const NORMAL_LIMIT = TOTAL_LIMIT - CONTROL_LIMIT;
 const IMPORT_LIMIT = 2;
+const PUBLIC_LIMIT = 6;
 let normal = 0;
 let control = 0;
 let imports = 0;
+let anonymous = 0;
 
-/** Process-local resource admission, never an identity or authorization decision. */
-export function acquireProxyLease(isControl: boolean, isImport: boolean): ProxyLease | null {
-  if (normal + control >= TOTAL_LIMIT || (isControl ? control >= CONTROL_LIMIT : normal >= NORMAL_LIMIT)
-      || (isImport && imports >= IMPORT_LIMIT)) return null;
-  if (isControl) control++; else normal++;
+/**
+ * Process-local resource admission, never an identity or authorization decision.
+ * Credential-free routes (login, provider callbacks) use a separate small pool so
+ * unauthenticated traffic can never occupy the session or control capacity.
+ */
+export function acquireProxyLease(isControl: boolean, isImport: boolean, isPublic = false): ProxyLease | null {
+  const full = isPublic ? anonymous >= PUBLIC_LIMIT
+    : normal + control >= TOTAL_LIMIT || (isControl ? control >= CONTROL_LIMIT : normal >= NORMAL_LIMIT);
+  if (full || (isImport && imports >= IMPORT_LIMIT)) return null;
+  if (isPublic) anonymous++; else if (isControl) control++; else normal++;
   if (isImport) imports++;
   let released = false;
   return { release() {
     if (released) return;
     released = true;
-    if (isControl) control--; else normal--;
+    if (isPublic) anonymous--; else if (isControl) control--; else normal--;
     if (isImport) imports--;
   } };
 }

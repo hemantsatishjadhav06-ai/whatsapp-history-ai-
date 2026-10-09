@@ -1,5 +1,5 @@
 import type { NextRequest } from 'next/server';
-import { boundedProxyBody, UploadTimeoutError } from './proxy-body';
+import { boundedProxyBody, IMPORT_UPLOAD_DEADLINE_MS, JSON_UPLOAD_DEADLINE_MS, UploadTimeoutError } from './proxy-body';
 import { acquireProxyLease, leaseProxyBody } from './proxy-admission';
 import { signRateSource } from './rate-source';
 
@@ -45,10 +45,12 @@ async function forward(request: NextRequest, route: string, search: string, head
   if (!target) return unavailable('The private backend is not configured');
   if (!signRateSource(request, headers)) return unavailable('Trusted ingress configuration is unavailable');
   const isImport = mode === 'native' && (route === 'imports' || route === 'imports/preview');
-  const isControl = mode === 'native' && ((request.method === 'POST' && CONTROL.test(route))
+  // Provider callbacks and native sign-in carry no bearer session: they use the public pool.
+  const isPublic = mode !== 'native' || route === 'auth/config' || PUBLIC_NATIVE_POSTS.has(route);
+  const isControl = !isPublic && ((request.method === 'POST' && CONTROL.test(route))
     || (request.method === 'PUT' && /^conversations\/[^/]+\/permissions$/.test(route))
     || (request.method === 'DELETE' && /^(?:auth\/sessions\/[^/]+|memories\/[^/]+|automation\/grants\/[^/]+|connectors\/[^/]+|account-data)$/.test(route)));
-  const lease = acquireProxyLease(isControl, isImport);
+  const lease = acquireProxyLease(isControl, isImport, isPublic);
   if (!lease) return Response.json({ detail: 'The proxy is busy. This request was not submitted.', reason_code: 'PROXY_BUSY' },
     { status: 503, headers: { ...SECURITY, 'Retry-After': '1' } });
   const aborted = () => lease.release();
@@ -58,7 +60,7 @@ async function forward(request: NextRequest, route: string, search: string, head
   try {
     let body: ArrayBuffer | undefined;
     if (!['GET', 'HEAD'].includes(request.method)) {
-      try { body = await boundedProxyBody(request, maxBytes); }
+      try { body = await boundedProxyBody(request, maxBytes, isImport ? IMPORT_UPLOAD_DEADLINE_MS : JSON_UPLOAD_DEADLINE_MS); }
       catch (error) {
         return unavailable(error instanceof UploadTimeoutError ? 'Upload deadline exceeded' : error instanceof RangeError ? 'Upload is too large' : 'Invalid upload',
           error instanceof UploadTimeoutError ? 408 : error instanceof RangeError ? 413 : 400);

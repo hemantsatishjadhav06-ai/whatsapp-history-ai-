@@ -1,13 +1,15 @@
 import type { NextRequest } from 'next/server';
-import { boundedProxyBody, UploadTimeoutError } from '../../../lib/proxy-body';
+import { boundedProxyBody, IMPORT_UPLOAD_DEADLINE_MS, JSON_UPLOAD_DEADLINE_MS, UploadTimeoutError } from '../../../lib/proxy-body';
 import { acquireProxyLease, leaseProxyBody } from '../../../lib/proxy-admission';
 import { signRateSource } from '../../../lib/rate-source';
 
 export const dynamic = 'force-dynamic';
-const ALLOWED = /^(?:auth\/(?:config|nonce|google|csrf|logout|sessions(?:\/[^/]+)?)|me|ui\/(?:bootstrap|updates|resolve)|(?:workspaces|connectors|conversations|drafts|messages|imports|inbox|tasks|memories|forward-routes|actions|jobs|schedules|scheduled-intents|contacts|people|integrations)(?:\/[A-Za-z0-9_.:@+-]+){0,3}|integrations\/whatsapp\/personal\/(?:config|status|start|pairing|chats(?:\/authorize)?|disconnect|authorship\/confirm)|automation\/grants(?:\/[^/]+)?|assistant\/(?:commands|digest)|privacy\/(?:retention(?:\/sweep)?|model-processing)|pause-all|resume-all|activity|data-export|account-data)$/;
+const ALLOWED = /^(?:auth\/(?:config|nonce|google|access-code|csrf|logout|sessions(?:\/[^/]+)?)|me|ui\/(?:bootstrap|updates|resolve)|(?:workspaces|connectors|conversations|drafts|messages|imports|inbox|tasks|memories|forward-routes|actions|jobs|schedules|scheduled-intents|contacts|people|integrations)(?:\/[A-Za-z0-9_.:@+-]+){0,3}|integrations\/whatsapp\/personal\/(?:config|status|start|pairing|chats(?:\/authorize)?|disconnect|authorship\/confirm)|automation\/grants(?:\/[^/]+)?|assistant\/(?:commands|digest)|privacy\/(?:retention(?:\/sweep)?|model-processing)|pause-all|resume-all|activity|data-export|account-data)$/;
 const MAX_JSON_BODY_BYTES = 64 * 1024;
 const MAX_IMPORT_BODY_BYTES = 12 * 1024 * 1024;
 const CONTROL_ROUTES = /^(?:pause-all|resume-all|auth\/logout|conversations\/[^/]+\/(?:control|takeover|resume)|actions\/[^/]+\/cancel|integrations\/whatsapp\/personal\/disconnect)$/;
+// The only private API routes that accept a browser request without a session cookie.
+const PUBLIC_ROUTES = new Map([['auth/config', 'GET'], ['auth/nonce', 'GET'], ['auth/google', 'POST'], ['auth/access-code', 'POST']]);
 
 function loopback(hostname: string) {
   return hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '[::1]' || hostname === '::1';
@@ -41,6 +43,8 @@ async function proxy(request: NextRequest, context: { params: Promise<{ path: st
     const allowedMethod = /^(?:config|status|pairing|chats)$/.test(route.slice('integrations/whatsapp/personal/'.length)) ? 'GET' : 'POST';
     if (request.method !== allowedMethod) return Response.json({ detail: 'Method unavailable' }, { status: 405, headers: { 'Cache-Control': 'no-store' } });
   }
+  const publicMethod = PUBLIC_ROUTES.get(route);
+  if (publicMethod && request.method !== publicMethod) return Response.json({ detail: 'Method unavailable' }, { status: 405, headers: { 'Cache-Control': 'no-store' } });
   const configured = process.env.BACKEND_URL;
   if (!configured) {
     if (route === 'auth/config') return Response.json({ google_configured: false, backend_configured: false, client_id: null });
@@ -54,6 +58,11 @@ async function proxy(request: NextRequest, context: { params: Promise<{ path: st
         || request.headers.get('sec-fetch-site') === 'cross-site') {
       return Response.json({ detail: 'Same-origin request required' }, { status: 403 });
     }
+  }
+  // Session routes cannot reserve capacity or read a body without a session cookie;
+  // the private API still validates the session itself.
+  if (!publicMethod && !/(?:^|;)\s*session_token=[^;\s]/.test(request.headers.get('cookie') ?? '')) {
+    return Response.json({ detail: 'Authentication required' }, { status: 401, headers: { 'Cache-Control': 'no-store' } });
   }
   const headers = new Headers();
   for (const key of ['cookie', 'content-type', 'x-csrf-token', 'idempotency-key', 'origin', 'sec-fetch-site']) {
@@ -72,7 +81,7 @@ async function proxy(request: NextRequest, context: { params: Promise<{ path: st
   const isControl = (request.method === 'POST' && CONTROL_ROUTES.test(route))
     || (request.method === 'PUT' && /^conversations\/[^/]+\/permissions$/.test(route))
     || (request.method === 'DELETE' && /^(?:auth\/sessions\/[^/]+|memories\/[^/]+|automation\/grants\/[^/]+|connectors\/[^/]+|account-data)$/.test(route));
-  const lease = acquireProxyLease(isControl, isImport);
+  const lease = acquireProxyLease(isControl, isImport, Boolean(publicMethod));
   if (!lease) return Response.json({detail:'The web proxy is busy. This request was not sent to the backend.',reason_code:'PROXY_BUSY'},
     {status:503,headers:{'Retry-After':'1','Cache-Control':'no-store'}});
   const aborted = () => lease.release();
@@ -82,7 +91,7 @@ async function proxy(request: NextRequest, context: { params: Promise<{ path: st
   try {
     let body: ArrayBuffer | undefined;
     const bodyLimit = isImport ? MAX_IMPORT_BODY_BYTES : MAX_JSON_BODY_BYTES;
-    try { body = unsafe ? await boundedProxyBody(request, bodyLimit) : undefined; }
+    try { body = unsafe ? await boundedProxyBody(request, bodyLimit, isImport ? IMPORT_UPLOAD_DEADLINE_MS : JSON_UPLOAD_DEADLINE_MS) : undefined; }
     catch (error) {
       return Response.json({ detail: error instanceof UploadTimeoutError ? 'Upload did not finish within the deadline' : error instanceof RangeError ? 'Upload is too large' : 'Invalid upload body' },
         { status: error instanceof UploadTimeoutError ? 408 : error instanceof RangeError ? 413 : 400 });

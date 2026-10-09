@@ -103,6 +103,51 @@ test('native controls retain reserved admission under ordinary saturation', asyn
   }
 });
 
+test('bearer-less native session routes are refused before any body read or lease', async t => {
+  const { sent, request } = setup(t); let reads = 0;
+  for (let attempt = 0; attempt < 40; attempt++) {
+    const body = new ReadableStream<Uint8Array>({ pull() { reads++; } }, { highWaterMark: 0 });
+    const path = attempt % 2 ? 'assistant/commands' : 'imports';
+    assert.equal((await nativeProxy(request('/native-api/' + path, { method: 'POST', body, duplex: 'half' } as RequestInit), context(path))).status, 401);
+  }
+  assert.equal(reads, 0); assert.equal(sent.length, 0);
+  const leases = [...Array.from({ length: 28 }, () => acquireProxyLease(false, false)), ...Array.from({ length: 4 }, () => acquireProxyLease(true, false)),
+    ...Array.from({ length: 6 }, () => acquireProxyLease(false, false, true))];
+  try { assert.ok(leases.every(Boolean)); } finally { leases.forEach(lease => lease?.release()); }
+});
+
+test('native sign-in, provider webhook and callback share a public pool that cannot block bearer sessions', async t => {
+  const { sent, request } = setup(t);
+  const held = Array.from({ length: 6 }, () => acquireProxyLease(false, false, true)!);
+  t.after(() => held.forEach(lease => lease.release()));
+  assert.equal((await nativeProxy(request('/native-api/auth/native/refresh', { method: 'POST', body: '{}' }), context('auth/native/refresh'))).status, 503);
+  assert.equal((await nativeProxy(request('/native-api/auth/config'), context('auth/config'))).status, 503);
+  assert.equal((await whatsappWebhook(request('/api/webhooks/whatsapp', { method: 'POST', body: '{}', headers: { 'Content-Type': 'application/json', 'X-Hub-Signature-256': signature } }))).status, 503);
+  assert.equal((await nativeGoogleCallback(request('/api/auth/native/google/callback?state=state&code=code'))).status, 503);
+  assert.equal(sent.length, 0);
+  for (const [path, method] of [['me', 'GET'], ['pause-all', 'POST']] as const) {
+    const result = await nativeProxy(request('/native-api/' + path, { method, ...(method === 'POST' ? { body: '{}' } : {}), headers: { Authorization: `Bearer ${token}` } }), context(path));
+    assert.equal(result.status, 200); await result.text();
+  }
+  assert.equal(sent.length, 2);
+});
+
+test('public native and webhook uploads expire after five seconds; bearer imports keep ten', async t => {
+  const { sent, request } = setup(t); t.mock.timers.enable({ apis: ['setTimeout'] });
+  const flush = () => new Promise<void>(resolve => setImmediate(resolve));
+  const stalled = () => new ReadableStream<Uint8Array>({ pull() {} });
+  const login = nativeProxy(request('/native-api/auth/native/login', { method: 'POST', body: stalled(), duplex: 'half' } as RequestInit), context('auth/native/login'));
+  const webhook = whatsappWebhook(request('/api/webhooks/whatsapp', { method: 'POST', body: stalled(), duplex: 'half', headers: { 'Content-Type': 'application/json', 'X-Hub-Signature-256': signature } } as RequestInit));
+  let imported = false;
+  const history = nativeProxy(request('/native-api/imports', { method: 'POST', body: stalled(), duplex: 'half', headers: { Authorization: `Bearer ${token}` } } as RequestInit), context('imports'));
+  void history.finally(() => { imported = true; });
+  await flush(); t.mock.timers.tick(4_999); await flush();
+  t.mock.timers.tick(1);
+  assert.deepEqual([(await login).status, (await webhook).status], [408, 408]);
+  await flush(); assert.equal(imported, false);
+  t.mock.timers.tick(5_000); assert.equal((await history).status, 408); assert.equal(sent.length, 0);
+});
+
 test('WhatsApp ingress preserves signed raw bytes and strips all owner/service credentials', async t => {
   const { sent, request } = setup(t);
   const body = '{ "object": "whatsapp_business_account", "text": "hello 🌍" }\n';

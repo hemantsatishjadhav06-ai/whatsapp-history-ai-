@@ -5,6 +5,7 @@ import type { NextRequest } from 'next/server';
 import { createHmac } from 'node:crypto';
 import { GET, POST, PUT } from '../apps/web/app/api/[...path]/route.ts';
 import { boundedProxyBody, UploadTimeoutError } from '../apps/web/lib/proxy-body.ts';
+import { acquireProxyLease } from '../apps/web/lib/proxy-admission.ts';
 const controllers = new Set<AbortController>();
 
 function setup(t: TestContext, origin: string | null = 'https://milo.example.test') {
@@ -39,25 +40,26 @@ function request(path: string, options: RequestInit = {}, url = 'http://internal
   return value as NextRequest;
 }
 function context(path: string) { return { params: Promise.resolve({ path: path.split('/') }) }; }
+const owner = 'session_token=synthetic-owner';
 
 test('phone linking routes preserve owner cookies, no-store and expected public methods', async t => {
   const sent = setup(t);
   for (const suffix of ['config', 'status', 'pairing', 'chats']) {
     const path = `integrations/whatsapp/personal/${suffix}`;
-    const result = await GET(request(path, { headers: { Cookie: 'session=synthetic-owner' } }), context(path));
+    const result = await GET(request(path, { headers: { Cookie: owner } }), context(path));
     assert.equal(result.status, 200); await result.text();
     assert.equal(result.headers.get('cache-control'), 'no-store');
-    assert.equal(new Headers(sent.at(-1)?.init?.headers).get('cookie'), 'session=synthetic-owner');
+    assert.equal(new Headers(sent.at(-1)?.init?.headers).get('cookie'), owner);
     assert.equal((await POST(request(path, { method: 'POST', body: '{}' }), context(path))).status, 405);
   }
   for (const suffix of ['start', 'chats/authorize', 'authorship/confirm', 'disconnect']) {
     const path = `integrations/whatsapp/personal/${suffix}`;
-    const result = await POST(request(path, { method: 'POST', body: '{}', headers: { Origin: 'https://milo.example.test', 'X-CSRF-Token': 'synthetic-csrf' } }), context(path));
+    const result = await POST(request(path, { method: 'POST', body: '{}', headers: { Origin: 'https://milo.example.test', 'X-CSRF-Token': 'synthetic-csrf', Cookie: owner } }), context(path));
     assert.equal(result.status, 200); await result.text();
     assert.equal((await GET(request(path), context(path))).status, 405);
   }
   const path = 'conversations/synthetic-chat/automatic-drafts';
-  const result = await PUT(request(path, { method: 'PUT', body: '{"enabled":false,"expected_version":1}', headers: { Origin: 'https://milo.example.test' } }), context(path));
+  const result = await PUT(request(path, { method: 'PUT', body: '{"enabled":false,"expected_version":1}', headers: { Origin: 'https://milo.example.test', Cookie: owner } }), context(path));
   assert.equal(result.status, 200); await result.text();
   assert.equal(sent.at(-1)?.url, 'http://private-api.railway.internal:8000/v1/' + path);
 });
@@ -66,7 +68,7 @@ test('configured public HTTPS origin survives private HTTP reverse-proxy routing
   const sent = setup(t);
   const response = await POST(request('pause-all?workspace_id=synthetic', { method: 'POST', body: '{}', headers: {
     Origin: 'https://milo.example.test', Host: 'private-host:3000', 'X-Forwarded-Host': 'milo.example.test',
-    'X-Forwarded-Proto': 'https', 'X-CSRF-Token': 'synthetic-csrf', Cookie: 'session=synthetic' } }), context('pause-all'));
+    'X-Forwarded-Proto': 'https', 'X-CSRF-Token': 'synthetic-csrf', Cookie: owner } }), context('pause-all'));
   assert.equal(response.status, 200);
   assert.equal(sent.length, 1);
   assert.equal(sent[0]?.url, 'http://private-api.railway.internal:8000/v1/pause-all?workspace_id=synthetic');
@@ -95,7 +97,7 @@ test('public writes need configured origin; forwarded headers cannot supply it',
 test('explicit loopback preview remains usable without public deployment variables', async t => {
   const sent = setup(t, null);
   const response = await POST(request('pause-all', { method: 'POST', body: '{}', headers: {
-    Origin: 'http://localhost:3100', Host: 'localhost:3100' } }, 'http://localhost:3100'), context('pause-all'));
+    Origin: 'http://localhost:3100', Host: 'localhost:3100', Cookie: owner } }, 'http://localhost:3100'), context('pause-all'));
   assert.equal(response.status, 200);
   assert.equal(sent.length, 1);
 });
@@ -113,14 +115,14 @@ test('configured origins reject plaintext public hosts, userinfo and query subst
 test('declared oversized uploads are rejected before backend calls', async t => {
   const sent = setup(t);
   const response = await POST(request('imports', { method: 'POST', body: '{}', headers: {
-    Origin: 'https://milo.example.test', 'Content-Length': String(13 * 1024 * 1024) } }), context('imports'));
+    Origin: 'https://milo.example.test', 'Content-Length': String(13 * 1024 * 1024), Cookie: owner } }), context('imports'));
   assert.equal(response.status, 413);
   assert.equal(sent.length, 0);
 });
 
 test('ordinary JSON routes cannot allocate the larger history-import buffer', async t => {
   const sent = setup(t);
-  const headers = { Origin:'https://milo.example.test', 'Content-Length':String(64 * 1024 + 1) };
+  const headers = { Origin:'https://milo.example.test', 'Content-Length':String(64 * 1024 + 1), Cookie:owner };
   assert.equal((await POST(request('auth/google',{method:'POST',body:'{}',headers}),context('auth/google'))).status,413);
   assert.equal(sent.length,0);
   for (const path of ['imports','imports/preview']) {
@@ -139,7 +141,7 @@ test('unqualified streaming uploads cancel at the byte cap without full bufferin
     if (chunks === 20) controller.close();
   }, cancel() { canceled = true; } });
   const response = await POST(request('imports', { method: 'POST', body, duplex: 'half',
-    headers: { Origin: 'https://milo.example.test' } } as RequestInit), context('imports'));
+    headers: { Origin: 'https://milo.example.test', Cookie: owner } } as RequestInit), context('imports'));
   assert.equal(response.status, 413);
   assert.equal(canceled, true);
   assert.ok(chunks <= 14);
@@ -154,6 +156,59 @@ test('internal and development login remain inaccessible to browser proxy', asyn
   assert.equal(sent.length, 0);
 });
 
+test('session routes without a session cookie are refused before any body read, lease or backend call', async t => {
+  const sent = setup(t); let reads = 0;
+  for (let attempt = 0; attempt < 40; attempt++) {
+    const path = ['assistant/commands', 'imports', 'auth/logout', 'pause-all'][attempt % 4]!;
+    const body = new ReadableStream<Uint8Array>({ pull() { reads++; } }, { highWaterMark: 0 });
+    const response = await POST(request(path, { method: 'POST', body, duplex: 'half', headers: { Origin: 'https://milo.example.test',
+      'Content-Length': '65536', Cookie: attempt % 2 ? 'session=legacy; xsession_token=forged; session_token=' : '' } } as RequestInit), context(path));
+    assert.equal(response.status, 401); assert.deepEqual(await response.json(), { detail: 'Authentication required' });
+  }
+  for (const path of ['me', 'ui/bootstrap', 'auth/csrf', 'auth/sessions']) assert.equal((await GET(request(path), context(path))).status, 401);
+  assert.equal(reads, 0); assert.equal(sent.length, 0);
+  const leases = [...Array.from({ length: 28 }, () => acquireProxyLease(false, false)), ...Array.from({ length: 4 }, () => acquireProxyLease(true, false))];
+  try { assert.ok(leases.every(Boolean)); } finally { leases.forEach(lease => lease?.release()); }
+});
+
+test('owner access-code sign-in is a public same-origin POST forwarded without a session cookie', async t => {
+  const sent = setup(t);
+  const response = await POST(request('auth/access-code', { method: 'POST', body: '{"code":"synthetic"}', headers: {
+    Origin: 'https://milo.example.test', 'Content-Type': 'application/json' } }), context('auth/access-code'));
+  assert.equal(response.status, 200); await response.text();
+  assert.equal(sent.length, 1); assert.equal(sent[0]?.url, 'http://private-api.railway.internal:8000/v1/auth/access-code');
+  assert.equal(new TextDecoder().decode(sent[0]?.init?.body as ArrayBuffer), '{"code":"synthetic"}');
+  assert.equal(new Headers(sent[0]?.init?.headers).has('cookie'), false);
+  assert.equal(response.headers.getSetCookie()[0], 'synthetic_nonce=local; Path=/api/auth; Secure; HttpOnly; SameSite=Lax');
+  assert.equal((await POST(request('auth/access-code', { method: 'POST', body: '{}', headers: { Origin: 'https://attacker.example.test' } }), context('auth/access-code'))).status, 403);
+  for (const [path, method] of [['auth/access-code', 'GET'], ['auth/google', 'GET'], ['auth/nonce', 'POST'], ['auth/config', 'POST']] as const) {
+    const handler = method === 'GET' ? GET : POST;
+    assert.equal((await handler(request(path, { method, ...(method === 'POST' ? { body: '{}' } : {}), headers: { Origin: 'https://milo.example.test' } }), context(path))).status, 405);
+  }
+  assert.equal(sent.length, 1);
+});
+
+test('small JSON bodies expire after five seconds; only session-bearing imports keep ten', async t => {
+  const sent = setup(t);
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const flush = () => new Promise<void>(resolve => setImmediate(resolve));
+  const stalled = (path: string, cookie?: string) => {
+    let settled = false;
+    const result = POST(request(path, { method: 'POST', body: new ReadableStream<Uint8Array>({ pull() {} }), duplex: 'half',
+      headers: { Origin: 'https://milo.example.test', ...(cookie ? { Cookie: cookie } : {}) } } as RequestInit), context(path));
+    void result.finally(() => { settled = true; });
+    return { result, settled: () => settled };
+  };
+  const login = stalled('auth/google'); const command = stalled('assistant/commands', owner); const history = stalled('imports', owner);
+  await flush(); t.mock.timers.tick(4_999); await flush();
+  assert.deepEqual([login.settled(), command.settled(), history.settled()], [false, false, false]);
+  t.mock.timers.tick(1);
+  assert.equal((await login.result).status, 408); assert.equal((await command.result).status, 408);
+  await flush(); assert.equal(history.settled(), false);
+  t.mock.timers.tick(5_000);
+  assert.equal((await history.result).status, 408); assert.equal(sent.length, 0);
+});
+
 test('nonce cookies keep secure and HttpOnly flags while their path becomes browser-visible', async t => {
   const sent = setup(t);
   const response = await GET(request('auth/nonce'), context('auth/nonce'));
@@ -165,7 +220,7 @@ test('nonce cookies keep secure and HttpOnly flags while their path becomes brow
 test('authenticated object lookup stays in public backend route with exact query refs', async t => {
   const sent = setup(t);
   const response = await GET(request('ui/resolve?kind=conversation&id=synthetic-source', {
-    headers: { Cookie: 'session=synthetic' } }), context('ui/resolve'));
+    headers: { Cookie: owner } }), context('ui/resolve'));
   assert.equal(response.status, 200);
   assert.equal(sent[0]?.url, 'http://private-api.railway.internal:8000/v1/ui/resolve?kind=conversation&id=synthetic-source');
 });
@@ -184,16 +239,16 @@ test('backend origin credentials, protocols and embedded URL state fail closed w
   const sent = setup(t);
   for (const value of ['https://user:secret@api.example.test', 'file:///private', 'https://api.example.test?next=other', 'https://api.example.test/#secret', 'https://api.example.test/v1']) {
     process.env.BACKEND_URL = value;
-    assert.equal((await GET(request('me',{headers:{Cookie:'session=synthetic'}}),context('me'))).status,503);
+    assert.equal((await GET(request('me',{headers:{Cookie:owner}}),context('me'))).status,503);
   }
   assert.equal(sent.length,0);
 });
 
 test('proxy forwards only explicit browser-session headers, never supplied backend credentials', async t => {
   const sent = setup(t);
-  await GET(request('me',{headers:{Cookie:'session=synthetic',Authorization:'Bearer attacker-controlled','X-Internal-Token':'forged','X-Connector-Token':'forged'}}),context('me'));
+  await GET(request('me',{headers:{Cookie:owner,Authorization:'Bearer attacker-controlled','X-Internal-Token':'forged','X-Connector-Token':'forged'}}),context('me'));
   const headers = new Headers(sent[0]?.init?.headers);
-  assert.equal(headers.get('cookie'),'session=synthetic');
+  assert.equal(headers.get('cookie'),owner);
   for (const name of ['authorization','x-internal-token','x-connector-token']) assert.equal(headers.has(name),false);
 });
 
@@ -215,15 +270,15 @@ test('a canceled client upload releases the body reader without an upstream requ
 
 test('default ingress policy ignores forged forwarding and signed-rate headers', async t => {
   const sent = setup(t);
-  await GET(request('me',{headers:{'X-Forwarded-For':'198.51.100.8','X-Milo-Rate-Source':'198.51.100.8','X-Milo-Rate-Timestamp':'123','X-Milo-Rate-Signature':'forged'}}),context('me'));
-  const headers = new Headers(sent[0]?.init?.headers);
+  await GET(request('me',{headers:{Cookie:owner,'X-Forwarded-For':'198.51.100.8','X-Milo-Rate-Source':'198.51.100.8','X-Milo-Rate-Timestamp':'123','X-Milo-Rate-Signature':'forged'}}),context('me'));
+  assert.equal(sent.length,1); const headers = new Headers(sent[0]?.init?.headers);
   for (const name of ['x-forwarded-for','x-milo-rate-source','x-milo-rate-timestamp','x-milo-rate-signature']) assert.equal(headers.has(name),false);
 });
 
 test('explicit trusted-hop policy signs only its configured XFF suffix with the dedicated server key', async t => {
   const sent = setup(t); const key = 'synthetic-proxy-key-32-bytes-minimum-test';
   process.env.BACKEND_PROXY_KEY = key; process.env.TRUST_PROXY_HOPS = '1';
-  await GET(request('me',{headers:{'X-Forwarded-For':'attacker-prefix, 203.0.113.20','X-Milo-Rate-Source':'192.0.2.99','X-Milo-Rate-Signature':'forged'}}),context('me'));
+  await GET(request('me',{headers:{Cookie:owner,'X-Forwarded-For':'attacker-prefix, 203.0.113.20','X-Milo-Rate-Source':'192.0.2.99','X-Milo-Rate-Signature':'forged'}}),context('me'));
   const headers = new Headers(sent[0]?.init?.headers); const timestamp = headers.get('x-milo-rate-timestamp');
   assert.equal(headers.get('x-milo-rate-source'),'203.0.113.20'); assert.ok(timestamp && /^\d+$/.test(timestamp));
   assert.equal(headers.get('x-milo-rate-signature'),createHmac('sha256',key).update(`${timestamp}.203.0.113.20`).digest('hex'));
@@ -233,30 +288,30 @@ test('explicit trusted-hop policy signs only its configured XFF suffix with the 
 test('edge-set X-Real-IP policy signs that address and ignores forged forwarding chains', async t => {
   const sent = setup(t); const key = 'synthetic-proxy-key-32-bytes-minimum-test';
   process.env.TRUST_PROXY_HEADER = 'x-real-ip';
-  assert.equal((await GET(request('me',{headers:{'X-Real-IP':'203.0.113.30'}}),context('me'))).status,503);
+  assert.equal((await GET(request('me',{headers:{Cookie:owner,'X-Real-IP':'203.0.113.30'}}),context('me'))).status,503);
   process.env.BACKEND_PROXY_KEY = key;
-  await GET(request('me',{headers:{'X-Real-IP':'203.0.113.30','X-Forwarded-For':'198.51.100.8, 192.0.2.1'}}),context('me'));
+  await GET(request('me',{headers:{Cookie:owner,'X-Real-IP':'203.0.113.30','X-Forwarded-For':'198.51.100.8, 192.0.2.1'}}),context('me'));
   const headers = new Headers(sent.at(-1)?.init?.headers); const timestamp = headers.get('x-milo-rate-timestamp');
   assert.equal(headers.get('x-milo-rate-source'),'203.0.113.30');
   assert.equal(headers.get('x-milo-rate-signature'),createHmac('sha256',key).update(`${timestamp}.203.0.113.30`).digest('hex'));
   for (const value of ['not-an-ip','203.0.113.30, 198.51.100.8']) {
-    await GET(request('me',{headers:{'X-Real-IP':value}}),context('me'));
+    await GET(request('me',{headers:{Cookie:owner,'X-Real-IP':value}}),context('me'));
     assert.equal(new Headers(sent.at(-1)?.init?.headers).has('x-milo-rate-source'),false);
   }
   process.env.TRUST_PROXY_HEADER = 'x-forwarded-for';
-  assert.equal((await GET(request('me'),context('me'))).status,503);
+  assert.equal((await GET(request('me',{headers:{Cookie:owner}}),context('me'))).status,503);
 });
 
 test('misconfigured ingress trust fails closed and absent or malformed trusted IPs stay unsigned', async t => {
   const sent = setup(t); process.env.TRUST_PROXY_HOPS = '1';
-  assert.equal((await GET(request('me'),context('me'))).status,503);
+  assert.equal((await GET(request('me',{headers:{Cookie:owner}}),context('me'))).status,503);
   process.env.BACKEND_PROXY_KEY = 'synthetic-proxy-key-32-bytes-minimum-test';
   for (const value of ['not-an-ip','203.0.113.20:8080','fe80::1%eth0']) {
-    await GET(request('me',{headers:{'X-Forwarded-For':value}}),context('me'));
+    await GET(request('me',{headers:{Cookie:owner,'X-Forwarded-For':value}}),context('me'));
     assert.equal(new Headers(sent.at(-1)?.init?.headers).has('x-milo-rate-source'),false);
   }
   process.env.TRUST_PROXY_HOPS = '2';
-  await GET(request('me',{headers:{'X-Forwarded-For':'spoof, 198.51.100.7, 203.0.113.20'}}),context('me'));
+  await GET(request('me',{headers:{Cookie:owner,'X-Forwarded-For':'spoof, 198.51.100.7, 203.0.113.20'}}),context('me'));
   assert.equal(new Headers(sent.at(-1)?.init?.headers).get('x-milo-rate-source'),'198.51.100.7');
-  process.env.TRUST_PROXY_HOPS = '-1'; assert.equal((await GET(request('me'),context('me'))).status,503);
+  process.env.TRUST_PROXY_HOPS = '-1'; assert.equal((await GET(request('me',{headers:{Cookie:owner}}),context('me'))).status,503);
 });
