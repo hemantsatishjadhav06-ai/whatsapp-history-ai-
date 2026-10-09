@@ -9,6 +9,8 @@ import asyncio
 import hashlib
 import json
 import re
+import threading
+from contextlib import contextmanager
 from datetime import datetime
 from statistics import median
 from urllib.parse import urlparse
@@ -650,7 +652,7 @@ def validate_model_configuration(settings):
         if settings.environment not in {"development", "test"}:
             raise HTTPException(503, "Mock drafting is unavailable in production")
         return
-    if settings.model_provider not in {"openai", "openai_compatible"}:
+    if settings.model_provider not in {"openai", "openai_compatible", "openrouter"}:
         raise HTTPException(503, "Unsupported draft model provider")
     if not settings.model_api_key or not settings.model_name:
         raise HTTPException(503, "Approved model credentials and model name are required")
@@ -677,7 +679,34 @@ def model_request_payload(settings, context):
                                       "evidence_message_ids": {"type": "array", "items": {"type": "string"}},
                                       "missing_facts": {"type": "array", "items": {"type": "string"}}}},
         }},
-    }
+    } | ({"provider": {"require_parameters": True}} if uses_openrouter(settings) else {})
+
+
+def uses_openrouter(settings):
+    return settings.model_provider == "openrouter" or urlparse(settings.model_api_url).hostname == "openrouter.ai"
+
+
+def model_request_headers(settings):
+    headers = {"Authorization": f"Bearer {settings.model_api_key}"}
+    if uses_openrouter(settings):
+        referer = settings.model_app_url or next(
+            (origin.strip() for origin in settings.allowed_origins.split(",") if origin.strip()), "")
+        if referer:
+            headers["HTTP-Referer"] = referer
+        if settings.model_app_title:
+            headers["X-Title"] = settings.model_app_title
+    return headers
+
+
+FENCED_JSON = re.compile(r"\A\s*```(?:json)?\s*(.*?)\s*```\s*\Z", re.DOTALL | re.IGNORECASE)
+
+
+def model_content(content):
+    """Strict structured output, tolerating only a Markdown fence around the JSON object."""
+    if not isinstance(content, str):
+        raise ValueError("Provider returned no text content")
+    fenced = FENCED_JSON.match(content)
+    return fenced.group(1) if fenced else content
 
 
 def verified_model_pricing(settings):
@@ -691,6 +720,58 @@ def verified_model_pricing(settings):
 
 def model_usage_cost(input_tokens, output_tokens, rates):
     return sum((count * rate + 999_999) // 1_000_000 for count, rate in zip((input_tokens, output_tokens), rates))
+
+
+def owner_model_tokens_today(db, workspace_id):
+    """Model token units across every workspace of this workspace's owner, today (UTC)."""
+    from sqlalchemy import func
+    from .companion import current_day
+    from .people_models import UsageLedger
+    owner_id = select(Workspace.owner_id).where(Workspace.id == workspace_id).scalar_subquery()
+    return db.scalar(select(func.coalesce(func.sum(UsageLedger.token_units), 0))
+                     .join(Workspace, Workspace.id == UsageLedger.workspace_id)
+                     .where(Workspace.owner_id == owner_id, UsageLedger.window_day == current_day(),
+                            UsageLedger.kind.in_(["model", "model_unpriced"]),
+                            UsageLedger.status.in_(["reserved", "consumed", "uncertain"])))
+
+
+class ModelAdmission:
+    """Process-local provider concurrency, separate from ordinary request admission.
+
+    Provider calls hold a request thread for up to the model timeout. Without a
+    separate bound one account could occupy every ordinary request slot.
+    """
+
+    def __init__(self):
+        self.lock = threading.Lock()
+        self.active = 0
+        self.owners = {}
+
+    @contextmanager
+    def slot(self, settings, owner_id):
+        if settings.model_provider == "mock":
+            yield
+            return
+        with self.lock:
+            if (self.active >= settings.model_max_concurrency
+                    or self.owners.get(owner_id, 0) >= settings.model_max_concurrency_per_owner):
+                raise HTTPException(429, {"code": "MODEL_BUSY",
+                                          "message": "Milo is already working on a request for you; try again shortly"},
+                                    headers={"Retry-After": "5"})
+            self.active += 1
+            self.owners[owner_id] = self.owners.get(owner_id, 0) + 1
+        try:
+            yield
+        finally:
+            with self.lock:
+                self.active -= 1
+                if self.owners[owner_id] <= 1:
+                    del self.owners[owner_id]
+                else:
+                    self.owners[owner_id] -= 1
+
+
+model_admission = ModelAdmission()
 
 
 def reserve_model_budget(db, workspace_id, settings, context):
@@ -719,6 +800,12 @@ def reserve_model_budget(db, workspace_id, settings, context):
         reservation = reserve_usage(db, workspace_id, f"model:{uid()}",
                                     "model_mock" if mock else ("model" if rates else "model_unpriced"),
                                     token_units=input_bound + output_bound, cost_microusd=cost_bound)
+        if (not mock and settings.model_default_daily_tokens
+                and (budget is None or budget.max_tokens_per_day is None)
+                and owner_model_tokens_today(db, workspace_id) > settings.model_default_daily_tokens):
+            db.rollback()
+            raise HTTPException(429, {"code": "QUOTA_HELD", "budget": "default_model_tokens_per_day",
+                                      "message": "The default daily model allowance is used up; set a workspace budget to change it"})
         reservation_id = reservation.id
         db.commit()  # Durable reservation; release every SQL lock before networking.
     return {"id": reservation_id, "workspace_id": workspace_id, "mock": mock,
@@ -789,7 +876,7 @@ def call_model(settings, context):
             async with asyncio.timeout(duration):
                 async with httpx.AsyncClient(timeout=duration, follow_redirects=False, trust_env=False) as client:
                     async with client.stream("POST", settings.model_api_url.rstrip("/") + "/chat/completions",
-                            headers={"Authorization": f"Bearer {settings.model_api_key}"}, json=payload) as response:
+                            headers=model_request_headers(settings), json=payload) as response:
                         response.raise_for_status()
                         data = bytearray()
                         async for chunk in response.aiter_bytes():
@@ -801,7 +888,7 @@ def call_model(settings, context):
         # this boundary synchronous also makes SQL lock lifetime inspectable.
         data = asyncio.run(request_body())
         body = json.loads(data)
-        result = ModelResult.model_validate_json(body["choices"][0]["message"]["content"])
+        result = ModelResult.model_validate_json(model_content(body["choices"][0]["message"]["content"]))
         usage = body.get("usage")
         if isinstance(usage, dict):
             counts = (usage.get("prompt_tokens"), usage.get("completion_tokens"))
@@ -905,6 +992,13 @@ def build_scoped_context(db, conversation, permission, settings, instruction, *,
 
 def generate_scoped_result(db, user, conversation_id, settings, instruction, *, purpose="draft_reply",
                            authority_check=None, provider_deadline=None):
+    with model_admission.slot(settings, user.id):
+        return _generate_scoped_result(db, user, conversation_id, settings, instruction, purpose=purpose,
+                                       authority_check=authority_check, provider_deadline=provider_deadline)
+
+
+def _generate_scoped_result(db, user, conversation_id, settings, instruction, *, purpose,
+                            authority_check, provider_deadline):
     conversation = conversation_for(db, user, conversation_id)
     permission = permission_for(db, conversation, "read")
     require_draft = purpose == "draft_reply"

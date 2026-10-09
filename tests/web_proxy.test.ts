@@ -8,10 +8,10 @@ import { boundedProxyBody, UploadTimeoutError } from '../apps/web/lib/proxy-body
 const controllers = new Set<AbortController>();
 
 function setup(t: TestContext, origin: string | null = 'https://milo.example.test') {
-  const previous = { backend: process.env.BACKEND_URL, origin: process.env.PUBLIC_APP_ORIGIN, proxyKey:process.env.BACKEND_PROXY_KEY, hops:process.env.TRUST_PROXY_HOPS, fetch: globalThis.fetch };
+  const previous = { backend: process.env.BACKEND_URL, origin: process.env.PUBLIC_APP_ORIGIN, proxyKey:process.env.BACKEND_PROXY_KEY, hops:process.env.TRUST_PROXY_HOPS, header:process.env.TRUST_PROXY_HEADER, fetch: globalThis.fetch };
   process.env.BACKEND_URL = 'http://private-api.railway.internal:8000';
   if (origin === null) delete process.env.PUBLIC_APP_ORIGIN; else process.env.PUBLIC_APP_ORIGIN = origin;
-  delete process.env.BACKEND_PROXY_KEY; delete process.env.TRUST_PROXY_HOPS;
+  delete process.env.BACKEND_PROXY_KEY; delete process.env.TRUST_PROXY_HOPS; delete process.env.TRUST_PROXY_HEADER;
   const sent: { url: string; init: RequestInit | undefined }[] = [];
   globalThis.fetch = async (input, init) => {
     sent.push({ url: String(input), init });
@@ -25,6 +25,7 @@ function setup(t: TestContext, origin: string | null = 'https://milo.example.tes
     if (previous.origin === undefined) delete process.env.PUBLIC_APP_ORIGIN; else process.env.PUBLIC_APP_ORIGIN = previous.origin;
     if (previous.proxyKey === undefined) delete process.env.BACKEND_PROXY_KEY; else process.env.BACKEND_PROXY_KEY = previous.proxyKey;
     if (previous.hops === undefined) delete process.env.TRUST_PROXY_HOPS; else process.env.TRUST_PROXY_HOPS = previous.hops;
+    if (previous.header === undefined) delete process.env.TRUST_PROXY_HEADER; else process.env.TRUST_PROXY_HEADER = previous.header;
     globalThis.fetch = previous.fetch;
   });
   return sent;
@@ -227,6 +228,23 @@ test('explicit trusted-hop policy signs only its configured XFF suffix with the 
   assert.equal(headers.get('x-milo-rate-source'),'203.0.113.20'); assert.ok(timestamp && /^\d+$/.test(timestamp));
   assert.equal(headers.get('x-milo-rate-signature'),createHmac('sha256',key).update(`${timestamp}.203.0.113.20`).digest('hex'));
   assert.equal(headers.has('x-forwarded-for'),false); assert.equal(headers.has('backend-proxy-key'),false);
+});
+
+test('edge-set X-Real-IP policy signs that address and ignores forged forwarding chains', async t => {
+  const sent = setup(t); const key = 'synthetic-proxy-key-32-bytes-minimum-test';
+  process.env.TRUST_PROXY_HEADER = 'x-real-ip';
+  assert.equal((await GET(request('me',{headers:{'X-Real-IP':'203.0.113.30'}}),context('me'))).status,503);
+  process.env.BACKEND_PROXY_KEY = key;
+  await GET(request('me',{headers:{'X-Real-IP':'203.0.113.30','X-Forwarded-For':'198.51.100.8, 192.0.2.1'}}),context('me'));
+  const headers = new Headers(sent.at(-1)?.init?.headers); const timestamp = headers.get('x-milo-rate-timestamp');
+  assert.equal(headers.get('x-milo-rate-source'),'203.0.113.30');
+  assert.equal(headers.get('x-milo-rate-signature'),createHmac('sha256',key).update(`${timestamp}.203.0.113.30`).digest('hex'));
+  for (const value of ['not-an-ip','203.0.113.30, 198.51.100.8']) {
+    await GET(request('me',{headers:{'X-Real-IP':value}}),context('me'));
+    assert.equal(new Headers(sent.at(-1)?.init?.headers).has('x-milo-rate-source'),false);
+  }
+  process.env.TRUST_PROXY_HEADER = 'x-forwarded-for';
+  assert.equal((await GET(request('me'),context('me'))).status,503);
 });
 
 test('misconfigured ingress trust fails closed and absent or malformed trusted IPs stay unsigned', async t => {

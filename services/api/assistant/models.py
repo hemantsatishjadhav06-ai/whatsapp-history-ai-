@@ -52,7 +52,13 @@ class Workspace(Entity, Base):
 
 class Connector(Entity, Tenant, Base):
     __tablename__ = "connectors"
-    __table_args__ = (UniqueConstraint("provider", "account_id", name="uq_connector_account"),)
+    __table_args__ = (
+        UniqueConstraint("workspace_id", "provider", "account_id", name="uq_connector_workspace_account"),
+        # Provider identities stay globally unique; owner-chosen labels are per workspace.
+        Index("uq_connector_provider_account", "provider", "account_id", unique=True,
+              postgresql_where=text("NOT (provider IN ('export_only', 'mock'))"),
+              sqlite_where=text("NOT (provider IN ('export_only', 'mock'))")),
+    )
     provider: Mapped[str] = mapped_column(String(40))
     account_id: Mapped[str] = mapped_column(String(120))
     owner_sender_id: Mapped[str] = mapped_column(String(120))

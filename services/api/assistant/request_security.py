@@ -85,20 +85,28 @@ return 1
                 pass
         return remote
 
+    @staticmethod
+    def session_credential(headers):
+        token = headers.get(b"authorization", b"")
+        if not token:
+            cookie = SimpleCookie()
+            try:
+                cookie.load(headers.get(b"cookie", b"").decode("latin-1"))
+                value = cookie.get("session_token")
+                token = value.value.encode() if value else b""
+            except Exception:
+                token = b""
+        return token
+
+    def presents_credential(self, headers):
+        return bool(self.session_credential(headers))
+
     def actor(self, scope, headers, auth):
         # Authentication routes are limited by a trusted source, regardless of
         # arbitrary new cookie/bearer values. Other routes additionally bound
         # each presented session; current authentication is still enforced later.
         if not auth:
-            token = headers.get(b"authorization", b"")
-            if not token:
-                cookie = SimpleCookie()
-                try:
-                    cookie.load(headers.get(b"cookie", b"").decode("latin-1"))
-                    value = cookie.get("session_token")
-                    token = value.value.encode() if value else b""
-                except Exception:
-                    token = b""
+            token = self.session_credential(headers)
             if token and len(token) <= 256:
                 return hashlib.sha256(b"session:" + token).hexdigest()
         return hashlib.sha256(("source:" + self.source(scope, headers)).encode()).hexdigest()
@@ -188,6 +196,12 @@ class RequestSecurityMiddleware:
             or path.startswith("/auth/sessions/")
             or (scope["method"] == "DELETE" and path.startswith("/memories/"))
             or (path.startswith("/conversations/") and path.rsplit("/", 1)[-1] in {"permissions", "resume", "takeover"})))
+        if control and path != "/auth/native/revoke" and not self.limiter.presents_credential(headers):
+            # Every control route except refresh-secret revocation needs a session.
+            # Reject credential-free requests before they can spend the shared
+            # control buckets that owners rely on for pause, takeover and logout.
+            await self.reject(scope, receive, send, 401, "Authentication required")
+            return
         settings = self.settings
         if self.active >= settings.request_max_inflight or (
                 not control and self.ordinary >= settings.request_max_inflight - settings.request_control_reserve):

@@ -4,6 +4,10 @@ from cryptography.fernet import Fernet
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
+OPENAI_API_URL = "https://api.openai.com/v1"
+OPENROUTER_API_URL = "https://openrouter.ai/api/v1"
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
     environment: str = "development"
@@ -25,7 +29,7 @@ class Settings(BaseSettings):
     model_provider: str = "disabled"
     model_api_key: str = ""
     model_name: str = ""
-    model_api_url: str = "https://api.openai.com/v1"
+    model_api_url: str = OPENAI_API_URL
     model_timeout_seconds: int = 30
     model_max_input_chars: int = 24000
     model_processing_region: str = "unconfigured"
@@ -34,6 +38,16 @@ class Settings(BaseSettings):
     model_pricing_model_name: str = ""
     model_input_cost_microusd_per_million: int | None = None
     model_output_cost_microusd_per_million: int | None = None
+    # Applies to each owner when no explicit workspace token budget exists, so a
+    # newly signed-in account cannot spend the operator's model key without limit.
+    # 0 disables the default ceiling.
+    model_default_daily_tokens: int = 1_000_000
+    # Process-local provider concurrency, separate from ordinary request admission.
+    model_max_concurrency: int = 4
+    model_max_concurrency_per_owner: int = 1
+    # Optional OpenRouter attribution headers; the referer defaults to the first allowed origin.
+    model_app_url: str = ""
+    model_app_title: str = "Milo"
     whatsapp_app_secret: str = ""
     whatsapp_verify_token: str = ""
     whatsapp_access_token: str = ""
@@ -121,6 +135,8 @@ class Settings(BaseSettings):
             "request_rate_memory_keys": (10, 100000), "db_pool_size": (1, 100),
             "db_max_overflow": (0, 100), "db_pool_timeout_seconds": (0.01, 30),
             "db_pool_recycle_seconds": (30, 86400), "db_statement_timeout_ms": (100, 120000),
+            "model_default_daily_tokens": (0, 2_000_000_000), "model_max_concurrency": (1, 256),
+            "model_max_concurrency_per_owner": (1, 64),
         }
         for field, (minimum, maximum) in bounds.items():
             value = getattr(self, field)
@@ -167,6 +183,10 @@ class Settings(BaseSettings):
                 raise ValueError("Connector gateway requires its service token")
         if not 1 <= self.connector_gateway_timeout_seconds <= 60:
             raise ValueError("Connector gateway timeout must be between 1 and 60 seconds")
+        if self.model_provider == "openrouter" and self.model_api_url == OPENAI_API_URL:
+            self.model_api_url = OPENROUTER_API_URL
+        if self.model_max_concurrency_per_owner > self.model_max_concurrency:
+            raise ValueError("Per-owner model concurrency cannot exceed total model concurrency")
         for rate in (self.model_input_cost_microusd_per_million, self.model_output_cost_microusd_per_million):
             if rate is not None and not 0 <= rate <= 2_000_000_000:
                 raise ValueError("Model pricing must be a bounded nonnegative micro-USD rate")

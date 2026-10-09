@@ -1,6 +1,10 @@
 # Milo relationship assistant
 
-Live pilot: [Open Milo](https://web-production-bde60.up.railway.app).
+Live pilot: [Open Milo](https://web-production-bde60.up.railway.app). Product site:
+[what Milo is and how it works](https://web-production-bde60.up.railway.app/product)
+(Overview, How it works, Use cases, Trust & safety, Roadmap; source in `apps/web/app/(site)`).
+The latest security review and fixes are in [security audit](docs/SECURITY_AUDIT_2026-10-09.md);
+OpenRouter model configuration is described there and in the [Railway guide](docs/railway.md).
 The connectivity release `3336764b` passed exact-source CI and was redeployed to Railway.
 All 117 hosted checks passed with Google sign-in, model generation and external sending
 disabled. The implemented login and Business connection flows need real provider

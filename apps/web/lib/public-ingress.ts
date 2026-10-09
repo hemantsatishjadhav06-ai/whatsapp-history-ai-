@@ -1,8 +1,7 @@
 import type { NextRequest } from 'next/server';
-import { createHmac } from 'node:crypto';
-import { isIP } from 'node:net';
 import { boundedProxyBody, UploadTimeoutError } from './proxy-body';
 import { acquireProxyLease, leaseProxyBody } from './proxy-admission';
+import { signRateSource } from './rate-source';
 
 // Native clients use bearer sessions. Browser sessions and provider callbacks
 // each have a separate boundary; none can reach internal service routes.
@@ -44,21 +43,7 @@ function nativeRedirect(value: string | null): string | null {
 async function forward(request: NextRequest, route: string, search: string, headers: Headers, maxBytes: number, mode: 'native' | 'webhook' | 'callback') {
   const target = backend(route, search);
   if (!target) return unavailable('The private backend is not configured');
-  const rawHops = process.env.TRUST_PROXY_HOPS ?? '0';
-  if (!/^\d+$/.test(rawHops) || Number(rawHops) > 10) return unavailable('Trusted ingress configuration is unavailable');
-  const hops = Number(rawHops);
-  if (hops > 0) {
-    const key = process.env.BACKEND_PROXY_KEY;
-    if (!key || key.length < 32) return unavailable('Trusted ingress configuration is unavailable');
-    const forwarded = request.headers.get('x-forwarded-for');
-    const chain = forwarded && forwarded.length <= 2048 ? forwarded.split(',').map(value => value.trim()) : [];
-    const source = chain[chain.length - hops];
-    if (source && /^[a-fA-F0-9:.]+$/.test(source) && isIP(source)) {
-      const timestamp = String(Math.floor(Date.now() / 1000));
-      headers.set('x-milo-rate-source', source); headers.set('x-milo-rate-timestamp', timestamp);
-      headers.set('x-milo-rate-signature', createHmac('sha256', key).update(`${timestamp}.${source}`).digest('hex'));
-    }
-  }
+  if (!signRateSource(request, headers)) return unavailable('Trusted ingress configuration is unavailable');
   const isImport = mode === 'native' && (route === 'imports' || route === 'imports/preview');
   const isControl = mode === 'native' && ((request.method === 'POST' && CONTROL.test(route))
     || (request.method === 'PUT' && /^conversations\/[^/]+\/permissions$/.test(route))

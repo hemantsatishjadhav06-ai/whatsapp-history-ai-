@@ -1,8 +1,7 @@
 import type { NextRequest } from 'next/server';
-import { createHmac } from 'node:crypto';
-import { isIP } from 'node:net';
 import { boundedProxyBody, UploadTimeoutError } from '../../../lib/proxy-body';
 import { acquireProxyLease, leaseProxyBody } from '../../../lib/proxy-admission';
+import { signRateSource } from '../../../lib/rate-source';
 
 export const dynamic = 'force-dynamic';
 const ALLOWED = /^(?:auth\/(?:config|nonce|google|csrf|logout|sessions(?:\/[^/]+)?)|me|ui\/(?:bootstrap|updates|resolve)|(?:workspaces|connectors|conversations|drafts|messages|imports|inbox|tasks|memories|forward-routes|actions|jobs|schedules|scheduled-intents|contacts|people|integrations)(?:\/[A-Za-z0-9_.:@+-]+){0,3}|integrations\/whatsapp\/personal\/(?:config|status|start|pairing|chats(?:\/authorize)?|disconnect|authorship\/confirm)|automation\/grants(?:\/[^/]+)?|assistant\/(?:commands|digest)|privacy\/(?:retention(?:\/sweep)?|model-processing)|pause-all|resume-all|activity|data-export|account-data)$/;
@@ -60,26 +59,7 @@ async function proxy(request: NextRequest, context: { params: Promise<{ path: st
   for (const key of ['cookie', 'content-type', 'x-csrf-token', 'idempotency-key', 'origin', 'sec-fetch-site']) {
     const value = request.headers.get(key); if (value) headers.set(key, value);
   }
-  const configuredHops = process.env.TRUST_PROXY_HOPS ?? '0';
-  if (!/^\d+$/.test(configuredHops) || Number(configuredHops) > 10) {
-    return Response.json({detail:'Trusted ingress configuration is unavailable'}, {status:503});
-  }
-  const hops = Number(configuredHops);
-  if (hops > 0) {
-    const key = process.env.BACKEND_PROXY_KEY;
-    if (!key || key.length < 32) return Response.json({detail:'Trusted ingress configuration is unavailable'}, {status:503});
-    // Configure only after the edge's append/overwrite contract is verified.
-    // Earlier caller-supplied XFF entries never define the rate-limit source.
-    const forwarded = request.headers.get('x-forwarded-for');
-    const chain = forwarded && forwarded.length <= 2048 ? forwarded.split(',').map(value => value.trim()) : [];
-    const source = chain[chain.length - hops];
-    if (source && /^[a-fA-F0-9:.]+$/.test(source) && isIP(source)) {
-      const timestamp = String(Math.floor(Date.now() / 1000));
-      headers.set('x-milo-rate-source',source);
-      headers.set('x-milo-rate-timestamp',timestamp);
-      headers.set('x-milo-rate-signature',createHmac('sha256',key).update(`${timestamp}.${source}`).digest('hex'));
-    }
-  }
+  if (!signRateSource(request, headers)) return Response.json({detail:'Trusted ingress configuration is unavailable'}, {status:503});
   let upstream: URL;
   try {
     const base = new URL(configured);

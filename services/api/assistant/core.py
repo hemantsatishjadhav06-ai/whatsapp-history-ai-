@@ -181,6 +181,9 @@ def capabilities(provider):
     return values
 
 
+LABEL_PROVIDERS = frozenset({"export_only", "mock"})
+
+
 @router.post("/connectors", status_code=201)
 @serialized_control
 def create_connector(body: ConnectorInput, request: Request,
@@ -197,8 +200,11 @@ def create_connector(body: ConnectorInput, request: Request,
         status = "needs_verification"
     else:
         status = "connected"
-    existing = db.scalar(select(Connector).where(Connector.provider == body.provider,
-                                                Connector.account_id == body.account_id))
+    query = select(Connector).where(Connector.provider == body.provider, Connector.account_id == body.account_id)
+    if body.provider in LABEL_PROVIDERS:
+        # Owner-chosen labels are per workspace: another tenant's label never blocks or leaks.
+        query = query.where(Connector.workspace_id == body.workspace_id)
+    existing = db.scalar(query)
     if existing:
         if existing.workspace_id != body.workspace_id:
             raise HTTPException(409, "This account is already registered; explicit owner transfer is required")

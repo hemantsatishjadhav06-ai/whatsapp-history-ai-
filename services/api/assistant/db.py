@@ -59,7 +59,8 @@ class EncryptedJSON(EncryptedText):
 
 
 def make_database(settings):
-    kwargs = {"pool_pre_ping": True}
+    # Keep SQL parameters (identifiers, ciphertext) out of exception text and logs.
+    kwargs = {"pool_pre_ping": True, "hide_parameters": True}
     if settings.database_url.startswith("sqlite"):
         kwargs["connect_args"] = {"check_same_thread": False}
         if settings.database_url.endswith(":memory:"):
