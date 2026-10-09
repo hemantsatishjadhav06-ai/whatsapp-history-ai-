@@ -341,5 +341,35 @@ export function shortTime(value: unknown, timezone = 'Asia/Kolkata') {
   const date = new Date(value); if (Number.isNaN(date.valueOf())) return '';
   return new Intl.DateTimeFormat('en', { hour: 'numeric', minute: '2-digit', timeZone: timezone }).format(date);
 }
+function zonedDay(date: Date, timezone: string) {
+  return new Intl.DateTimeFormat('en-CA', { year: 'numeric', month: '2-digit', day: '2-digit', timeZone: timezone }).format(date);
+}
+function dayDistance(date: Date, timezone: string, now = new Date()) {
+  return Math.round((Date.parse(zonedDay(now, timezone)) - Date.parse(zonedDay(date, timezone))) / 86_400_000);
+}
+/** WhatsApp-style list stamp: time today, then Yesterday, weekday, or a short date. */
+export function listTime(value: unknown, timezone = 'Asia/Kolkata', now = new Date()) {
+  if (typeof value !== 'string' || !value) return '';
+  const date = new Date(value); if (Number.isNaN(date.valueOf())) return '';
+  const days = dayDistance(date, timezone, now);
+  if (days <= 0) return shortTime(value, timezone);
+  if (days === 1) return 'Yesterday';
+  if (days < 7) return new Intl.DateTimeFormat('en', { weekday: 'long', timeZone: timezone }).format(date);
+  return new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', year: days > 300 ? 'numeric' : undefined, timeZone: timezone }).format(date);
+}
+/** Separator label for a day of messages in the owner's timezone. */
+export function dayLabel(value: unknown, timezone = 'Asia/Kolkata', now = new Date()) {
+  if (typeof value !== 'string' || !value) return '';
+  const date = new Date(value); if (Number.isNaN(date.valueOf())) return '';
+  const days = dayDistance(date, timezone, now);
+  if (days <= 0) return 'Today';
+  if (days === 1) return 'Yesterday';
+  return new Intl.DateTimeFormat('en-GB', { weekday: days < 7 ? 'long' : undefined, day: 'numeric', month: 'long',
+    year: days > 300 ? 'numeric' : undefined, timeZone: timezone }).format(date);
+}
+export function dayKey(value: unknown, timezone = 'Asia/Kolkata') {
+  if (typeof value !== 'string' || !value) return '';
+  const date = new Date(value); return Number.isNaN(date.valueOf()) ? '' : zonedDay(date, timezone);
+}
 export function textValue(value: unknown, fallback = '') { return typeof value === 'string' ? value : fallback; }
 export function isRecord(value: unknown): value is DataRecord { return !!value && typeof value === 'object' && 'id' in value; }

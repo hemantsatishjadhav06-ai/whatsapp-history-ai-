@@ -9,7 +9,8 @@ function snapshot(owner = 'owner-a', workspace = 'workspace-a', version = 'v1') 
     styles: [], grants: [], routes: [], activity: [], contacts: [], budget: null, retention: null, simulation: false,
     generated_at: '2026-10-07T12:00:00Z', snapshot_version: version };
 }
-async function fixture(page: Page, options: { enabled?: boolean; connected?: boolean; expiresAfter?: number; savedChat?: boolean; automaticExpiresAfter?: number; linkCode?: boolean } = {}) {
+async function fixture(page: Page, options: { enabled?: boolean; connected?: boolean; expiresAfter?: number; savedChat?: boolean; automaticExpiresAfter?: number; linkCode?: boolean; importMode?: 'all' | 'selected' } = {}) {
+  let importMode = options.importMode ?? 'selected'; const modeWrites: Record<string, unknown>[] = [];
   let currentSnapshot: Record<string, unknown> = snapshot(); let enabled = options.enabled ?? true;
   let connected = options.connected ?? false; let started = connected; let hold: Promise<void> | null = null;
   const expiresAt = new Date(Date.now() + (options.expiresAfter ?? 45_000)).toISOString();
@@ -34,6 +35,13 @@ async function fixture(page: Page, options: { enabled?: boolean; connected?: boo
       pairingCount++; const held = hold; const body = { connector_id: 'personal-fixture', state: 'pairing', qr: { value: syntheticQR, expires_at: expiresAt }, poll_after_seconds: 3, pairing_code: options.linkCode ? { code: 'ABCD2345', expires_at: new Date(Date.now() + 120_000).toISOString() } : null };
       if (held) await held; return route.fulfill({ json: body });
     }
+    if (path.endsWith('/personal/sync')) return route.fulfill({ json: { workspace_id: 'workspace-a', import_mode: importMode, connector_id: 'personal-fixture',
+      chats: importMode === 'all' ? 182 : 1, messages: importMode === 'all' ? 24518 : 3, phase: importMode === 'all' ? 'full' : 'complete', progress: importMode === 'all' ? 64 : 100,
+      last_sync_at: new Date().toISOString(), oldest_message_at: '2021-03-04T10:00:00Z', backfill_pending: importMode === 'all' ? 12 : 0, backfill_complete: 0 } });
+    if (path.endsWith('/personal/preferences') && route.request().method() === 'PUT') {
+      const body = route.request().postDataJSON() as Record<string, unknown>; modeWrites.push(body);
+      importMode = body.import_mode === 'all' ? 'all' : 'selected'; return route.fulfill({ json: body });
+    }
     if (path.endsWith('/personal/chats')) return route.fulfill({ json: { connector_id: 'personal-fixture', chats: [{ provider_chat_id: 'synthetic-peer', title: 'Synthetic person', kind: 'contact', conversation_id: options.savedChat ? 'saved-personal-chat' : null, permissions: options.savedChat ? { read: true, retain: true, draft: true } : {} }, { provider_chat_id: 'unsupported-group', title: 'Unsupported group', kind: 'group', conversation_id: null }], limit: 50, has_more: false } });
     if (path === '/api/conversations/saved-personal-chat/messages') { writingCount++; const response = writing; const held = heldWriting; if (held) await held; return route.fulfill({ json: response }); }
     if (path.endsWith('/automatic-drafts')) {
@@ -52,7 +60,7 @@ async function fixture(page: Page, options: { enabled?: boolean; connected?: boo
     }
     return route.fulfill({ status: 404, json: { detail: 'Unavailable synthetic fixture route' } });
   });
-  return { changes, automaticWrites, failStatus: () => { statusUnavailable = true; }, setWriting: (rows: Record<string, unknown>[]) => { writing = rows; }, holdWriting: (promise: Promise<void> | null) => { heldWriting = promise; }, writingCount: () => writingCount, pairingCount: () => pairingCount, hold: (value: Promise<void> | null) => { hold = value; },
+  return { changes, automaticWrites, modeWrites, failStatus: () => { statusUnavailable = true; }, setWriting: (rows: Record<string, unknown>[]) => { writing = rows; }, holdWriting: (promise: Promise<void> | null) => { heldWriting = promise; }, writingCount: () => writingCount, pairingCount: () => pairingCount, hold: (value: Promise<void> | null) => { hold = value; },
     switchOwner: () => { enabled = false; currentSnapshot = snapshot('owner-b', 'workspace-b', 'changed-owner'); } };
 }
 const panel = (page: Page) => page.getByRole('region', { name: 'WhatsApp phone connection', exact: true });
@@ -60,6 +68,22 @@ async function startLinking(page: Page, number = '+1 555 000 0000') {
   await panel(page).getByRole('textbox', { name: 'Your WhatsApp number, with country code', exact: true }).fill(number);
   await panel(page).getByRole('button', { name: 'Get my link code', exact: true }).click();
 }
+
+test('all-chats mode reads every chat without per-chat approval and shows import progress', async ({ page }) => {
+  const data = await fixture(page, { connected: true, importMode: 'all' }); await page.goto('/connections');
+  const sync = panel(page).getByRole('region', { name: 'WhatsApp sync', exact: true });
+  await expect(panel(page)).toContainText('Your phone is linked. Milo is reading all your chats.');
+  await expect(sync).toContainText('24,518'); await expect(sync).toContainText('182');
+  await expect(sync).toContainText('Importing your WhatsApp history · 64%');
+  await expect(sync).toContainText('12 chats to go');
+  await expect(sync.getByRole('radio', { name: /All my chats/ })).toBeChecked();
+  // Per-chat controls stay available but collapsed; nothing asks for approval to read.
+  await expect(panel(page).getByRole('form', { name: 'Choose one linked WhatsApp conversation', exact: true })).toBeHidden();
+  await sync.getByRole('radio', { name: /Only chats I choose/ }).check();
+  await expect.poll(() => data.modeWrites).toEqual([{ workspace_id: 'workspace-a', import_mode: 'selected' }]);
+  await expect(panel(page)).toContainText('Your phone is linked. Choose the chats Milo may read.');
+  expect(data.changes).toEqual([]);
+});
 
 test('an unavailable pilot cannot show a pairing code or start a connection', async ({ page }) => {
   const data = await fixture(page, { enabled: false }); await page.goto('/connections');
@@ -70,11 +94,11 @@ test('an unavailable pilot cannot show a pairing code or start a connection', as
 
 test('a failed status refresh cannot keep claiming a currently linked phone or showing old private chats', async ({ page }) => {
   const data = await fixture(page, { connected: true, savedChat: true }); await page.goto('/connections');
-  await expect(panel(page)).toContainText('Your phone is linked. Choose one conversation to begin.');
+  await expect(panel(page)).toContainText('Your phone is linked. Choose the chats Milo may read.');
   await panel(page).getByRole('combobox', { name: 'Individual WhatsApp conversation', exact: true }).selectOption('synthetic-peer');
   data.failStatus(); await panel(page).getByRole('button', { name: 'Refresh phone linking', exact: true }).click();
   await expect(panel(page)).toContainText('Current phone linking is unconfirmed. Refresh linking to review its current state.');
-  await expect(panel(page)).not.toContainText('Your phone is linked. Choose one conversation to begin.');
+  await expect(panel(page)).not.toContainText('Your phone is linked. Choose the chats Milo may read.');
   await expect(panel(page).getByRole('form', { name: 'Choose one linked WhatsApp conversation', exact: true })).toHaveCount(0);
   await expect(panel(page).getByRole('button', { name: 'Disconnect this linked device', exact: true })).toBeEnabled();
   expect(data.changes).toEqual([]);

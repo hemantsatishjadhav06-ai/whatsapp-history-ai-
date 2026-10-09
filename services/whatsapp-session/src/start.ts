@@ -17,7 +17,11 @@ if (parsed.searchParams.get("sslmode") === "no-verify" || parsed.searchParams.ge
 }
 const storage = postgresAuthStores({ connectionString: databaseUrl, key: encryptionKey(process.env.SESSION_ENCRYPTION_KEY ?? "") });
 const maxSessions = Number(process.env.MAX_PERSONAL_SESSIONS ?? "20");
-const sessions = new Sessions({ enabled, maxSessions,
+// Content-free operational events only: counts, status codes and a hashed session tag. Never JIDs or text.
+const log = (event: string, fields: Record<string, string | number | boolean>) => {
+  process.stdout.write(`${JSON.stringify({ at: new Date().toISOString(), event, ...fields })}\n`);
+};
+const sessions = new Sessions({ enabled, maxSessions, log,
   stores: storage.factory, authority: authorityClient({ origin: process.env.PYTHON_AUTHORITY_URL ?? "http://127.0.0.1:8000",
     token: process.env.PYTHON_INTERNAL_TOKEN ?? "" }) });
 const server = privateServer({ token: process.env.SESSION_GATEWAY_TOKEN ?? "", sessions,

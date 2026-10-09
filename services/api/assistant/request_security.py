@@ -18,6 +18,10 @@ from redis.asyncio import Redis
 from starlette.responses import JSONResponse
 
 
+SYNC_BATCH_PATHS = frozenset({"/internal/whatsapp-session-sync"})
+SYNC_BATCH_BYTES = 2_097_152  # Bounded private history batches from the session service.
+
+
 def canonical_path(path):
     return path[3:] if path.startswith("/v1/") else path
 
@@ -219,7 +223,8 @@ class RequestSecurityMiddleware:
                 await self.reject(scope, receive, send, 429, "Request rate limit reached", settings.request_rate_window_seconds)
                 return
             large = path in {"/imports", "/imports/preview", "/webhooks/whatsapp"}
-            cap = settings.max_import_bytes * 6 + 65536 if large else settings.request_default_body_bytes
+            cap = (settings.max_import_bytes * 6 + 65536 if large else
+                   SYNC_BATCH_BYTES if path in SYNC_BATCH_PATHS else settings.request_default_body_bytes)
             if declared > cap:
                 await self.reject(scope, receive, send, 413, "Request body too large")
                 return

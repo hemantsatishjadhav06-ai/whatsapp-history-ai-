@@ -192,6 +192,9 @@ def run():
                 api.headers["X-CSRF-Token"] = signed["csrf_token"]
                 workspace = check(api.post(api_url + "/workspaces", json={"name": "Synthetic QR bridge"}), 201)
                 wid = workspace["id"]
+                # Selected-chat mode keeps the explicit per-contact consent flow; "all" is exercised below.
+                owner("/integrations/whatsapp/personal/preferences", {"workspace_id": wid, "import_mode": "selected"},
+                      method="PUT")
                 started = owner("/integrations/whatsapp/personal/start", {"workspace_id": wid})
                 cid = started["connector"]["id"]
                 ident = {"schema_version": 1, "workspace_id": wid, "connector_id": cid,
@@ -239,6 +242,24 @@ def run():
                     assert db.scalar(select(StyleProfile).where(StyleProfile.conversation_id == conv_id)).sample_count == 1
                 visible = owner(f"/conversations/{conv_id}/messages", method="GET")
                 assert len(visible) == 3
+                # Owner-chosen "all chats": every one-to-one chat is read without per-chat approval,
+                # the owner's own history teaches style, and sending is never granted.
+                owner("/integrations/whatsapp/personal/preferences", {"workspace_id": wid, "import_mode": "all"},
+                      method="PUT")
+                control_post("/message", {"connector_id": cid, "provider_chat_id": UNSELECTED, "direction": "inbound",
+                    "origin": "live", "provider_message_id": "synthetic-all-chats", "text": "Synthetic all-chats request"})
+                control_post("/message", {"connector_id": cid, "provider_chat_id": UNSELECTED, "direction": "outbound",
+                    "origin": "history", "provider_message_id": "synthetic-all-owner", "text": "Synthetic owner history"})
+                with factory() as db:
+                    imported = db.scalar(select(Conversation).where(Conversation.provider_chat_id == UNSELECTED))
+                    assert imported is not None and imported.control_state == "DRAFT_MODE"
+                    imported_id = imported.id
+                    imported_grant = db.scalar(select(Permission).where(Permission.conversation_id == imported_id))
+                    assert imported_grant.read and imported_grant.retain and not imported_grant.send
+                    assert db.scalar(select(Message.author_kind).where(
+                        Message.provider_message_id == "synthetic-all-owner")) == "human_owner"
+                    assert db.scalar(select(func.count()).select_from(SendAttempt)) == 0
+                report["checks"].extend(["all_chats_import_without_per_chat_approval", "all_chats_never_grant_send"])
                 draft_id, digest = seed_owner_draft(factory, conv_id)
                 owner(f"/drafts/{draft_id}/approve", {"content_hash": digest})
                 attempt = owner(f"/drafts/{draft_id}/dispatch")
@@ -278,6 +299,8 @@ def run():
                 assert owner(f"/drafts/{draft_id}/dispatch")["status"] == "delivered"
                 assert stats()["sends"] == 0
                 report["checks"].extend(["encrypted_credentials_restore_after_service_restart", "sql_ledger_prevents_send_replay_after_restart"])
+                review_id, review_digest = seed_owner_draft(factory, conv_id)
+                owner(f"/drafts/{review_id}/approve", {"content_hash": review_digest})
                 stop(node_process)
                 with factory() as db:
                     db.get(Connector, cid).lease_expires_at = now() - timedelta(seconds=1)
@@ -286,9 +309,12 @@ def run():
                 control_post("/wait", {})
                 assert owner("/integrations/whatsapp/personal/status", method="GET", params={"workspace_id": wid})["connected"] is True
                 with factory() as db:
+                    # Pending work is reviewed after a gap; idle chats stay readable and unchanged.
                     assert db.get(Conversation, conv_id).control_state == "RECONNECT_REVIEW"
+                    assert db.get(Draft, review_id).status == "cancelled"
+                    assert db.get(Conversation, imported_id).control_state == "DRAFT_MODE"
                 assert stats()["sends"] == 0
-                report["checks"].append("expired_lease_autorestore_requires_contact_review")
+                report["checks"].append("expired_lease_autorestore_reviews_pending_work")
                 disconnected = owner("/integrations/whatsapp/personal/disconnect", {"connector_id": cid})
                 assert disconnected["status"] == "disconnected" and disconnected["remote_session_close"] == "confirmed"
                 assert disconnected["provider_revocation"] == "not_verified"

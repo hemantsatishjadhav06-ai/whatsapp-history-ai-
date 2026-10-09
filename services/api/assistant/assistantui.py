@@ -9,7 +9,7 @@ from typing import Literal
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request
 from pydantic import BaseModel, ConfigDict, Field, field_validator
-from sqlalchemy import or_, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.orm import load_only
 
 from .access import audit, conversation_for, permission_for, workspace_for
@@ -38,7 +38,9 @@ router = APIRouter(tags=["UI bootstrap", "client configuration"])
 
 def auth_config(settings):
     from .native_oauth import broker_configured
+    from .whatsapp_personal import configured as personal_configured
     native_broker_ready = broker_configured(settings)
+    personal_ready = personal_configured(settings)
     return {"backend_configured": True, "google_configured": bool(settings.google_client_id),
             "access_code_enabled": bool(settings.owner_access_code),
             "client_id": settings.google_client_id or None,
@@ -54,7 +56,9 @@ def auth_config(settings):
             "browser_authentication": "http_only_cookie_with_csrf",
             "native_authentication": "revocable_bearer_with_google_nonce_and_S256_proof",
             "native_refresh_supported": True,
-            "providers": {"whatsapp_personal": {"status": "unavailable", "pairing_supported": False},
+            "providers": {"whatsapp_personal": {"status": "configured" if personal_ready else
+                                                "not_configured" if not settings.whatsapp_personal_enabled else "unavailable",
+                                                "pairing_supported": personal_ready, "history_sync": personal_ready},
                           "whatsapp_business": {"status": "configured" if settings.whatsapp_phone_number_id
                                                  and settings.whatsapp_access_token else "not_configured",
                                                 "live_verification_required": True},
@@ -90,9 +94,47 @@ def recover_browser_csrf(request: Request, user=Depends(get_current_user), db=De
     return {"csrf_token": token, "rotated": True}
 
 
+def _activity(row):
+    return aware(row.last_message_at or row.created_at)
+
+
 def _cursor(row):
-    value = json.dumps([aware(row.created_at).isoformat(), row.id], separators=(",", ":")).encode()
+    value = json.dumps([_activity(row).isoformat(), row.id], separators=(",", ":")).encode()
     return base64.urlsafe_b64encode(value).decode().rstrip("=")
+
+
+def _previews(db, workspace_id, ids):
+    """Newest available message per chat on this page, for the inbox list.
+
+    Two bounded queries regardless of page size. Bodies are decrypted one by one so a
+    single unreadable record yields an empty preview instead of failing the snapshot."""
+    from sqlalchemy import Text, type_coerce
+    if not ids:
+        return {}
+    latest = select(Message.conversation_id, func.max(Message.provider_timestamp).label("stamp")).where(
+        Message.workspace_id == workspace_id, Message.conversation_id.in_(ids), Message.deleted.is_(False)
+    ).group_by(Message.conversation_id).subquery()
+    rows = db.execute(select(Message.id, Message.connector_id, Message.conversation_id, Message.direction,
+                             type_coerce(Message.text, Text()).label("ciphertext"))
+                      .join(latest, (Message.conversation_id == latest.c.conversation_id)
+                            & (Message.provider_timestamp == latest.c.stamp))
+                      .where(Message.workspace_id == workspace_id, Message.deleted.is_(False))
+                      .order_by(Message.id)).all()
+    expired = {row.message_id for row in db.execute(select(MessageContext.message_id, MessageContext.connector_id,
+                                                           MessageContext.conversation_id).where(
+        MessageContext.workspace_id == workspace_id, MessageContext.message_id.in_([row.id for row in rows]),
+        MessageContext.expires_at.is_not(None), MessageContext.expires_at <= now()))} if rows else set()
+    cipher = getattr(db.get_bind().dialect, "assistant_cipher", None)
+    previews = {}
+    for row in rows:
+        if row.conversation_id in previews or row.id in expired or cipher is None or not row.ciphertext:
+            continue
+        try:
+            text = cipher.decrypt(row.ciphertext.encode()).decode()
+        except Exception:
+            continue  # An unreadable body never breaks the inbox list.
+        previews[row.conversation_id] = (("You: " if row.direction == "outbound" else "") + " ".join(text.split()))[:140]
+    return previews
 
 
 def _cursor_value(value):
@@ -143,20 +185,28 @@ def bootstrap(request: Request, workspace_id: str | None = None,
         Permission.workspace_id == workspace.id, Permission.read.is_(True),
         or_(Permission.expires_at.is_(None), Permission.expires_at > now()))
     query = select(Conversation).where(Conversation.workspace_id == workspace.id, Conversation.id.in_(readable))
+    # Newest activity first, like WhatsApp; chats without messages sort by creation.
+    activity = func.coalesce(Conversation.last_message_at, Conversation.created_at)
     if conversation_cursor:
         stamp, identifier = _cursor_value(conversation_cursor)
-        query = query.where(or_(Conversation.created_at > stamp,
-                                (Conversation.created_at == stamp) & (Conversation.id > identifier)))
-    conversations = list(db.scalars(query.order_by(Conversation.created_at, Conversation.id).limit(conversation_limit + 1)))
+        query = query.where(or_(activity < stamp, (activity == stamp) & (Conversation.id < identifier)))
+    conversations = list(db.scalars(query.order_by(activity.desc(), Conversation.id.desc()).limit(conversation_limit + 1)))
     more = len(conversations) > conversation_limit
     conversations = conversations[:conversation_limit]
     ids = [row.id for row in conversations]
     permissions = {row.conversation_id: row for row in db.scalars(select(Permission).where(
         Permission.workspace_id == workspace.id, Permission.conversation_id.in_(ids)))}
+    from .whatsapp_personal_models import PersonalChatSync
+    unread = dict(db.execute(select(PersonalChatSync.conversation_id, PersonalChatSync.unread_count).where(
+        PersonalChatSync.workspace_id == workspace.id, PersonalChatSync.conversation_id.in_(ids))).all()) if ids else {}
+    previews = _previews(db, workspace.id, ids)
     for row in conversations:
         value = public(row, "workspace_id", "connector_id", "provider_chat_id", "title", "kind", "revision",
                        "control_epoch", "control_state", "recipient_opted_in", "recipient_opted_out", "group_send_allowed")
         value["permissions"] = public(permissions[row.id], "read", "retain", "learn", "draft", "send", "share", "version", "expires_at")
+        value.update(timestamp=_activity(row).isoformat(), preview=previews.get(row.id, ""),
+                     unread=int(unread.get(row.id) or 0),
+                     last_message_at=aware(row.last_message_at).isoformat() if row.last_message_at else None)
         result["conversations"].append(value)
     result["pagination"].update(conversation_next_cursor=_cursor(conversations[-1]) if more else None,
                                  has_more_conversations=more)
@@ -236,6 +286,28 @@ def bootstrap(request: Request, workspace_id: str | None = None,
     stable = {key: value for key, value in result.items() if key not in {"generated_at", "configuration"}}
     result["snapshot_version"] = hashlib.sha256(json.dumps(stable, sort_keys=True, default=str).encode()).hexdigest()
     return result
+
+
+@router.get("/ui/conversations/search")
+def search_conversations(workspace_id: str, q: str = Query(min_length=2, max_length=80),
+                         limit: int = Query(20, ge=1, le=50), user=Depends(get_current_user), db=Depends(get_db)):
+    """Find readable chats by name or number across every page, newest activity first."""
+    workspace_for(db, user, workspace_id)
+    readable = select(Permission.conversation_id).where(
+        Permission.workspace_id == workspace_id, Permission.read.is_(True),
+        or_(Permission.expires_at.is_(None), Permission.expires_at > now()))
+    needle = q.strip().lower()
+    digits = "".join(char for char in needle if char.isdigit())
+    match = func.lower(Conversation.title).contains(needle, autoescape=True)
+    if len(digits) >= 4:
+        match = or_(match, Conversation.provider_chat_id.contains(digits, autoescape=True))
+    activity = func.coalesce(Conversation.last_message_at, Conversation.created_at)
+    rows = list(db.scalars(select(Conversation).where(Conversation.workspace_id == workspace_id,
+                                                      Conversation.id.in_(readable), match)
+                           .order_by(activity.desc(), Conversation.id.desc()).limit(limit)))
+    previews = _previews(db, workspace_id, [row.id for row in rows])
+    return [{**public(row, "workspace_id", "connector_id", "provider_chat_id", "title", "kind", "control_state"),
+             "timestamp": _activity(row).isoformat(), "preview": previews.get(row.id, "")} for row in rows]
 
 
 @router.get("/ui/resolve")

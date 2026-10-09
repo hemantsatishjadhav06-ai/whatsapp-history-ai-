@@ -547,6 +547,8 @@ def commit_import(body: ImportInput, request: Request, user=Depends(get_current_
         db.flush()
         db.add(MessageEvent(workspace_id=conv.workspace_id, event_id=f"{conv.id}:{provider_id}",
                             conversation_id=conv.id, message_id=msg.id, event_type="message.created", source_revision=1))
+        if conv.last_message_at is None or aware(record.timestamp) > aware(conv.last_message_at):
+            conv.last_message_at = aware(record.timestamp)
         count += 1
     invalidate(db, conv, "history_imported")
     from .intelligence import refresh_style_from_messages

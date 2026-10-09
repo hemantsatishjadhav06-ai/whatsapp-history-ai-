@@ -232,14 +232,64 @@ def erase_session_credentials(db, connector):
                                                     PersonalWhatsAppSession.workspace_id == connector.workspace_id))
 
 
+def conversations_with_pending_work(db, row):
+    """Chats of this connector holding drafts, schedules, actions or automation.
+
+    An idle chat has nothing to review, so a connection gap leaves it readable and
+    unchanged; with every chat imported, reviewing idle chats would freeze hundreds.
+    A fixed number of queries regardless of how many chats the account has."""
+    from .action_models import AutomationGrant, ForwardRoute, OutboundAction
+    from .actions import PENDING as ACTION_PENDING
+    from .automatic_drafts_models import AutoDraftGrant
+    from .jobs import ACTIVE as JOB_ACTIVE
+    from .jobs_models import AuthorizedJob
+    from .messaging import PENDING_DRAFTS
+    from .models import Automation, ScheduledIntent
+    chats = select(Conversation.id).where(Conversation.connector_id == row.id,
+                                         Conversation.workspace_id == row.workspace_id)
+    queries = (
+        select(Draft.conversation_id).where(Draft.conversation_id.in_(chats), Draft.status.in_(PENDING_DRAFTS)),
+        select(ScheduledIntent.conversation_id).where(ScheduledIntent.conversation_id.in_(chats),
+                                                      ScheduledIntent.status.in_(["scheduled", "held"])),
+        select(Automation.conversation_id).where(Automation.conversation_id.in_(chats), Automation.enabled.is_(True)),
+        select(AutoDraftGrant.conversation_id).where(AutoDraftGrant.conversation_id.in_(chats),
+                                                     AutoDraftGrant.enabled.is_(True)),
+        select(AutomationGrant.conversation_id).where(AutomationGrant.conversation_id.in_(chats),
+                                                      AutomationGrant.enabled.is_(True)),
+        select(ForwardRoute.source_conversation_id).where(ForwardRoute.source_conversation_id.in_(chats),
+                                                          ForwardRoute.enabled.is_(True)),
+        select(ForwardRoute.destination_conversation_id).where(ForwardRoute.destination_conversation_id.in_(chats),
+                                                               ForwardRoute.enabled.is_(True)),
+        select(OutboundAction.conversation_id).where(OutboundAction.conversation_id.in_(chats),
+                                                     OutboundAction.status.in_(ACTION_PENDING)),
+        select(OutboundAction.destination_conversation_id).where(OutboundAction.destination_conversation_id.in_(chats),
+                                                                 OutboundAction.status.in_(ACTION_PENDING)),
+        select(AuthorizedJob.conversation_id).where(AuthorizedJob.conversation_id.in_(chats),
+                                                    AuthorizedJob.status.in_(JOB_ACTIVE)),
+    )
+    pending = set()
+    for query in queries:
+        pending.update(db.scalars(query.distinct()))
+    return pending
+
+
+def review_after_gap(db, row, reason):
+    """Cancel stale work and require owner review only where there is work to review."""
+    pending = conversations_with_pending_work(db, row)
+    if not pending:
+        return
+    for conv in db.scalars(select(Conversation).where(Conversation.id.in_(pending),
+                                                     Conversation.connector_id == row.id,
+                                                     Conversation.workspace_id == row.workspace_id)):
+        invalidate(db, conv, reason)
+        conv.control_state = "RECONNECT_REVIEW"
+
+
 def revoke(db, row, reason):
     row.status, row.lease_expires_at = "disconnected", now()
     row.fence += 1
     erase_session_credentials(db, row)
-    for conv in db.scalars(select(Conversation).where(Conversation.connector_id == row.id,
-                                                     Conversation.workspace_id == row.workspace_id)):
-        invalidate(db, conv, reason)
-        conv.control_state = "RECONNECT_REVIEW"
+    review_after_gap(db, row, reason)
 
 
 def private_request(settings, operation, payload):
@@ -541,6 +591,15 @@ def session_authority(body: AuthorityInput, request: Request, db=Depends(get_db)
     if not configured(settings):
         return result
     try:
+        row = db.get(Connector, body.connector_id)
+        if row is not None and row.provider == PROVIDER and row.workspace_id == body.workspace_id:
+            # Content-free denial reasons let the private actor recover from a lease gap
+            # (re-announce its connection) and stop only when the session is revoked.
+            if row.fence != body.connector_fence or row.status in {"disconnected", "failed", "logged_out"}:
+                result["reason_code"] = "revoked"
+            elif (body.operation == "status" and row.status == "connected"
+                  and (row.lease_expires_at is None or aware(row.lease_expires_at) <= now())):
+                result["reason_code"] = "lease_expired"
         row, _ = current_identity(db, body, require_session=body.operation != "disconnect",
                                   connected=body.operation in {"ingest", "send", "chats"})
         if body.operation == "status" and row.status == "connected":
@@ -611,28 +670,27 @@ def apply_connection(db, body, data):
                 db.commit()
                 raise HTTPException(409, "This WhatsApp account is already bound to another workspace")
         if row.status == "connected" and (not row.lease_expires_at or aware(row.lease_expires_at) <= now()):
-            for conv in db.scalars(select(Conversation).where(Conversation.connector_id == row.id,
-                                                             Conversation.workspace_id == row.workspace_id)):
-                invalidate(db, conv, "personal_session_lease_gap")
-                conv.control_state = "RECONNECT_REVIEW"
+            review_after_gap(db, row, "personal_session_lease_gap")
         for alias in aliases:
             if db.get(PersonalAccountAlias, alias) is None:
                 db.add(PersonalAccountAlias(alias_id=alias, workspace_id=row.workspace_id, connector_id=row.id))
+        first_link = row.status != "connected" or not JID.fullmatch(row.account_id)
         row.account_id, row.owner_sender_id = data.account_id, data.account_id
         row.status = session.status = "connected"
         row.lease_expires_at = now() + timedelta(seconds=LEASE_SECONDS)
         row.capabilities = {**capabilities(PROVIDER), "live_receive": "supported", "send_text": "supported",
-                            "qr_pairing": "supported", "delivery_receipts": "supported",
-                            "human_outgoing": "supported", "assistant_echo": "supported"}
+                            "qr_pairing": "supported", "pairing_code": "supported", "history_sync": "supported",
+                            "delivery_receipts": "supported", "human_outgoing": "supported",
+                            "assistant_echo": "supported", "message_edits": "supported", "deletions": "supported"}
         session.last_connected_at = session.last_health_at = now()
         session.error_code = None
+        if first_link:
+            from .whatsapp_sync import keep_full_history
+            keep_full_history(db, row)
     else:
         target = "pairing" if data.state == "qr" else data.state
         if row.status == "connected":
-            for conv in db.scalars(select(Conversation).where(Conversation.connector_id == row.id,
-                                                             Conversation.workspace_id == row.workspace_id)):
-                invalidate(db, conv, "personal_session_connection_gap")
-                conv.control_state = "RECONNECT_REVIEW"
+            review_after_gap(db, row, "personal_session_connection_gap")
         row.status = session.status = target
         row.lease_expires_at = None
         session.last_health_at = now()

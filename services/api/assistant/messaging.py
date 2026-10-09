@@ -181,8 +181,10 @@ def invalidate_conversation(db: Session, conversation: Conversation, reason: str
     )).all()
     for intent in intents:
         intent.status = "cancelled"
-    audit(db, conversation.workspace_id, "system", "conversation.work_invalidated", conversation.id,
-          reason=reason, draft_count=len(drafts), schedule_count=len(intents))
+    if drafts or intents:
+        # Every observed message bumps the revision; only real cancellations belong in Activity.
+        audit(db, conversation.workspace_id, "system", "conversation.work_invalidated", conversation.id,
+              reason=reason, draft_count=len(drafts), schedule_count=len(intents))
     from .actions import invalidate_actions
     invalidate_actions(db, conversation, reason)
     from .automatic_drafts import invalidate_automatic_drafts
@@ -350,6 +352,8 @@ def ingest_event(db: Session, event: CanonicalEvent) -> dict:
         if conversation.last_inbound_at is None or event.provider_timestamp > aware(conversation.last_inbound_at):
             conversation.last_inbound_at = event.provider_timestamp
     if event.event_type == "message.created" and not message.deleted:
+        if conversation.last_message_at is None or aware(event.provider_timestamp) > aware(conversation.last_message_at):
+            conversation.last_message_at = aware(event.provider_timestamp)
         from .people import auto_save_contact
         auto_save_contact(db, conversation, message)
     if message.author_kind == "human_owner":

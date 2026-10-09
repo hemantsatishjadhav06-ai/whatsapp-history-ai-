@@ -3235,6 +3235,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/ui/conversations/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Search Conversations
+         * @description Find readable chats by name or number across every page, newest activity first.
+         */
+        get: operations["search_conversations_ui_conversations_search_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/ui/resolve": {
         parameters: {
             query?: never;
@@ -3332,6 +3352,26 @@ export interface paths {
         };
         /** Bootstrap */
         get: operations["bootstrap_v1_ui_bootstrap_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/ui/conversations/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Search Conversations
+         * @description Find readable chats by name or number across every page, newest activity first.
+         */
+        get: operations["search_conversations_v1_ui_conversations_search_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -3954,6 +3994,148 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/internal/whatsapp-session-sync": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Session Sync */
+        post: operations["session_sync_internal_whatsapp_session_sync_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/internal/whatsapp-session-backfill": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Session Backfill
+         * @description Older history, newest chats first: report outcomes, receive the next anchors.
+         */
+        post: operations["session_backfill_internal_whatsapp_session_backfill_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/integrations/whatsapp/personal/sync": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Sync Status */
+        get: operations["sync_status_integrations_whatsapp_personal_sync_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/integrations/whatsapp/personal/preferences": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Set Preferences */
+        put: operations["set_preferences_integrations_whatsapp_personal_preferences_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/internal/whatsapp-session-sync": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Session Sync */
+        post: operations["session_sync_v1_internal_whatsapp_session_sync_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/internal/whatsapp-session-backfill": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Session Backfill
+         * @description Older history, newest chats first: report outcomes, receive the next anchors.
+         */
+        post: operations["session_backfill_v1_internal_whatsapp_session_backfill_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/integrations/whatsapp/personal/sync": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Sync Status */
+        get: operations["sync_status_v1_integrations_whatsapp_personal_sync_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/integrations/whatsapp/personal/preferences": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Set Preferences */
+        put: operations["set_preferences_v1_integrations_whatsapp_personal_preferences_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/conversations/{conversation_id}/automatic-drafts": {
         parameters: {
             query?: never;
@@ -4133,6 +4315,40 @@ export interface components {
              * @default 09:00
              */
             quiet_end: string;
+        };
+        /** BackfillInput */
+        BackfillInput: {
+            /**
+             * Schema Version
+             * @default 1
+             * @constant
+             */
+            schema_version: 1;
+            /** Workspace Id */
+            workspace_id: string;
+            /** Connector Id */
+            connector_id: string;
+            /** Connector Fence */
+            connector_fence: number;
+            /** Account Id */
+            account_id?: string | null;
+            /** Reports */
+            reports?: components["schemas"]["BackfillReport"][];
+            /**
+             * Limit
+             * @default 5
+             */
+            limit: number;
+        };
+        /** BackfillReport */
+        BackfillReport: {
+            /** Jid */
+            jid: string;
+            /**
+             * Outcome
+             * @enum {string}
+             */
+            outcome: "requested" | "exhausted" | "failed";
         };
         /** BudgetInput */
         BudgetInput: {
@@ -4652,6 +4868,16 @@ export interface components {
             /** Expires At */
             expires_at?: string | null;
         };
+        /** PreferenceInput */
+        PreferenceInput: {
+            /** Workspace Id */
+            workspace_id: string;
+            /**
+             * Import Mode
+             * @enum {string}
+             */
+            import_mode: "all" | "selected";
+        };
         /** ReactionContent */
         ReactionContent: {
             /** Target Provider Message Id */
@@ -4860,10 +5086,109 @@ export interface components {
             /** Reviewed */
             reviewed?: boolean | null;
         };
+        /** SyncBatch */
+        SyncBatch: {
+            /**
+             * Schema Version
+             * @default 1
+             * @constant
+             */
+            schema_version: 1;
+            /** Workspace Id */
+            workspace_id: string;
+            /** Connector Id */
+            connector_id: string;
+            /** Connector Fence */
+            connector_fence: number;
+            /** Account Id */
+            account_id?: string | null;
+            /**
+             * Origin
+             * @enum {string}
+             */
+            origin: "live" | "history" | "replay" | "backfill";
+            /** Chats */
+            chats?: components["schemas"]["SyncChat"][];
+            /** Messages */
+            messages?: components["schemas"]["SyncMessage"][];
+            progress?: components["schemas"]["SyncProgress"] | null;
+        };
+        /** SyncChat */
+        SyncChat: {
+            /** Jid */
+            jid: string;
+            /** Alt Jid */
+            alt_jid?: string | null;
+            /** Title */
+            title?: string | null;
+            /** Title Source */
+            title_source?: ("contact" | "verified" | "chat" | "push") | null;
+            /** Unread Count */
+            unread_count?: number | null;
+            /** Archived */
+            archived?: boolean | null;
+            /**
+             * Contact Only
+             * @default false
+             */
+            contact_only: boolean;
+        };
         /** SyncInput */
         SyncInput: {
             /** Connector Id */
             connector_id: string;
+        };
+        /** SyncMessage */
+        SyncMessage: {
+            /** Id */
+            id: string;
+            /** Chat Jid */
+            chat_jid: string;
+            /** Chat Alt Jid */
+            chat_alt_jid?: string | null;
+            /** From Me */
+            from_me: boolean;
+            /**
+             * Timestamp
+             * Format: date-time
+             */
+            timestamp: string;
+            /**
+             * Event
+             * @default created
+             * @enum {string}
+             */
+            event: "created" | "edited" | "deleted";
+            /**
+             * Kind
+             * @default text
+             * @enum {string}
+             */
+            kind: "text" | "media" | "location" | "contact" | "poll" | "event" | "call" | "other";
+            /**
+             * Text
+             * @default
+             */
+            text: string;
+            /** Push Name */
+            push_name?: string | null;
+            /** Reply To */
+            reply_to?: string | null;
+            /**
+             * Revision
+             * @default 1
+             */
+            revision: number;
+        };
+        /** SyncProgress */
+        SyncProgress: {
+            /**
+             * Phase
+             * @enum {string}
+             */
+            phase: "initial" | "recent" | "full" | "on_demand" | "push_name" | "complete" | "live";
+            /** Percent */
+            percent?: number | null;
         };
         /** TaskCreate */
         TaskCreate: {
@@ -12156,6 +12481,39 @@ export interface operations {
             };
         };
     };
+    search_conversations_ui_conversations_search_get: {
+        parameters: {
+            query: {
+                workspace_id: string;
+                q: string;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     resolve_ui_reference_ui_resolve_get: {
         parameters: {
             query: {
@@ -12304,6 +12662,39 @@ export interface operations {
                 workspace_id?: string | null;
                 conversation_limit?: number;
                 conversation_cursor?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    search_conversations_v1_ui_conversations_search_get: {
+        parameters: {
+            query: {
+                workspace_id: string;
+                q: string;
+                limit?: number;
             };
             header?: never;
             path?: never;
@@ -13442,6 +13833,266 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["assistant__whatsapp_personal__ConfirmAuthorship"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    session_sync_internal_whatsapp_session_sync_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SyncBatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    session_backfill_internal_whatsapp_session_backfill_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BackfillInput"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    sync_status_integrations_whatsapp_personal_sync_get: {
+        parameters: {
+            query: {
+                workspace_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    set_preferences_integrations_whatsapp_personal_preferences_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PreferenceInput"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    session_sync_v1_internal_whatsapp_session_sync_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SyncBatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    session_backfill_v1_internal_whatsapp_session_backfill_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BackfillInput"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    sync_status_v1_integrations_whatsapp_personal_sync_get: {
+        parameters: {
+            query: {
+                workspace_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    set_preferences_v1_integrations_whatsapp_personal_preferences_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PreferenceInput"];
             };
         };
         responses: {
