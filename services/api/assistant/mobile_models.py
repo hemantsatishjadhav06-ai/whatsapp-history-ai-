@@ -24,6 +24,8 @@ class NativeSession(Entity, Base):
     user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), index=True)
     token_hash: Mapped[str] = mapped_column(String(64), unique=True)
     refresh_token_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    # The immediately rotated-out refresh hash; presenting it again signals token theft.
+    previous_refresh_token_hash: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
     refresh_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True, index=True)
     platform: Mapped[str] = mapped_column(String(10))
     device_name: Mapped[str] = mapped_column(EncryptedText)

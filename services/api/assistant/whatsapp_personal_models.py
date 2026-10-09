@@ -19,6 +19,8 @@ class PersonalWhatsAppSession(Entity, Tenant, Base):
     last_connected_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     last_health_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     error_code: Mapped[str | None] = mapped_column(String(60), nullable=True)
+    # SHA-256 of the owner-entered international number; a linked account must match it.
+    expected_account_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
 
 
 class PersonalAuthKey(Base):
