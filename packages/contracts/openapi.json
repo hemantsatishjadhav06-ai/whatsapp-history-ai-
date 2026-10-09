@@ -103,6 +103,50 @@
         }
       }
     },
+    "/auth/access-code": {
+      "post": {
+        "tags": [
+          "authentication"
+        ],
+        "summary": "Access Code Login",
+        "description": "Pilot operator sign-in with one high-entropy server secret, rate limited as an exchange.",
+        "operationId": "access_code_login_auth_access_code_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AccessCodeLogin"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Access Code Login Auth Access Code Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/auth/dev": {
       "post": {
         "tags": [
@@ -232,6 +276,50 @@
                   "additionalProperties": true,
                   "type": "object",
                   "title": "Response Google Login V1 Auth Google Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/auth/access-code": {
+      "post": {
+        "tags": [
+          "authentication"
+        ],
+        "summary": "Access Code Login",
+        "description": "Pilot operator sign-in with one high-entropy server secret, rate limited as an exchange.",
+        "operationId": "access_code_login_v1_auth_access_code_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AccessCodeLogin"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Access Code Login V1 Auth Access Code Post"
                 }
               }
             }
@@ -8421,7 +8509,7 @@
           "sessions"
         ],
         "summary": "Native Revoke",
-        "description": "Possession of the refresh secret can revoke a device after access expiry.",
+        "description": "Possession of the current or just-rotated refresh secret revokes a device.",
         "operationId": "native_revoke_auth_native_revoke_post",
         "requestBody": {
           "content": {
@@ -8808,7 +8896,7 @@
           "sessions"
         ],
         "summary": "Native Revoke",
-        "description": "Possession of the refresh secret can revoke a device after access expiry.",
+        "description": "Possession of the current or just-rotated refresh secret revokes a device.",
         "operationId": "native_revoke_v1_auth_native_revoke_post",
         "requestBody": {
           "content": {
@@ -11070,6 +11158,22 @@
   },
   "components": {
     "schemas": {
+      "AccessCodeLogin": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "maxLength": 256,
+            "minLength": 1,
+            "title": "Code"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "code"
+        ],
+        "title": "AccessCodeLogin"
+      },
       "ActionInput": {
         "properties": {
           "kind": {
@@ -13234,6 +13338,18 @@
             "maxLength": 36,
             "minLength": 36,
             "title": "Workspace Id"
+          },
+          "phone_number": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 32
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone Number"
           }
         },
         "additionalProperties": false,
