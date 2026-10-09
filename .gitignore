@@ -22,3 +22,4 @@ test-results/
 *.mobileprovision
 *.p12
 *.egg-info/
+.claude/worktrees/
