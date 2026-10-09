@@ -120,7 +120,7 @@ return 1
             group, actor_limit = "control", settings.request_rate_control
         elif path in {"/auth/nonce", "/auth/native/nonce", "/auth/native/google/start"}:
             group, actor_limit = "issue", settings.request_rate_auth_issues
-        elif path in {"/auth/google", "/auth/native/login", "/auth/native/refresh",
+        elif path in {"/auth/google", "/auth/access-code", "/auth/native/login", "/auth/native/refresh",
                       "/auth/native/google/callback", "/auth/native/google/exchange"}:
             group, actor_limit = "exchange", settings.request_rate_auth_exchanges
         else:

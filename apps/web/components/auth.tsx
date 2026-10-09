@@ -10,7 +10,7 @@ import { WhatsAppConnection } from './whatsapp-connection';
 import { PersonalConnection } from './personal-connection';
 
 export function Login() {
-  const { state, actions, authenticate, browserSessionPresent, browserSessionChecking, resumeBrowserSession } = useMilo();
+  const { state, actions, authenticate, authenticateWithAccessCode, browserSessionPresent, browserSessionChecking, resumeBrowserSession } = useMilo();
   const holder = useRef<HTMLDivElement>(null);
   const mounted = useRef(false);
   const [available, setAvailable] = useState(false);
@@ -18,6 +18,7 @@ export function Login() {
   const [configured, setConfigured] = useState(false);
   const [error, setError] = useState('');
   const [attempt, setAttempt] = useState(0);
+  const [accessCodeEnabled, setAccessCodeEnabled] = useState(false); const [accessCode, setAccessCode] = useState('');
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
   useEffect(() => {
     let alive = true;
@@ -29,8 +30,9 @@ export function Login() {
     async function prepare() {
       setLoading(true); setAvailable(false); setError(''); holder.current?.replaceChildren();
       try {
-        const config = await client.request<{ google_configured: boolean; google_client_id?: string; client_id?: string }>('/auth/config');
+        const config = await client.request<{ google_configured: boolean; google_client_id?: string; client_id?: string; access_code_enabled?: boolean }>('/auth/config');
         if (!alive) return;
+        setAccessCodeEnabled(config.access_code_enabled === true);
         const clientId = config.google_client_id ?? config.client_id;
         setConfigured(Boolean(config.google_configured && clientId));
         if (!config.google_configured || !clientId) { if (alive) setLoading(false); return; }
@@ -58,6 +60,14 @@ export function Login() {
     }
     void prepare(); return () => { alive = false; window.clearTimeout(refreshTimer); holder.current?.replaceChildren(); };
   }, [authenticate, attempt, browserSessionPresent, browserSessionChecking]);
+  async function signInWithCode(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!accessCode.trim()) return;
+    setLoading(true); setError('');
+    try { await authenticateWithAccessCode(accessCode.trim()); }
+    catch (failure) { if (mounted.current) { setError(failure instanceof Error ? failure.message : 'Owner sign-in was not confirmed.'); setLoading(false); } }
+    finally { if (mounted.current) setAccessCode(''); }
+  }
   async function resume() {
     setLoading(true); setError('');
     try { await resumeBrowserSession(); }
@@ -73,7 +83,7 @@ export function Login() {
     }
   }
   const shownError = error || (browserSessionPresent ? state.error : '');
-  return <div className="auth-page"><div className="auth-brand"><Milo size={52}/><span>milo</span></div><section className="auth-card"><Milo size={126}/><span className="eyebrow">A LITTLE LESS NOISE</span><h1>Your people.<br/>A little more presence.</h1><p>A companion for the conversations that matter, with you in control of every scope.</p><div ref={holder} className="google-holder"/>{browserSessionPresent ? <><p role="status">You are signed in. Your private workspace is loaded separately.</p><button className="button google-button" disabled={loading} onClick={resume}>{loading ? 'Loading your workspace…' : 'Continue to your workspace'}</button><button className="button secondary" disabled={loading} onClick={signOut}>Sign out</button></> : !available && <button className="button google-button" disabled>{loading ? 'Checking sign-in…' : configured ? 'Google sign-in needs another attempt' : 'Google sign-in not configured'}</button>}{shownError && <p className="notice error" role="alert">{shownError}</p>}{!browserSessionPresent && error && <button className="button secondary" disabled={loading} onClick={() => setAttempt(previous => previous + 1)}>Retry Google sign-in</button>}<button className="button secondary" onClick={() => actions.navigate('/')}>{browserSessionPresent ? 'Return home' : 'Explore the synthetic demo'} <Icon name="arrow" size={17}/></button><p className="fine-print">Google verifies your identity. It does not grant Gmail, Calendar, Contacts or WhatsApp access.</p></section><p className="auth-footnote"><Icon name="shield" size={16}/> Your scope. Your voice. Your call.</p></div>;
+  return <div className="auth-page"><div className="auth-brand"><Milo size={52}/><span>milo</span></div><section className="auth-card"><Milo size={126}/><span className="eyebrow">A LITTLE LESS NOISE</span><h1>Your people.<br/>A little more presence.</h1><p>A companion for the conversations that matter, with you in control of every scope.</p><div ref={holder} className="google-holder"/>{browserSessionPresent ? <><p role="status">You are signed in. Your private workspace is loaded separately.</p><button className="button google-button" disabled={loading} onClick={resume}>{loading ? 'Loading your workspace…' : 'Continue to your workspace'}</button><button className="button secondary" disabled={loading} onClick={signOut}>Sign out</button></> : !available && !(accessCodeEnabled && !configured && !loading) && <button className="button google-button" disabled>{loading ? 'Checking sign-in…' : configured ? 'Google sign-in needs another attempt' : 'Google sign-in not configured'}</button>}{!browserSessionPresent && accessCodeEnabled && <form onSubmit={signInWithCode} aria-label="Owner sign-in" style={{ display: 'grid', gap: 10, width: '100%', maxWidth: 320, margin: '4px auto 0', textAlign: 'left' }}><label style={{ display: 'grid', gap: 6, fontWeight: 600, fontSize: 14 }}>Owner access code<input type="password" autoComplete="current-password" value={accessCode} disabled={loading} onChange={event => setAccessCode(event.target.value)} style={{ padding: '11px 14px' }}/></label><button className="button" disabled={loading || !accessCode.trim()}>{loading ? 'Signing in…' : 'Sign in as owner'}</button></form>}{shownError && <p className="notice error" role="alert">{shownError}</p>}{!browserSessionPresent && error && <button className="button secondary" disabled={loading} onClick={() => setAttempt(previous => previous + 1)}>Retry Google sign-in</button>}<button className="button secondary" onClick={() => actions.navigate('/')}>{browserSessionPresent ? 'Return home' : 'Explore the synthetic demo'} <Icon name="arrow" size={17}/></button><p className="fine-print">Google verifies your identity. It does not grant Gmail, Calendar, Contacts or WhatsApp access.</p></section><p className="auth-footnote"><Icon name="shield" size={16}/> Your scope. Your voice. Your call.</p></div>;
 }
 
 export function Onboarding() {

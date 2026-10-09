@@ -3,11 +3,11 @@ import { AppState, Switch, View } from 'react-native';
 import { useFocusEffect, useRouter, type Href } from 'expo-router';
 import Svg, { Path, Rect } from 'react-native-svg';
 import qrcode from 'qrcode-generator';
-import { emptyPersonalConsent, personalConsentFor, personalQRDrawing, usablePersonalQR, validPersonalConsent,
+import { emptyPersonalConsent, internationalPhoneNumber, personalConsentFor, personalQRDrawing, usablePersonalPairingCode, usablePersonalQR, validPersonalConsent,
   type PersonalChats, type PersonalConfig, type PersonalConsent, type PersonalPairing, type PersonalStatus } from '@milo/contracts';
 import { useMilo } from '../lib/state';
 import { snapshotVersion, type PrivateResult } from '../lib/private-results';
-import { Body, Button, Card, Heading, styles } from './ui';
+import { Body, Button, Card, Field, Heading, styles } from './ui';
 import { AutomaticDrafts } from './automatic-drafts';
 import { PersonalAuthorship } from './personal-authorship';
 
@@ -41,23 +41,25 @@ export function PersonalConnection() {
   const [errorEntry, setErrorEntry] = useState<PrivateResult<string> | null>(null);
   const [notice, setNotice] = useState(''); const [busy, setBusy] = useState(false); const [loading, setLoading] = useState(true);
   const [selectedId, setSelectedId] = useState(''); const [consent, setConsent] = useState(emptyPersonalConsent);
-  const [now, setNow] = useState(Date.now()); const [attempt, setAttempt] = useState(0);
+  const [now, setNow] = useState(Date.now()); const [attempt, setAttempt] = useState(0); const [phone, setPhone] = useState('');
   const current = entry?.version === version ? entry.value : null;
   const pairing = pairingEntry?.version === version ? pairingEntry.value : null;
   const chats = chatsEntry?.version === version ? chatsEntry.value : null;
   const error = errorEntry?.version === version ? errorEntry.value : null;
   const connector = current?.status.connector;
   const qr = focused && foreground && !current?.status.connected ? usablePersonalQR(pairing, connector?.id, now) : null;
+  const linkCode = focused && foreground && !current?.status.connected ? usablePersonalPairingCode(pairing, connector?.id, now) : null;
+  const phoneNumber = internationalPhoneNumber(phone);
   const selected = chats?.chats.find(chat => chat.provider_chat_id === selectedId && chat.kind === 'contact');
   const configured = Boolean(current?.config.enabled && current.config.configured && !current.config.simulation && !current.status.simulation);
   const statusRef = useRef(current?.status); statusRef.current = current?.status;
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
   useEffect(() => { setSelectedId(''); setConsent(emptyPersonalConsent()); setNotice(''); }, [version, connector?.id]);
   useEffect(() => {
-    if (!pairing?.qr) return;
-    const currentCode = usablePersonalQR(pairing, connector?.id);
-    if (!currentCode) { setPairingEntry(null); return; }
-    const timer = setTimeout(() => { setPairingEntry(null); setNow(Date.now()); }, currentCode.expiresAt - Date.now());
+    if (!pairing?.qr && !pairing?.pairing_code) return;
+    const expiries = [usablePersonalQR(pairing, connector?.id)?.expiresAt, usablePersonalPairingCode(pairing, connector?.id)?.expiresAt].filter((value): value is number => value !== undefined);
+    if (!expiries.length) { setPairingEntry(null); return; }
+    const timer = setTimeout(() => { setPairingEntry(null); setNow(Date.now()); }, Math.max(...expiries) - Date.now());
     return () => clearTimeout(timer);
   }, [pairing, connector?.id]);
 
@@ -104,10 +106,11 @@ export function PersonalConnection() {
   async function change(action: 'start' | 'disconnect' | 'chats/authorize') {
     if (flight.current || !app.online || !configured || (action !== 'disconnect' && (loading || error))) return;
     if (action !== 'start' && !connector) return;
+    if (action === 'start' && !phoneNumber) return;
     if (action === 'chats/authorize' && (!selected || !validPersonalConsent(consent))) return;
     const started = version; const id = ++sequence.current; flight.current = true; setBusy(true); setPairingEntry(null); setNotice(''); setErrorEntry(null);
     try {
-      const body = action === 'start' ? { workspace_id: workspaceId } : action === 'disconnect' ? { connector_id: connector!.id }
+      const body = action === 'start' ? { workspace_id: workspaceId, phone_number: phoneNumber } : action === 'disconnect' ? { connector_id: connector!.id }
         : { connector_id: connector!.id, provider_chat_id: selected!.provider_chat_id, title: selected!.title, ...consent };
       await app.request(`${route}/${action}`, { method: 'POST', body });
       if (!active.current || latest.current !== started || sequence.current !== id) return;
@@ -125,9 +128,12 @@ export function PersonalConnection() {
     {loading && <Body small>Checking phone linking…</Body>}{error && <View accessibilityLiveRegion="assertive"><Body>{error}</Body></View>}{notice && <View accessibilityLiveRegion="polite"><Body>{notice}</Body></View>}
     {current && (!configured ? <Body>Phone linking is not available in this deployment yet. You can connect an eligible Business number or begin with an exported chat.</Body> : <>
       <Body>{error ? 'Current phone linking is unconfirmed. Refresh linking to review its current state.' : current.status.connected ? 'Your phone is linked. Choose one conversation to begin.' : current.status.status === 'pairing' ? 'Waiting for you to scan the current code.' : current.status.status === 'reconnecting' ? 'Reconnecting to WhatsApp. Replies remain subject to current connection checks.' : 'Your phone has not been confirmed as linked.'}</Body>
-      {!current.status.connected && <Button label={busy ? 'Requesting linking…' : connector ? 'Resume phone linking' : 'Start phone linking'} disabled={busy || loading || !!error || !app.online} onPress={() => void change('start')}/>}
+      {!current.status.connected && <><Field label="Your WhatsApp number, with country code" value={phone} onChangeText={setPhone} keyboardType="phone-pad" autoComplete="tel" placeholder="+91 98765 43210" maxLength={32} editable={!busy}/>
+        <Body small>Only this number can complete the link.</Body>
+        <Button label={busy ? 'Requesting linking…' : connector ? 'Get a new link code' : 'Get my link code'} disabled={busy || loading || !!error || !app.online || !phoneNumber} onPress={() => void change('start')}/></>}
+      {linkCode && <><Heading>{linkCode.code}</Heading><Body small>Tap the WhatsApp notification, or open WhatsApp → Settings → Linked devices → Link a device → Link with phone number instead, then enter this code. Never share it.</Body></>}
       {qr && <><PairingQR value={qr.value}/><Body small>This code expires shortly. Keep this screen open. Do not share or save the code.</Body></>}
-      {!qr && current.status.status === 'pairing' && <Body small>Waiting for a current pairing code. Expired codes are removed automatically.</Body>}
+      {!qr && !linkCode && current.status.status === 'pairing' && <Body small>Waiting for a current link code. Expired codes are removed automatically.</Body>}
       {connector && <Button label="Disconnect this linked device" secondary disabled={busy || !app.online} onPress={() => void change('disconnect')}/>}
       {current.status.connected && chats && <>
         <Heading>Choose one conversation</Heading><Body small>New chats start with every choice off. Existing choices are shown for the selected chat. Linking never grants every conversation or enables Auto.</Body>

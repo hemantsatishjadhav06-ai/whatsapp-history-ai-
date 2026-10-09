@@ -4,9 +4,9 @@ import { createDemoSnapshot } from '../../packages/contracts/demo';
 // Exercises browser SDK callbacks, nonce rotation and session UX. Google signing
 // and SQL identity verification are deliberately mocked here and tested at the
 // API boundary separately; this is never evidence of a live provider login.
-async function googleFixture(page: Page, options: { configured?: boolean; failExchange?: boolean; failBootstrap?: boolean; failSdk?: boolean; existingSession?: boolean; failLogout?: boolean; expiredLogout?: boolean } = {}) {
+async function googleFixture(page: Page, options: { configured?: boolean; failExchange?: boolean; failBootstrap?: boolean; failSdk?: boolean; existingSession?: boolean; failLogout?: boolean; expiredLogout?: boolean; accessCode?: boolean } = {}) {
   const exchanges: { nonce: string; credential: string; csrf: string | undefined }[] = [];
-  const logouts: { csrf: string | undefined }[] = [];
+  const logouts: { csrf: string | undefined }[] = []; const codes: string[] = [];
   let nonceCount = 0;
   let sdkCount = 0;
   let bootstrapCount = 0;
@@ -38,7 +38,13 @@ async function googleFixture(page: Page, options: { configured?: boolean; failEx
   await page.route('**/api/**', async route => {
     const path = new URL(route.request().url()).pathname.replace('/api', '');
     const json = (body: unknown, status = 200, headers: Record<string, string> = {}) => route.fulfill({ status, contentType: 'application/json', headers, body: JSON.stringify(body) });
-    if (path === '/auth/config') return json({ backend_configured: true, google_configured: options.configured !== false, client_id: options.configured === false ? null : 'synthetic-web-client.apps.googleusercontent.com' });
+    if (path === '/auth/config') return json({ backend_configured: true, google_configured: options.configured !== false, client_id: options.configured === false ? null : 'synthetic-web-client.apps.googleusercontent.com', access_code_enabled: options.accessCode === true });
+    if (path === '/auth/access-code') {
+      const { code } = route.request().postDataJSON() as { code: string }; codes.push(code);
+      if (code !== 'synthetic-owner-access-code-with-32-plus-bytes') return json({ detail: 'Owner access code is not valid' }, 401);
+      signedIn = true;
+      return json({ user: snapshot.user, csrf_token: 'synthetic-session-csrf' }, 200, { 'Set-Cookie': 'session_token=synthetic-browser-session; Path=/; HttpOnly; SameSite=Lax' });
+    }
     if (path === '/auth/nonce') { nonceCount++; return json({ nonce: `nonce_${nonceCount}_${'x'.repeat(40)}` }); }
     if (path === '/auth/google') {
       const body = route.request().postDataJSON();
@@ -63,7 +69,7 @@ async function googleFixture(page: Page, options: { configured?: boolean; failEx
     }
     return json({ detail: 'Unexpected fixture endpoint' }, 404);
   });
-  return { exchanges, logouts, signedIn: () => signedIn, nonceCount: () => nonceCount, sdkCount: () => sdkCount, bootstrapCount: () => bootstrapCount };
+  return { exchanges, logouts, codes, signedIn: () => signedIn, nonceCount: () => nonceCount, sdkCount: () => sdkCount, bootstrapCount: () => bootstrapCount };
 }
 
 test('Google browser exchange submits the same nonce in body and CSRF header, then enters owner setup', async ({ page }) => {
@@ -239,4 +245,17 @@ test('an already expired browser session completes sign-out without offering a f
   await expect(page.getByRole('button', { name: 'Explore the synthetic demo', exact: true })).toBeVisible();
   await expect(page.getByRole('alert').filter({ hasText: 'Sign-out was not confirmed' })).toHaveCount(0);
   expect(fixture.logouts).toHaveLength(1);
+});
+
+test('an owner access code signs in without Google and a wrong code is reported without a session', async ({ page }) => {
+  const fixture = await googleFixture(page, { configured: false, accessCode: true });
+  await page.goto('/login');
+  await expect(page.getByRole('button', { name: 'Google sign-in not configured', exact: true })).toHaveCount(0);
+  const code = page.getByLabel('Owner access code', { exact: true });
+  await code.fill('wrong-code'); await page.getByRole('button', { name: 'Sign in as owner', exact: true }).click();
+  await expect(page.getByRole('alert').filter({ hasText: 'not valid' })).toBeVisible();
+  await expect(code).toHaveValue('');
+  await code.fill('synthetic-owner-access-code-with-32-plus-bytes'); await page.getByRole('button', { name: 'Sign in as owner', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Make it yours', exact: true })).toBeVisible();
+  expect(fixture.codes).toEqual(['wrong-code', 'synthetic-owner-access-code-with-32-plus-bytes']); expect(fixture.exchanges).toHaveLength(0);
 });

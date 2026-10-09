@@ -7,7 +7,7 @@ import type { Connection, Conversation, DataRecord, Message, MiloActions, MiloDa
 
 type Session = { state: MiloState; actions: MiloActions; messages: Record<string, Message[]>;
   authorizedSnapshot: MiloSnapshot | null;
-  authenticate(credential: string, nonce: string): Promise<void>; backendConfigured: boolean;
+  authenticate(credential: string, nonce: string): Promise<void>; authenticateWithAccessCode(code: string): Promise<void>; backendConfigured: boolean;
   browserSessionPresent: boolean; browserSessionChecking: boolean; resumeBrowserSession(): Promise<void>;
   composers: Record<string, string>; setComposer(id: string, text: string): void };
 const Context = createContext<Session | null>(null);
@@ -298,14 +298,14 @@ export function MiloProvider({ children }: { children: React.ReactNode }) {
       }
     },
   }), [client, refresh, request, router, confirmOwnerAnswer, clearOwnerAnswerScope]);
-  const authenticate = useCallback(async (credential: string, nonce: string) => {
+  const establishSession = useCallback(async (path: string, body: Record<string, string>, headers: Record<string, string>, method: string) => {
     setAuthorizedSnapshot(null); clearOwnerAnswerScope();
     liveSessionEnabled.current = false;
     setBrowserSessionPresent(false);
     setBrowserSessionChecking(false);
     const capturedEpoch = ++epoch.current; snapshotSequence.current++; setComposers({});
     setState(initial.current.state); setMessages(initial.current.messages);
-    const result = await client.request<{ csrf_token: string }>('/auth/google', { method: 'POST', body: { credential, nonce }, headers: { 'X-CSRF-Token': nonce } });
+    const result = await client.request<{ csrf_token: string }>(path, { method: 'POST', body, headers });
     if (capturedEpoch !== epoch.current) throw new Error('Sign-in was superseded by another session change.');
     csrf.current = result.csrf_token;
     liveSessionEnabled.current = true;
@@ -313,19 +313,23 @@ export function MiloProvider({ children }: { children: React.ReactNode }) {
     try { await refreshLive(); }
     catch (failure) {
       if (!liveSessionEnabled.current || capturedEpoch !== epoch.current) throw failure;
-      const message = 'Google sign-in succeeded, but your private workspace could not load. Continue to your workspace to retry loading it.';
+      const message = `${method} succeeded, but your private workspace could not load. Continue to your workspace to retry loading it.`;
       setState(previous => ({ ...previous, error: message }));
       throw new Error(message);
     }
     if (capturedEpoch === epoch.current && liveSessionEnabled.current) router.push('/');
   }, [client, refreshLive, router, clearOwnerAnswerScope]);
+  const authenticate = useCallback((credential: string, nonce: string) =>
+    establishSession('/auth/google', { credential, nonce }, { 'X-CSRF-Token': nonce }, 'Google sign-in'), [establishSession]);
+  const authenticateWithAccessCode = useCallback((code: string) =>
+    establishSession('/auth/access-code', { code }, {}, 'Owner sign-in'), [establishSession]);
   const resumeBrowserSession = useCallback(async () => {
     if (!liveSessionEnabled.current) throw new Error('Your session expired. Sign in again.');
     const capturedEpoch = epoch.current;
     await refreshLive();
     if (capturedEpoch === epoch.current && liveSessionEnabled.current) router.push('/');
   }, [refreshLive, router]);
-  return <Context.Provider value={{ state, actions, messages, authorizedSnapshot: state.mode === 'live' && authorizedSnapshot?.user.id === state.user.id && authorizedSnapshot?.workspace?.id === state.workspaceId ? authorizedSnapshot : null, authenticate, backendConfigured, browserSessionPresent, browserSessionChecking, resumeBrowserSession, composers,
+  return <Context.Provider value={{ state, actions, messages, authorizedSnapshot: state.mode === 'live' && authorizedSnapshot?.user.id === state.user.id && authorizedSnapshot?.workspace?.id === state.workspaceId ? authorizedSnapshot : null, authenticate, authenticateWithAccessCode, backendConfigured, browserSessionPresent, browserSessionChecking, resumeBrowserSession, composers,
     setComposer: (id, text) => setComposers(previous => ({ ...previous, [id]: text })) }}>
     <Fragment key={`${state.mode}:${state.user.id}:${state.workspaceId}`}>{children}</Fragment>
   </Context.Provider>;

@@ -5,6 +5,7 @@ The application remains the authority for account ownership, grants and sends.
 """
 from datetime import datetime, timedelta
 import asyncio
+import hashlib
 import re
 from typing import Literal
 
@@ -18,7 +19,7 @@ from .access import audit, conversation_for, permission_for, workspace_for
 from .auth import get_current_user
 from .core import capabilities, connector_for, invalidate, public
 from .db import aware, get_db, now, uid
-from .messaging import CanonicalEvent, EventContent, content_hash, ingest_event, require_internal, submit_guard
+from .messaging import CanonicalEvent, EventContent, content_hash, ingest_event, require_session_service, submit_guard
 from .models import Connector, Conversation, Draft, Message, Permission, SendAttempt, User, Workspace
 from .storage_authority import lock_workspace
 from .whatsapp_personal_models import PersonalAccountAlias, PersonalAuthKey, PersonalWhatsAppSession
@@ -30,6 +31,12 @@ LEASE_SECONDS = 60
 MAX_CHATS = 200
 JID = re.compile(r"[0-9]{5,24}@(?:s\.whatsapp\.net|lid)\Z")
 STATES = {"starting", "qr", "connected", "reconnecting", "disconnected", "logged_out", "failed"}
+PHONE = re.compile(r"\+[0-9][0-9 ()-]{6,24}\Z")
+PAIRING_CODE = re.compile(r"[A-Z0-9]{4}-?[A-Z0-9]{4}\Z")
+
+
+def number_hash(digits):
+    return hashlib.sha256(digits.encode()).hexdigest()
 
 
 class Payload(BaseModel):
@@ -38,6 +45,21 @@ class Payload(BaseModel):
 
 class StartInput(Payload):
     workspace_id: str = Field(min_length=36, max_length=36)
+    # Owner's own number in international form. The session requests a pairing
+    # code for it and only this number may complete the link.
+    phone_number: str | None = Field(default=None, max_length=32)
+
+    @field_validator("phone_number")
+    @classmethod
+    def international_number(cls, value):
+        if value is None:
+            return None
+        if not PHONE.fullmatch(value.strip()):
+            raise ValueError("Enter the full international number starting with + and the country code")
+        digits = re.sub(r"\D", "", value)
+        if not 8 <= len(digits) <= 15 or digits.startswith("0"):
+            raise ValueError("Enter the full international number starting with + and the country code")
+        return digits
 
 
 class ConnectorInput(Payload):
@@ -137,14 +159,14 @@ class MessageData(Payload):
 def configured(settings):
     return bool(settings.whatsapp_personal_enabled and settings.whatsapp_personal_session_url
                 and len(settings.whatsapp_personal_session_token.encode()) >= 32
-                and settings.internal_service_token)
+                and (settings.whatsapp_personal_authority_token or settings.internal_service_token))
 
 
 def require_owner(settings, user):
     if not configured(settings):
         raise HTTPException(503, "Personal WhatsApp session service is unavailable")
-    if settings.environment == "production" and not user.subject.startswith("google:"):
-        raise HTTPException(403, "Verified Google sign-in is required for personal WhatsApp")
+    if settings.environment == "production" and not user.subject.startswith(("google:", "operator:")):
+        raise HTTPException(403, "Verified Google or owner sign-in is required for personal WhatsApp")
 
 
 def personal_for(db, user, connector_id, settings):
@@ -288,7 +310,12 @@ def start(body: StartInput, request: Request, response: Response,
             db.add(row)
             db.flush()
         session = db.scalar(select(PersonalWhatsAppSession).where(PersonalWhatsAppSession.connector_id == row.id))
-        if row.status in {"disconnected", "failed", "logged_out"}:
+        expected = number_hash(body.phone_number) if body.phone_number and row.status != "connected" else None
+        if row.status != "connected" and body.phone_number is None and settings.environment == "production":
+            raise HTTPException(422, "Enter your WhatsApp number to bind this pairing to your own account")
+        # A number-bound request always starts a fresh fenced session so the
+        # private service requests a new pairing code for exactly that number.
+        if row.status in {"disconnected", "failed", "logged_out"} or (expected and session is not None):
             revoke(db, row, "personal_session_restart")
             row.status = "starting"
             session = None
@@ -296,11 +323,14 @@ def start(body: StartInput, request: Request, response: Response,
             session = PersonalWhatsAppSession(workspace_id=row.workspace_id, connector_id=row.id,
                                               connector_fence=row.fence, status="starting")
             db.add(session)
+        if expected:
+            session.expected_account_hash = expected
         envelope = identity(row)
+        pairing_phone = {"pairing_phone": body.phone_number} if expected else {}
         audit(db, row.workspace_id, user.id, "whatsapp.personal.start_requested", row.id)
         db.commit()
     # This transaction is finished before the private service can call back.
-    private_request(settings, "sessions/start", envelope)
+    private_request(settings, "sessions/start", {**envelope, **pairing_phone})
     db.expire_all()
     row = db.get(Connector, envelope["connector_id"])
     if row is None or row.workspace_id != envelope["workspace_id"] or row.fence != envelope["connector_fence"]:
@@ -330,20 +360,28 @@ def private_owner_read(db, user, connector_id, settings, operation, extra=None):
 def pairing(connector_id: str, request: Request, response: Response,
             user=Depends(get_current_user), db=Depends(get_db)):
     row, result = private_owner_read(db, user, connector_id, request.app.state.settings, "sessions/status")
-    qr = result.get("qr")
-    safe = None
-    if result["state"] == "qr" and row.status in {"starting", "pairing"} and isinstance(qr, dict):
-        try:
-            value = qr["value"]
-            expires = aware(datetime.fromisoformat(qr["expires_at"].replace("Z", "+00:00")))
-            if not isinstance(value, str) or not 1 <= len(value) <= 4096 or not now() < expires <= now() + timedelta(seconds=45):
-                raise ValueError("Invalid pairing expiry")
-            safe = {"value": value, "expires_at": expires.isoformat()}
-        except (KeyError, ValueError, TypeError, AttributeError):
-            safe = None
+    pairable = result["state"] == "qr" and row.status in {"starting", "pairing"}
+    safe = pairing_value(result.get("qr"), "value", 45, lambda value: 1 <= len(value) <= 4096) if pairable else None
+    code = pairing_value(result.get("pairing"), "code", 180, PAIRING_CODE.fullmatch) if pairable else None
     response.headers["Cache-Control"] = "private, no-store"
     response.headers["Pragma"] = "no-cache"
-    return {"connector_id": row.id, "state": result["state"], "qr": safe, "poll_after_seconds": 3}
+    # The private service calls this state "qr"; clients and connector status call it "pairing".
+    state = "pairing" if result["state"] == "qr" else result["state"]
+    return {"connector_id": row.id, "state": state, "qr": safe, "pairing_code": code,
+            "poll_after_seconds": 3}
+
+
+def pairing_value(item, key, max_seconds, valid):
+    if not isinstance(item, dict):
+        return None
+    try:
+        value = item[key]
+        expires = aware(datetime.fromisoformat(item["expires_at"].replace("Z", "+00:00")))
+        if not isinstance(value, str) or not valid(value) or not now() < expires <= now() + timedelta(seconds=max_seconds):
+            raise ValueError("Invalid pairing expiry")
+        return {key: value, "expires_at": expires.isoformat()}
+    except (KeyError, ValueError, TypeError, AttributeError):
+        return None
 
 
 def contact_metadata(result):
@@ -495,7 +533,7 @@ def validate_send(db, body, settings):
     return row, draft, attempt
 
 
-@router.post("/internal/whatsapp-session-authority", dependencies=[Depends(require_internal)])
+@router.post("/internal/whatsapp-session-authority", dependencies=[Depends(require_session_service)])
 def session_authority(body: AuthorityInput, request: Request, db=Depends(get_db)):
     settings = request.app.state.settings
     result = {**body.model_dump(exclude={"operation", "send"}), "allowed": False,
@@ -556,6 +594,14 @@ def apply_connection(db, body, data):
         aliases = set(data.account_aliases + [data.account_id])
         if any(not JID.fullmatch(alias) for alias in aliases):
             raise HTTPException(422, "Invalid personal WhatsApp account alias")
+        if session.expected_account_hash and not any(
+                alias.endswith("@s.whatsapp.net") and number_hash(alias.split("@", 1)[0]) == session.expected_account_hash
+                for alias in aliases):
+            # Only the number the owner entered may complete the link; a relayed
+            # QR or pairing code scanned by another account is refused.
+            revoke(db, row, "personal_account_number_mismatch")
+            db.commit()
+            raise HTTPException(409, "The linked WhatsApp number does not match the number entered for pairing")
         for alias in aliases:
             occupied = db.get(PersonalAccountAlias, alias)
             other = db.scalar(select(Connector).where(Connector.provider == PROVIDER,
@@ -671,7 +717,7 @@ def apply_receipt(db, body, data, settings):
     return {"status": "accepted", "attempt_id": attempt.id}
 
 
-@router.post("/internal/whatsapp-session-events", dependencies=[Depends(require_internal)])
+@router.post("/internal/whatsapp-session-events", dependencies=[Depends(require_session_service)])
 def session_event(body: SessionEvent, request: Request, db=Depends(get_db)):
     if not configured(request.app.state.settings):
         raise HTTPException(503, "Personal WhatsApp is disabled")

@@ -14,6 +14,7 @@ type State = "starting" | "qr" | "connected" | "reconnecting" | "disconnected" |
 type ChatMetadata = Readonly<{ provider_chat_id: string; title: string; kind: "contact" }>;
 type RecordState = { identity: Identity; state: State; store: AuthStore | null; socket: WASocket | null;
   generation: number; qr: { value: string; expires_at: string } | null; chats: Map<string, ChatMetadata>;
+  pairingPhone: string | null; pairingRequested: boolean; pairing: { code: string; expires_at: string } | null;
   tail: Promise<void>; pending: number; reconnects: number; timer: ReturnType<typeof setTimeout> | null;
   authorityTimer: ReturnType<typeof setInterval> | null };
 export class Sessions {
@@ -43,7 +44,8 @@ export class Sessions {
   }
   #view(record: RecordState) {
     return { schema_version: 1 as const, state: record.state, account_id: record.identity.account_id,
-      ...(record.qr && Date.parse(record.qr.expires_at) > this.#clock() ? { qr: { ...record.qr } } : {}) };
+      ...(record.qr && Date.parse(record.qr.expires_at) > this.#clock() ? { qr: { ...record.qr } } : {}),
+      ...(record.pairing && Date.parse(record.pairing.expires_at) > this.#clock() ? { pairing: { ...record.pairing } } : {}) };
   }
   async restore(identities: readonly Identity[]) {
     let restored = 0, rejected = 0;
@@ -54,7 +56,8 @@ export class Sessions {
     }
     return { restored, rejected };
   }
-  async start(identity: Identity) {
+  /** A pairing phone requests a WhatsApp link code for exactly that number; only that account may connect. */
+  async start(identity: Identity, pairingPhone?: string) {
     if (!this.#enabled) throw new Blocked("PERSONAL_QR_DISABLED");
     if (this.#closed) throw new Blocked("SESSION_DISCONNECTED");
     await this.#authority.authorize("start", identity);
@@ -69,7 +72,8 @@ export class Sessions {
     const active = [...this.#records.values()].filter(row => !["failed", "disconnected", "logged_out"].includes(row.state)).length;
     if (active >= this.#limit) throw new Blocked("SESSION_CELL_FULL");
     const record: RecordState = { identity, state: "starting", store: null, socket: null, generation: 0,
-      qr: null, chats: new Map(), tail: Promise.resolve(), pending: 0, reconnects: 0, timer: null, authorityTimer: null };
+      qr: null, chats: new Map(), pairingPhone: pairingPhone ?? null, pairingRequested: false, pairing: null,
+      tail: Promise.resolve(), pending: 0, reconnects: 0, timer: null, authorityTimer: null };
     this.#records.set(identity.connector_id, record);
     try {
       record.store = await this.#stores(identity, () => { void this.#stop(record, "failed"); });
@@ -195,19 +199,34 @@ export class Sessions {
         if (update.qr) {
           if (update.qr.length > 4096) throw new Blocked("INVALID_QR");
           record.state = "qr"; record.qr = { value: update.qr, expires_at: new Date(this.#clock() + 45_000).toISOString() };
+          if (record.pairingPhone && !record.pairingRequested && record.store && !record.store.state.creds.registered) {
+            record.pairingRequested = true;
+            const code = await socket.requestPairingCode(record.pairingPhone);
+            if (!current()) return;
+            if (!/^[A-Z0-9]{8}$/.test(code)) throw new Blocked("INVALID_PAIRING_CODE");
+            record.pairing = { code, expires_at: new Date(this.#clock() + 160_000).toISOString() };
+          }
         }
         if (update.connection === "open") {
           const account = canonicalJid(socket.user?.id ?? "");
           if (!individualJid(account)) throw new Blocked("INVALID_ACCOUNT_IDENTITY");
           const aliases = [...new Set([account, canonicalJid(socket.user?.lid ?? "")].filter(individualJid))];
           const connected = { ...record.identity, account_id: account };
+          record.qr = null; record.pairing = null;
+          if (record.pairingPhone && !aliases.includes(`${record.pairingPhone}@s.whatsapp.net`)) {
+            // A relayed code or QR completed by a different account is unlinked, never bound.
+            await this.#logout(socket); if (record.store) await record.store.clear();
+            await this.#authority.event({ ...record.identity, event_type: "connection", data: { state: "failed", account_id: record.identity.account_id } });
+            throw new Blocked("ACCOUNT_MISMATCH");
+          }
           // Python verifies global account ownership before message processing becomes eligible.
-          await this.#authority.event({ ...record.identity, event_type: "connection", data: { state: "connected", account_id: account, account_aliases: aliases } });
-          record.identity = connected; record.qr = null; record.state = "connected"; record.reconnects = 0;
+          try { await this.#authority.event({ ...record.identity, event_type: "connection", data: { state: "connected", account_id: account, account_aliases: aliases } }); }
+          catch (error) { await this.#logout(socket); throw error; }
+          record.identity = connected; record.state = "connected"; record.reconnects = 0;
           if (record.store) await record.store.saveCreds();
         }
         if (update.connection === "close") {
-          record.qr = null;
+          record.qr = null; record.pairing = null;
           const error = update.lastDisconnect?.error as { output?: { statusCode?: number } } | undefined;
           const code = error?.output?.statusCode;
           if (code === DisconnectReason.loggedOut || code === DisconnectReason.connectionReplaced || code === DisconnectReason.badSession) {
@@ -275,8 +294,15 @@ export class Sessions {
       provider_timestamp: new Date(timestamp * 1000).toISOString(), content: { type: "text", text }, source_revision: 1,
     } });
   }
+  async #logout(socket: WASocket) {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    try { await Promise.race([socket.logout("account_not_authorized"), new Promise<void>(resolve => {
+      timer = setTimeout(resolve, 1500); timer.unref();
+    })]); } catch { /* The local socket still ends; provider unlink stays unverified. */ }
+    finally { if (timer) clearTimeout(timer); }
+  }
   async #stop(record: RecordState, state: State) {
-    record.generation += 1; record.qr = null; record.state = state;
+    record.generation += 1; record.qr = null; record.pairing = null; record.state = state;
     if (record.timer) { clearTimeout(record.timer); record.timer = null; }
     if (record.authorityTimer) { clearInterval(record.authorityTimer); record.authorityTimer = null; }
     const socket = record.socket; record.socket = null;

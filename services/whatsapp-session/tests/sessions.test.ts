@@ -21,7 +21,8 @@ function fixture(options: { enabled?: boolean; clock?: () => number; max?: numbe
     async sendMessage(_jid: string, _body: unknown, args: { messageId: string }) {
       calls.push("socket"); if (sendMode === "throw") throw new Error("uncertain network");
       return { key: { id: sendMode === "mismatch" ? "different" : args.messageId } };
-    }, async logout() { calls.push("logout"); if (logoutMode === "throw") throw new Error("remote unlink unavailable");
+    }, async requestPairingCode(phone: string) { calls.push(`pair:${phone}`); return "ABCD2345"; },
+    async logout() { calls.push("logout"); if (logoutMode === "throw") throw new Error("remote unlink unavailable");
       if (logoutMode === "hang") await new Promise<void>(() => {}); }, async end() { calls.push("end"); ended += 1; },
   } as unknown as WASocket;
   const sessions = new Sessions({ enabled: options.enabled ?? true,
@@ -196,4 +197,29 @@ test("idle SQL authority revocation stops the socket without inbound messages", 
   const f = fixture(); await paired(f); f.deny("status");
   await wait(5100); await f.sessions.settlePendingEvents();
   assert.equal(f.ended(), 1); await assert.rejects(f.sessions.send(send())); await f.sessions.close();
+});
+test("a pairing phone requests one link code on the first QR, exposes it only to the owner view, and expires", async () => {
+  let now = Date.now(); const f = fixture({ clock: () => now }); await f.sessions.start(initial, "15550000001");
+  f.emitter.emit("connection.update", { qr: "synthetic-qr-one" }); f.emitter.emit("connection.update", { qr: "synthetic-qr-two" }); await wait(20);
+  assert.deepEqual(f.calls.filter(call => call.startsWith("pair:")), ["pair:15550000001"]);
+  assert.equal((await f.sessions.status(initial)).pairing?.code, "ABCD2345");
+  assert.equal(f.events.some(row => JSON.stringify(row).includes("ABCD2345")), false);
+  now += 160_001; assert.equal((await f.sessions.status(initial)).pairing, undefined);
+  f.emitter.emit("connection.update", { connection: "open" }); await wait(20);
+  assert.equal((await f.sessions.status(connected)).state, "connected"); await f.sessions.close();
+});
+test("an account other than the entered pairing number is unlinked and never bound", async () => {
+  const f = fixture(); await f.sessions.start(initial, "919999999999");
+  f.emitter.emit("connection.update", { qr: "synthetic-qr" }); await wait(10);
+  f.emitter.emit("connection.update", { connection: "open" }); await wait(20);
+  assert.equal(f.calls.includes("logout"), true); assert.equal(f.clears(), 1);
+  assert.equal(f.events.some(row => row.data.state === "connected"), false);
+  assert.equal(f.events.at(-1)?.data.state, "failed");
+  await assert.rejects(f.sessions.status(connected)); await f.sessions.close();
+});
+test("an account binding refused by Python is unlinked from the phone", async () => {
+  const f = fixture(); f.reject(event => event.data.state === "connected"); await f.sessions.start(initial);
+  f.emitter.emit("connection.update", { connection: "open" }); await wait(20);
+  assert.equal(f.calls.includes("logout"), true); assert.equal((await f.sessions.status(initial)).state, "failed");
+  await f.sessions.close();
 });

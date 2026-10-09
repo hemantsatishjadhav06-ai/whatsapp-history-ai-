@@ -144,6 +144,32 @@ For separate browser source buckets, configure the same dedicated secret as Web 
 
 The API pre-deploy step applies the repository's Alembic migrations before traffic. Its startup override binds both IPv4 and IPv6, which supports Railway ingress and private service DNS; the installed Uvicorn version was verified with HTTP on both local address families. Deploy Jobs and Retention after API migrations succeed, using the same database and production settings. Neither worker needs a public domain or an HTTP health route. Retention visits workspaces in pages of 100 and sleeps 30 seconds between completed cycles; query batches are bounded, while full-cycle duration depends on the tenant count and retention backlog. A stopped Retention service allows expired authentication metadata to accumulate, so monitor its process, restart history, cycle age and cleanup output. Jobs' SQL timers work without Temporal. The Actions manifest is preparation for a later verified adapter/planner release and is not part of the enabled pilot topology. The existing Temporal worker, registrar and Kafka relay are optional independent processes; their development plaintext clients require supported production TLS/authentication configuration before connecting to external infrastructure.
 
+## Personal WhatsApp session service
+
+The optional linked-device pilot runs as a sixth private service built from
+`services/whatsapp-session/Dockerfile` (`infra/railway-whatsapp-session.json`) with no
+public domain and private endpoint `whatsapp-session`. Configure:
+
+| Service | Variable | Value |
+| --- | --- | --- |
+| WhatsApp Session | `ENABLE_PERSONAL_WHATSAPP` | `true` |
+| WhatsApp Session | `PORT` | `8091` |
+| WhatsApp Session | `DATABASE_URL` | `${{Postgres.DATABASE_URL}}` (private network) |
+| WhatsApp Session | `SESSION_ENCRYPTION_KEY` | base64 of 32 random bytes; losing it unlinks every session |
+| WhatsApp Session | `SESSION_GATEWAY_TOKEN` | random, at least 32 bytes |
+| WhatsApp Session | `PYTHON_AUTHORITY_URL` | `http://api.railway.internal:8000` |
+| WhatsApp Session | `PYTHON_INTERNAL_TOKEN` | the API's `WHATSAPP_PERSONAL_AUTHORITY_TOKEN` |
+| API and Jobs | `WHATSAPP_PERSONAL_ENABLED` | `true` |
+| API and Jobs | `WHATSAPP_PERSONAL_SESSION_URL` | `http://whatsapp-session.railway.internal:8091` |
+| API and Jobs | `WHATSAPP_PERSONAL_SESSION_TOKEN` | the session service's `SESSION_GATEWAY_TOKEN` |
+| API and Jobs | `WHATSAPP_PERSONAL_AUTHORITY_TOKEN` | random, at least 32 bytes, distinct from every other secret |
+
+Owners enter their own number with the country code; the service requests a WhatsApp
+link code for it and the API refuses a link completed by any other account. WhatsApp
+does not officially support third-party linked-device clients, so test with a number
+you are prepared to have restricted. `OWNER_ACCESS_CODE` (API) enables a single
+operator sign-in for pilots without Google; Google sign-in remains the customer path.
+
 ## Authentication and release
 
 The official Railway CLI supports `RAILWAY_TOKEN` for a project/environment token

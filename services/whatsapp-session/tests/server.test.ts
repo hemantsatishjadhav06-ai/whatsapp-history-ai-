@@ -25,6 +25,11 @@ test("private ingress authenticates before body parsing and refuses browser-cook
     }
     assert.equal((await post({ Authorization: `Bearer ${token}` }, "not-json")).status, 400);
     assert.equal((await post({ Authorization: `Bearer ${token}` }, "x".repeat(32_769))).status, 400);
+    for (const phone of ["+15550000001", "0155500000", "1555", 15550000001]) {
+      assert.equal((await post({ Authorization: `Bearer ${token}` }, JSON.stringify({ ...identity, pairing_phone: phone }))).status, 400);
+    }
+    const paired = await post({ Authorization: `Bearer ${token}` }, JSON.stringify({ ...identity, pairing_phone: "15550000001" }));
+    assert.equal((await paired.json() as { reason_code: string }).reason_code, "PERSONAL_QR_DISABLED");
     const off = await post({ Authorization: `Bearer ${token}` }); assert.equal(off.status, 503);
     assert.equal((await off.json() as { reason_code: string }).reason_code, "PERSONAL_QR_DISABLED"); assert.equal(storeOpened, 0);
     const health = await fetch(`${origin}/healthz`); assert.equal(health.status, 200); assert.equal(health.headers.get("cache-control"), "no-store");

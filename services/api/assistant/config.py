@@ -6,6 +6,9 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 OPENAI_API_URL = "https://api.openai.com/v1"
 OPENROUTER_API_URL = "https://openrouter.ai/api/v1"
+# Platform variables that identify a hosted runtime, where ENVIRONMENT must be explicit.
+HOSTING_MARKERS = ("RAILWAY_ENVIRONMENT_NAME", "RAILWAY_PROJECT_ID", "RENDER_SERVICE_ID", "FLY_APP_NAME",
+                   "K_SERVICE", "DYNO")
 
 
 class Settings(BaseSettings):
@@ -26,6 +29,11 @@ class Settings(BaseSettings):
     native_refresh_ttl_seconds: int = 2592000
     allowed_origins: str = "http://localhost:3000"
     internal_service_token: str = ""
+    # Dedicated token for the private WhatsApp session service's two authority
+    # routes. It never authorizes other /internal routes (connector events, jobs).
+    whatsapp_personal_authority_token: str = ""
+    # Optional pilot owner sign-in: one high-entropy operator secret (>= 32 chars).
+    owner_access_code: str = ""
     model_provider: str = "disabled"
     model_api_key: str = ""
     model_name: str = ""
@@ -116,6 +124,11 @@ class Settings(BaseSettings):
                 raise ValueError("Native Google callback must use an exact HTTPS application callback URL")
         if self.environment not in {"development", "test", "production"}:
             raise ValueError("Unknown environment")
+        import os
+        hosted = any(os.environ.get(name) for name in HOSTING_MARKERS)
+        if hosted and "environment" not in self.model_fields_set:
+            # The development default would silently skip every production guard.
+            raise ValueError("Set ENVIRONMENT explicitly on hosted deployments")
         if self.whatsapp_authorized_owner_subject:
             subject = self.whatsapp_authorized_owner_subject
             if (len(subject) > 248 or subject.startswith("google:")
@@ -170,8 +183,16 @@ class Settings(BaseSettings):
             raise ValueError("Personal WhatsApp timeout must be between 1 and 30 seconds")
         if self.whatsapp_personal_enabled and (
                 not self.whatsapp_personal_session_url or len(self.whatsapp_personal_session_token.encode()) < 32
-                or not self.internal_service_token):
+                or not (self.whatsapp_personal_authority_token or self.internal_service_token)):
             raise ValueError("Personal WhatsApp requires a private session service and strong service token")
+        secrets = [value for value in (self.internal_service_token, self.whatsapp_personal_authority_token,
+                                       self.whatsapp_personal_session_token, self.owner_access_code) if value]
+        if len(secrets) != len(set(secrets)):
+            raise ValueError("Service tokens and the owner access code must all be different secrets")
+        for name in ("whatsapp_personal_authority_token", "owner_access_code"):
+            value = getattr(self, name)
+            if value and (len(value.encode()) < 32 or any(character.isspace() for character in value)):
+                raise ValueError(f"{name} must contain at least 32 non-whitespace bytes")
         if self.connector_gateway_url:
             from urllib.parse import urlsplit
             endpoint = urlsplit(self.connector_gateway_url)
@@ -199,6 +220,10 @@ class Settings(BaseSettings):
                 raise ValueError("Mock model is unavailable in production")
             if self.request_limits_mode != "redis":
                 raise ValueError("Production requires shared Redis request limits")
+            if self.internal_service_token and len(self.internal_service_token.encode()) < 32:
+                raise ValueError("Production internal service token must contain at least 32 bytes")
+            if self.whatsapp_personal_enabled and not self.whatsapp_personal_authority_token:
+                raise ValueError("Production personal WhatsApp requires a dedicated session authority token")
             from urllib.parse import urlsplit
             origins = [value.strip() for value in self.allowed_origins.split(",") if value.strip()]
             if not origins:

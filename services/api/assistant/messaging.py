@@ -59,7 +59,17 @@ def content_hash(text: str) -> str:
 
 
 def require_internal(request: Request) -> None:
-    expected = request.app.state.settings.internal_service_token
+    _require_bearer(request, request.app.state.settings.internal_service_token)
+
+
+def require_session_service(request: Request) -> None:
+    """The private WhatsApp session service uses its own token when one is configured,
+    so a compromise of that untrusted-traffic process cannot reach other /internal routes."""
+    settings = request.app.state.settings
+    _require_bearer(request, settings.whatsapp_personal_authority_token or settings.internal_service_token)
+
+
+def _require_bearer(request: Request, expected: str) -> None:
     supplied = request.headers.get("authorization", "")
     if not expected or not hmac.compare_digest(supplied.encode(), f"Bearer {expected}".encode()):
         raise HTTPException(401, "Valid internal service authentication required")
