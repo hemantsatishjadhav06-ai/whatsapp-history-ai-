@@ -19,9 +19,12 @@ const route = '/integrations/whatsapp/personal';
 
 type ImportMode = 'all' | 'selected';
 type PersonalSyncStatus = { import_mode: ImportMode; connector_id: string | null; chats: number; messages: number;
-  phase: string | null; progress: number | null; last_sync_at: string | null; oldest_message_at: string | null;
-  backfill_pending: number; backfill_complete: number };
-const IMPORTING = new Set(['initial', 'recent', 'full', 'push_name', 'on_demand']);
+  phase: string | null; progress: number | null; last_sync_at: string | null; linked_at: string | null;
+  oldest_message_at: string | null; backfill_pending: number; backfill_complete: number };
+// WhatsApp's own history transfer at link time; on-demand backfill is reported separately.
+const IMPORTING = new Set(['initial', 'recent', 'full', 'push_name']);
+// WhatsApp starts sending past chats within minutes of a link. After that, none means it will not for this link.
+const HISTORY_WAIT_MS = 5 * 60_000;
 const count = (value: number) => new Intl.NumberFormat('en-IN').format(value);
 
 function syncLine(sync: PersonalSyncStatus, connected: boolean) {
@@ -35,12 +38,12 @@ function syncLine(sync: PersonalSyncStatus, connected: boolean) {
 /** Sync progress and the owner's import choice for the linked phone. */
 function PersonalSync({ state, actions, connected, onMode }: { state: MiloState; actions: MiloActions; connected: boolean;
   onMode(mode: ImportMode): void }) {
-  const [sync, setSync] = useState<PersonalSyncStatus | null>(null);
+  const [sync, setSync] = useState<PersonalSyncStatus | null>(null); const [checkedAt, setCheckedAt] = useState(0);
   const [busy, setBusy] = useState(false); const [error, setError] = useState('');
   const load = useCallback(async () => {
     try {
       const value = await actions.request<PersonalSyncStatus>('GET', `${route}/sync?workspace_id=${encodeURIComponent(state.workspaceId)}`);
-      setSync(value); onMode(value.import_mode); setError('');
+      setSync(value); setCheckedAt(Date.now()); onMode(value.import_mode); setError('');
     } catch { setError('Sync status is unavailable right now.'); }
   }, [actions, state.workspaceId, onMode]);
   useEffect(() => {
@@ -58,6 +61,8 @@ function PersonalSync({ state, actions, connected, onMode }: { state: MiloState;
     finally { setBusy(false); }
   }
   if (!sync) return error ? <p className={styles.warning} role="alert">{error}</p> : null;
+  const historyMissing = connected && sync.import_mode === 'all' && (sync.phase === null || sync.phase === 'on_demand')
+    && sync.linked_at !== null && checkedAt - Date.parse(sync.linked_at) > HISTORY_WAIT_MS;
   const oldest = sync.oldest_message_at ? new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', year: 'numeric',
     timeZone: state.timezone }).format(new Date(sync.oldest_message_at)) : '—';
   return <section className={styles.coverage} aria-label="WhatsApp sync">
@@ -69,7 +74,7 @@ function PersonalSync({ state, actions, connected, onMode }: { state: MiloState;
         <div><strong>{oldest}</strong><span>oldest message</span></div>
       </div>
       <p role="status">{syncLine(sync, connected)}</p>
-      {connected && sync.import_mode === 'all' && !sync.phase && <p className={styles.meta}>Only new messages so far? WhatsApp sends past chats only when a device is first linked. To bring in your full history, remove “Milo” under WhatsApp → Linked devices, then link again here. Chats already in Milo stay.</p>}
+      {historyMissing && <p className={styles.meta}>WhatsApp has not sent your past chats for this link. It sends them only when a device is first linked: remove “Milo” under WhatsApp → Linked devices, then link again here. Chats already in Milo stay.</p>}
       <fieldset className={styles.fieldset} disabled={busy}>
         <legend>Which chats Milo reads</legend>
         <label className={styles.checkbox}><input type="radio" name="import-mode" checked={sync.import_mode === 'all'} onChange={() => void choose('all')}/><span>All my chats — read and keep every one-to-one chat, newest first. Sending still needs your approval.</span></label>

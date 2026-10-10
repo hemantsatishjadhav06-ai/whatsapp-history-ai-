@@ -32,6 +32,9 @@ MAX_TEXT = 20000
 MAX_BACKFILL_PAGES = 200
 FULL_HISTORY_RAW_DAYS = 3650
 TITLE_RANK = {"number": 0, "push": 1, "chat": 2, "verified": 3, "contact": 4}
+# WhatsApp's own history transfer at link time. On-demand backfill pages never replace these phases, so the
+# owner can tell a link that received its past chats from one that only has backfill.
+LINK_PHASES = {"initial", "recent", "full", "push_name", "complete"}
 STYLE_REFRESH_PER_BATCH = 2
 
 
@@ -454,7 +457,7 @@ def session_sync(body: SyncBatch, request: Request, db=Depends(get_db)):
             live_ingest(db, row, resolver, body.messages, stats)
         else:
             bulk_ingest(db, row, resolver, body.messages, body.origin, stats)
-        if body.progress is not None:
+        if body.progress is not None and not (body.progress.phase == "on_demand" and session.sync_phase in LINK_PHASES):
             session.sync_phase = body.progress.phase
             session.sync_progress = body.progress.percent
         session.last_sync_at = now()
@@ -519,7 +522,7 @@ def sync_status(workspace_id: str, request: Request, response: Response,
     response.headers["Cache-Control"] = "private, no-store"
     row = _personal_connector(db, workspace_id)
     result = {"workspace_id": workspace_id, "import_mode": import_mode(db, workspace_id), "connector_id": None,
-              "chats": 0, "messages": 0, "phase": None, "progress": None, "last_sync_at": None,
+              "chats": 0, "messages": 0, "phase": None, "progress": None, "last_sync_at": None, "linked_at": None,
               "oldest_message_at": None, "backfill_pending": 0, "backfill_complete": 0}
     if row is None:
         return result
@@ -533,6 +536,7 @@ def sync_status(workspace_id: str, request: Request, response: Response,
                       Message.connector_id == row.id, Message.deleted.is_(False))),
                   phase=session.sync_phase if session else None, progress=session.sync_progress if session else None,
                   last_sync_at=aware(session.last_sync_at).isoformat() if session and session.last_sync_at else None,
+                  linked_at=aware(session.last_connected_at).isoformat() if session and session.last_connected_at else None,
                   oldest_message_at=aware(oldest).isoformat() if oldest else None,
                   backfill_pending=counts.get("pending", 0), backfill_complete=counts.get("complete", 0))
     return result
