@@ -139,6 +139,18 @@ test("every one-to-one chat streams to Python, which alone decides what is kept;
   assert.deepEqual(f.batches.find(batch => batch.progress)?.progress, { phase: "recent", percent: 40 });
   assert.equal(f.calls.some(call => call.startsWith("authority:ingest")), false); await f.sessions.close();
 });
+test("live chat events only update chats; history chat lists create them at WhatsApp's activity time", async () => {
+  const f = fixture(); await paired(f);
+  const at = Math.floor(Date.now() / 1000) - 3600, other = "15550000003@s.whatsapp.net", named = "15550000004@s.whatsapp.net";
+  f.emitter.emit("chats.update", [{ id: peer, unreadCount: 1, conversationTimestamp: at }, { id: other, unreadCount: 0, archived: true }]);
+  await wait(20); await f.sessions.settlePendingEvents();
+  f.emitter.emit("messaging-history.set", { chats: [{ id: named, name: "Asha", unreadCount: 2, conversationTimestamp: at }],
+    contacts: [], messages: [], syncType: 3 });
+  await wait(20); await f.sessions.settlePendingEvents();
+  assert.deepEqual(f.batches.flatMap(batch => batch.chats), [{ jid: other, unread_count: 0, archived: true, contact_only: true },
+    { jid: named, title: "Asha", title_source: "chat", unread_count: 2, last_activity_at: new Date(at * 1000).toISOString() }]);
+  await f.sessions.close();
+});
 test("media becomes readable placeholders, ephemeral wrappers unwrap, groups and future dates are skipped", async () => {
   const f = fixture(); await paired(f);
   f.emitter.emit("messages.upsert", { type: "notify", messages: [{ ...message(), key: { id: "group", remoteJid: "123456@g.us" } },

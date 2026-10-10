@@ -44,7 +44,7 @@ const owner = 'session_token=synthetic-owner';
 
 test('phone linking routes preserve owner cookies, no-store and expected public methods', async t => {
   const sent = setup(t);
-  for (const suffix of ['config', 'status', 'pairing', 'chats']) {
+  for (const suffix of ['config', 'status', 'pairing', 'chats', 'sync']) {
     const path = `integrations/whatsapp/personal/${suffix}`;
     const result = await GET(request(path, { headers: { Cookie: owner } }), context(path));
     assert.equal(result.status, 200); await result.text();
@@ -58,6 +58,15 @@ test('phone linking routes preserve owner cookies, no-store and expected public 
     assert.equal(result.status, 200); await result.text();
     assert.equal((await GET(request(path), context(path))).status, 405);
   }
+  const preferences = 'integrations/whatsapp/personal/preferences';
+  const saved = await PUT(request(preferences, { method: 'PUT', body: '{"workspace_id":"synthetic","import_mode":"all"}', headers: { Origin: 'https://milo.example.test', 'X-CSRF-Token': 'synthetic-csrf', Cookie: owner } }), context(preferences));
+  assert.equal(saved.status, 200); await saved.text();
+  assert.equal(sent.at(-1)?.init?.method, 'PUT');
+  assert.equal((await POST(request(preferences, { method: 'POST', body: '{}', headers: { Origin: 'https://milo.example.test', Cookie: owner } }), context(preferences))).status, 405);
+  const search = 'ui/conversations/search';
+  const found = await GET(request(search + '?workspace_id=synthetic&q=ra', { headers: { Cookie: owner } }), context(search));
+  assert.equal(found.status, 200); await found.text();
+  assert.equal(sent.at(-1)?.url, 'http://private-api.railway.internal:8000/v1/ui/conversations/search?workspace_id=synthetic&q=ra');
   const path = 'conversations/synthetic-chat/automatic-drafts';
   const result = await PUT(request(path, { method: 'PUT', body: '{"enabled":false,"expected_version":1}', headers: { Origin: 'https://milo.example.test', Cookie: owner } }), context(path));
   assert.equal(result.status, 200); await result.text();

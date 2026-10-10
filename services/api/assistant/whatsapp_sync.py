@@ -62,8 +62,9 @@ class SyncChat(Payload):
     title_source: Literal["contact", "verified", "chat", "push"] | None = None
     unread_count: int | None = Field(default=None, ge=0, le=1_000_000)
     archived: bool | None = None
-    # Address-book entries name existing chats; only real chats create conversations.
+    # Address-book entries and live chat events describe existing chats; only real chats create conversations.
     contact_only: bool = False
+    last_activity_at: Zoned | None = None
 
 
 class SyncMessage(Payload):
@@ -183,6 +184,10 @@ class ChatResolver:
         self._link(conv, jids)
         if title:
             self.retitle(conv, title, source or "push")
+        number = next((value for value in jids if value.endswith("@s.whatsapp.net")), None)
+        if number and conv.title == number_title(conv.provider_chat_id) != number_title(number):
+            # A chat first seen only by its private WhatsApp ID shows the number once WhatsApp shares it.
+            self.retitle(conv, number_title(number), "number")
         return conv
 
     def _create(self, jids, title, source):
@@ -435,6 +440,9 @@ def session_sync(body: SyncBatch, request: Request, db=Depends(get_db)):
                 sync.unread_count = chat.unread_count
             if chat.archived is not None:
                 sync.archived = chat.archived
+            if chat.last_activity_at is not None and conv.last_message_at is None:
+                # Until its messages arrive, a chat sorts by its WhatsApp activity, not by import time.
+                conv.last_message_at = chat.last_activity_at
             sync.updated_at = now()
         if body.origin == "live":
             live_ingest(db, row, resolver, body.messages, stats)

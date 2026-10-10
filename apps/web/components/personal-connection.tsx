@@ -69,7 +69,7 @@ function PersonalSync({ state, actions, connected, onMode }: { state: MiloState;
         <div><strong>{oldest}</strong><span>oldest message</span></div>
       </div>
       <p role="status">{syncLine(sync, connected)}</p>
-      {connected && sync.import_mode === 'all' && sync.messages === 0 && <p className={styles.meta}>No history yet? WhatsApp sends past chats only when a device is first linked. If you linked before full history was supported, remove “Milo” under WhatsApp → Linked devices, then link again here.</p>}
+      {connected && sync.import_mode === 'all' && !sync.phase && <p className={styles.meta}>Only new messages so far? WhatsApp sends past chats only when a device is first linked. To bring in your full history, remove “Milo” under WhatsApp → Linked devices, then link again here. Chats already in Milo stay.</p>}
       <fieldset className={styles.fieldset} disabled={busy}>
         <legend>Which chats Milo reads</legend>
         <label className={styles.checkbox}><input type="radio" name="import-mode" checked={sync.import_mode === 'all'} onChange={() => void choose('all')}/><span>All my chats — read and keep every one-to-one chat, newest first. Sending still needs your approval.</span></label>

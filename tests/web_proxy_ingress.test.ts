@@ -36,7 +36,7 @@ const context = (path: string) => ({ params: Promise.resolve({ path: path.split(
 
 test('native phone linking routes remain bearer-only and restrict pairing versus mutation methods', async t => {
   const { sent, request } = setup(t); const headers = { Authorization: `Bearer ${token}` };
-  for (const suffix of ['config', 'status', 'pairing', 'chats']) {
+  for (const suffix of ['config', 'status', 'pairing', 'chats', 'sync']) {
     const path = `integrations/whatsapp/personal/${suffix}`;
     const result = await nativeProxy(request('/native-api/v1/' + path, { headers }), context('v1/' + path));
     assert.equal(result.status, 200); await result.text();
@@ -49,6 +49,13 @@ test('native phone linking routes remain bearer-only and restrict pairing versus
     assert.equal(result.status, 200); await result.text();
     assert.equal((await nativeProxy(request('/native-api/v1/' + path, { headers }), context('v1/' + path))).status, 405);
   }
+  const preferences = 'integrations/whatsapp/personal/preferences';
+  const saved = await nativeProxy(request('/native-api/v1/' + preferences, { method: 'PUT', body: '{"workspace_id":"synthetic","import_mode":"all"}', headers }), context('v1/' + preferences));
+  assert.equal(saved.status, 200); await saved.text();
+  assert.equal((await nativeProxy(request('/native-api/v1/' + preferences, { method: 'POST', body: '{}', headers }), context('v1/' + preferences))).status, 405);
+  const search = 'ui/conversations/search';
+  const found = await nativeProxy(request('/native-api/v1/' + search + '?workspace_id=synthetic&q=ra', { headers }), context('v1/' + search));
+  assert.equal(found.status, 200); await found.text();
   const path = 'conversations/synthetic-chat/automatic-drafts';
   const result = await nativeProxy(request('/native-api/v1/' + path, { method: 'PUT', body: '{"enabled":false,"expected_version":1}', headers }), context('v1/' + path));
   assert.equal(result.status, 200); await result.text();

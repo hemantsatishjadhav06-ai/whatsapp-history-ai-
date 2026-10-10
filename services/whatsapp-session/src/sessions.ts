@@ -5,7 +5,7 @@ import type { AuthStore, AuthStoreFactory } from "./storage.ts";
 import type { AuthorityClient } from "./authority.ts";
 import { Blocked, Denied, canonicalJid, individualJid } from "./protocol.ts";
 import type { BackfillReport, BackfillTarget, Identity, SendEnvelope, SyncChat, SyncMessage, SyncOrigin, SyncProgress } from "./protocol.ts";
-import { convertMessage } from "./convert.ts";
+import { convertMessage, isoSeconds } from "./convert.ts";
 import type { ChatAddress } from "./convert.ts";
 import { SyncPump } from "./sync.ts";
 import type { PumpLog } from "./sync.ts";
@@ -330,8 +330,8 @@ export class Sessions {
       const lid = canonicalJid(mapping.lid), pn = canonicalJid(mapping.pn);
       if (lid.endsWith("@lid") && pn.endsWith("@s.whatsapp.net")) record.lidToPn.set(lid, pn);
     });
-    socket.ev.on("chats.upsert", (chats: Chat[]) => { if (current()) this.#after(record, async () => this.#chatRows(record, chats)); });
-    socket.ev.on("chats.update", (chats: Partial<Chat>[]) => { if (current()) this.#after(record, async () => this.#chatRows(record, chats)); });
+    socket.ev.on("chats.upsert", (chats: Chat[]) => { if (current()) this.#after(record, async () => this.#chatRows(record, chats, true)); });
+    socket.ev.on("chats.update", (chats: Partial<Chat>[]) => { if (current()) this.#after(record, async () => this.#chatRows(record, chats, true)); });
     socket.ev.on("contacts.upsert", (contacts: Contact[]) => { if (current()) this.#after(record, async () => this.#contactRows(record, contacts)); });
     socket.ev.on("contacts.update", (contacts: Partial<Contact>[]) => { if (current()) this.#after(record, async () => this.#contactRows(record, contacts)); });
     socket.ev.on("messages.upsert", event => {
@@ -345,7 +345,7 @@ export class Sessions {
         const lid = canonicalJid(mapping.lid), pn = canonicalJid(mapping.pn);
         if (lid.endsWith("@lid") && pn.endsWith("@s.whatsapp.net")) record.lidToPn.set(lid, pn);
       }
-      this.#after(record, async () => { this.#chatRows(record, event.chats ?? []); this.#contactRows(record, event.contacts ?? []); });
+      this.#after(record, async () => { this.#chatRows(record, event.chats ?? [], false); this.#contactRows(record, event.contacts ?? []); });
       const onDemand = event.syncType === proto.HistorySync.HistorySyncType.ON_DEMAND;
       this.#ingest(record, onDemand ? "backfill" : "history", event.messages ?? [], rows => {
         if (onDemand && record.onDemand) {
@@ -454,18 +454,28 @@ export class Sessions {
     const address = this.#address(record, jid, jid.endsWith("@lid") ? altPn : altLid);
     return record.owner.has(address.jid) || (address.alt && record.owner.has(address.alt)) ? null : address;
   }
-  #chatRows(record: RecordState, chats: readonly Partial<Chat>[]) {
+  /**
+   * History chat lists name and create chats, with absolute unread counts and WhatsApp's last activity.
+   * Live chat events only update existing chats: their positive unread counts are per-message increments
+   * (live messages are counted where they are stored), 0 means read on the phone and -1 marked unread.
+   */
+  #chatRows(record: RecordState, chats: readonly Partial<Chat>[], live: boolean) {
     const rows: SyncChat[] = [];
+    const now = this.#clock();
     for (const chat of chats.slice(0, 5000)) {
       const raw = chat as Partial<Chat> & { lidJid?: string | null; pnJid?: string | null; displayName?: string | null };
       const address = this.#canonical(record, raw.id, raw.lidJid, raw.pnJid);
       if (!address) continue;
       const name = raw.displayName || raw.name;
-      const unread = typeof raw.unreadCount === "number" ? (raw.unreadCount < 0 ? 1 : raw.unreadCount) : undefined;
+      const count = typeof raw.unreadCount === "number" ? raw.unreadCount : undefined;
+      const unread = count === undefined || (live && count > 0) ? undefined : count < 0 ? 1 : count;
+      const activity = live ? undefined : isoSeconds(raw.conversationTimestamp, now);
+      if (live && !name && unread === undefined && typeof raw.archived !== "boolean") continue;
       rows.push({ jid: address.jid, ...(address.alt ? { alt_jid: address.alt } : {}),
         ...(name ? { title: name.slice(0, 160), title_source: "chat" as const } : {}),
         ...(unread !== undefined ? { unread_count: Math.min(unread, 1_000_000) } : {}),
-        ...(typeof raw.archived === "boolean" ? { archived: raw.archived } : {}) });
+        ...(typeof raw.archived === "boolean" ? { archived: raw.archived } : {}),
+        ...(activity ? { last_activity_at: activity } : {}), ...(live ? { contact_only: true } : {}) });
     }
     this.#emitChats(record, rows);
   }

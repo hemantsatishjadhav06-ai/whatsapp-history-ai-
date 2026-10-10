@@ -64,7 +64,10 @@ export class SyncPump {
     if (this.#closed || !chats.length) return;
     for (const chat of chats) {
       const previous = this.#chats.get(chat.jid);
-      this.#chats.set(chat.jid, previous ? { ...previous, ...chat } : chat);
+      const merged = previous ? { ...previous, ...chat } : chat;
+      // A pending history row may still create its chat when a live update for it arrives first or later.
+      if (previous && !(previous.contact_only && chat.contact_only)) delete merged.contact_only;
+      this.#chats.set(chat.jid, merged);
     }
     this.#kick();
   }

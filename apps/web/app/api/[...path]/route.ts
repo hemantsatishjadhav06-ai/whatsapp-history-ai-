@@ -4,7 +4,7 @@ import { acquireProxyLease, leaseProxyBody } from '../../../lib/proxy-admission'
 import { signRateSource } from '../../../lib/rate-source';
 
 export const dynamic = 'force-dynamic';
-const ALLOWED = /^(?:auth\/(?:config|nonce|google|access-code|csrf|logout|sessions(?:\/[^/]+)?)|me|ui\/(?:bootstrap|updates|resolve)|(?:workspaces|connectors|conversations|drafts|messages|imports|inbox|tasks|memories|forward-routes|actions|jobs|schedules|scheduled-intents|contacts|people|integrations)(?:\/[A-Za-z0-9_.:@+-]+){0,3}|integrations\/whatsapp\/personal\/(?:config|status|start|pairing|chats(?:\/authorize)?|disconnect|authorship\/confirm)|automation\/grants(?:\/[^/]+)?|assistant\/(?:commands|digest)|privacy\/(?:retention(?:\/sweep)?|model-processing)|pause-all|resume-all|activity|data-export|account-data)$/;
+const ALLOWED = /^(?:auth\/(?:config|nonce|google|access-code|csrf|logout|sessions(?:\/[^/]+)?)|me|ui\/(?:bootstrap|updates|resolve|conversations\/search)|(?:workspaces|connectors|conversations|drafts|messages|imports|inbox|tasks|memories|forward-routes|actions|jobs|schedules|scheduled-intents|contacts|people|integrations)(?:\/[A-Za-z0-9_.:@+-]+){0,3}|integrations\/whatsapp\/personal\/(?:config|status|sync|preferences|start|pairing|chats(?:\/authorize)?|disconnect|authorship\/confirm)|automation\/grants(?:\/[^/]+)?|assistant\/(?:commands|digest)|privacy\/(?:retention(?:\/sweep)?|model-processing)|pause-all|resume-all|activity|data-export|account-data)$/;
 const MAX_JSON_BODY_BYTES = 64 * 1024;
 const MAX_IMPORT_BODY_BYTES = 12 * 1024 * 1024;
 const CONTROL_ROUTES = /^(?:pause-all|resume-all|auth\/logout|conversations\/[^/]+\/(?:control|takeover|resume)|actions\/[^/]+\/cancel|integrations\/whatsapp\/personal\/disconnect)$/;
@@ -40,7 +40,8 @@ async function proxy(request: NextRequest, context: { params: Promise<{ path: st
     return Response.json({ detail: 'This service route is not available to the browser' }, { status: 404 });
   }
   if (route.startsWith('integrations/whatsapp/personal/')) {
-    const allowedMethod = /^(?:config|status|pairing|chats)$/.test(route.slice('integrations/whatsapp/personal/'.length)) ? 'GET' : 'POST';
+    const suffix = route.slice('integrations/whatsapp/personal/'.length);
+    const allowedMethod = /^(?:config|status|pairing|chats|sync)$/.test(suffix) ? 'GET' : suffix === 'preferences' ? 'PUT' : 'POST';
     if (request.method !== allowedMethod) return Response.json({ detail: 'Method unavailable' }, { status: 405, headers: { 'Cache-Control': 'no-store' } });
   }
   const publicMethod = PUBLIC_ROUTES.get(route);

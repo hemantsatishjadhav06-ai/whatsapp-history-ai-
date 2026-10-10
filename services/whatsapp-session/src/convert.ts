@@ -1,5 +1,5 @@
 /** Content-only conversion of SDK messages into the bounded private sync shape. No downloads or link fetches. */
-import { normalizeMessageContent, proto } from "@whiskeysockets/baileys";
+import { getContentType, isRealMessage, normalizeMessageContent, proto } from "@whiskeysockets/baileys";
 import type { WAMessage } from "@whiskeysockets/baileys";
 import { canonicalJid, individualJid } from "./protocol.ts";
 import type { SyncMessage } from "./protocol.ts";
@@ -14,6 +14,11 @@ function seconds(value: unknown): number {
   if (value && typeof value === "object" && "toNumber" in value && typeof value.toNumber === "function") return Number(value.toNumber());
   if (typeof value === "string" && /^\d+$/.test(value)) return Number(value);
   return Number.NaN;
+}
+/** An SDK seconds timestamp as ISO time; undefined when missing, invalid or in the future. */
+export function isoSeconds(value: unknown, now = Date.now()): string | undefined {
+  const stamp = seconds(value);
+  return Number.isFinite(stamp) && stamp > 0 && stamp <= now / 1000 + 60 ? new Date(stamp * 1000).toISOString() : undefined;
 }
 function clip(text: string): string {
   const value = text.replace(/\u0000/g, "").trim();
@@ -46,7 +51,8 @@ export function describe(content: Content | null | undefined, viewOnce = false):
     return { kind: "media", text: withCaption(`📄 ${content.documentMessage.fileName || content.documentMessage.title || "Document"}`,
       content.documentMessage.caption) };
   }
-  if (content.stickerMessage) return { kind: "media", text: "Sticker" };
+  if (content.stickerMessage || content.lottieStickerMessage) return { kind: "media", text: "Sticker" };
+  if (content.stickerPackMessage) return { kind: "media", text: withCaption("Sticker pack", content.stickerPackMessage.name) };
   if (content.locationMessage) {
     const place = [content.locationMessage.name, content.locationMessage.address].filter(Boolean).join(", ");
     return { kind: "location", text: `📍 ${place || "Location"}` };
@@ -57,12 +63,26 @@ export function describe(content: Content | null | undefined, viewOnce = false):
     const count = content.contactsArrayMessage.contacts?.length ?? 0;
     return { kind: "contact", text: `👤 ${content.contactsArrayMessage.displayName || `${count} contacts`}` };
   }
-  const poll = content.pollCreationMessage ?? content.pollCreationMessageV2 ?? content.pollCreationMessageV3;
+  if (content.pollCreationMessageV4?.message) return describe(content.pollCreationMessageV4.message, viewOnce);
+  const poll = content.pollCreationMessage ?? content.pollCreationMessageV2 ?? content.pollCreationMessageV3 ?? content.pollCreationMessageV5;
   if (poll) {
     const options = (poll.options ?? []).map(option => option.optionName).filter(Boolean).join(" / ");
     return { kind: "poll", text: `📊 ${poll.name || "Poll"}${options ? ` — ${options}` : ""}` };
   }
   if (content.eventMessage) return { kind: "event", text: `📅 ${content.eventMessage.name || "Event"}` };
+  if (content.pollResultSnapshotMessage) return { kind: "poll", text: `📊 Poll results: ${content.pollResultSnapshotMessage.name || "Poll"}` };
+  const call = content.callLogMesssage;
+  if (call) {
+    const outcome = call.callOutcome ?? Outcome.CONNECTED;
+    const icon = call.isVideo ? "📹" : "📞", type = call.isVideo ? "video call" : "voice call";
+    if (MISSED.has(outcome)) return { kind: "call", text: `${icon} Missed ${type}` };
+    const length = outcome === Outcome.CONNECTED ? seconds(call.durationSecs) : 0;
+    return { kind: "call", text: `${icon} ${type[0]!.toUpperCase()}${type.slice(1)}${duration(length)}` };
+  }
+  if (content.bcallMessage) return { kind: "call", text: "📞 Call" };
+  if (content.scheduledCallCreationMessage) {
+    return { kind: "event", text: `📅 Scheduled call${content.scheduledCallCreationMessage.title ? `: ${content.scheduledCallCreationMessage.title}` : ""}` };
+  }
   if (content.buttonsResponseMessage?.selectedDisplayText) return { kind: "text", text: content.buttonsResponseMessage.selectedDisplayText };
   if (content.listResponseMessage?.title) return { kind: "text", text: content.listResponseMessage.title };
   if (content.templateButtonReplyMessage?.selectedDisplayText) return { kind: "text", text: content.templateButtonReplyMessage.selectedDisplayText };
@@ -78,7 +98,22 @@ export function describe(content: Content | null | undefined, viewOnce = false):
   if (content.productMessage) return { kind: "other", text: "🛍️ Product" };
   if (content.orderMessage) return { kind: "other", text: "🛒 Order" };
   if (content.requestPaymentMessage || content.sendPaymentMessage) return { kind: "other", text: "💳 Payment" };
+  if (content.requestPhoneNumberMessage) return { kind: "other", text: "Asked to see your phone number" };
+  if (content.placeholderMessage) return { kind: "other", text: "🔒 This message is only on your phone" };
   return null;
+}
+const Outcome = proto.Message.CallLogMessage.CallOutcome;
+const MISSED = new Set<number>([Outcome.MISSED, Outcome.REJECTED, Outcome.SILENCED_BY_DND, Outcome.SILENCED_UNKNOWN_CALLER]);
+// Actions on another message or on the chat (pins, kept messages, encrypted reactions and RSVPs, album
+// headers whose photos arrive one by one). WhatsApp shows these inline, never as a message of their own.
+const NOT_MESSAGES = new Set(["albumMessage", "keepInChatMessage", "pinInChatMessage", "encReactionMessage",
+  "encEventResponseMessage", "encCommentMessage", "secretEncryptedMessage", "messageHistoryBundle",
+  "messageHistoryNotice", "botFeedbackMessage", "statusNotificationMessage"]);
+/** A real message of a type this converter cannot render still shows up, so no chat looks empty. */
+function unsupported(message: WAMessage, content: Content | null | undefined): Converted | null {
+  const type = getContentType(content ?? undefined);
+  if (!type || NOT_MESSAGES.has(type) || !isRealMessage(message)) return null;
+  return { kind: "other", text: "💬 Message — open WhatsApp on your phone to see it" };
 }
 const CALL_STUBS = new Map<number, string>([[40, "📞 Missed voice call"], [41, "📹 Missed video call"],
   [45, "📞 Missed group voice call"], [46, "📹 Missed group video call"]]);
@@ -120,7 +155,7 @@ export function convertMessage(message: WAMessage, address: (jid: string, alt?: 
   }
   if (key.id.length > 180) return null;
   const stub = message.messageStubType ? CALL_STUBS.get(message.messageStubType) : undefined;
-  const described = stub ? { kind: "call" as const, text: stub } : describe(content, viewOnce);
+  const described = stub ? { kind: "call" as const, text: stub } : describe(content, viewOnce) ?? unsupported(message, content);
   if (!described?.text.trim()) return null;
   const context = content ? Object.values(content).find(value =>
     value && typeof value === "object" && "contextInfo" in value) as { contextInfo?: proto.IContextInfo | null } | undefined : undefined;

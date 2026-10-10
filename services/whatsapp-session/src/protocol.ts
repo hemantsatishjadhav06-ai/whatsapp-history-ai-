@@ -19,9 +19,10 @@ export class Denied extends Blocked {
   constructor(denial: string) { super("AUTHORITY_DENIED"); this.denial = denial; }
 }
 export type SyncOrigin = "live" | "history" | "replay" | "backfill";
-/** `contact_only` rows come from the address book: they name chats but never create one. */
+/** `contact_only` rows (address book, live chat events) describe existing chats but never create one. */
 export type SyncChat = { jid: string; alt_jid?: string; title?: string;
-  title_source?: "contact" | "verified" | "chat" | "push"; unread_count?: number; archived?: boolean; contact_only?: boolean };
+  title_source?: "contact" | "verified" | "chat" | "push"; unread_count?: number; archived?: boolean; contact_only?: boolean;
+  last_activity_at?: string };
 export type SyncMessage = { id: string; chat_jid: string; chat_alt_jid?: string; from_me: boolean; timestamp: string;
   event: "created" | "edited" | "deleted";
   kind: "text" | "media" | "location" | "contact" | "poll" | "event" | "call" | "other";
