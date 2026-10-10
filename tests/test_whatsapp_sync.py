@@ -5,7 +5,7 @@ from datetime import timedelta
 import pytest
 from sqlalchemy import func, select
 
-from assistant.db import now
+from assistant.db import aware, now
 from assistant.lifecycle_models import RetentionPolicy
 from assistant.models import AuditEvent, Connector, Conversation, Message, Outbox, Permission
 from assistant.whatsapp_personal_models import PersonalChatAlias, PersonalChatSync, PersonalWhatsAppSession
@@ -85,6 +85,22 @@ def test_phone_number_and_lid_addresses_share_one_chat(app, personal):
         assert conv.provider_chat_id == FRIEND
         assert db.scalar(select(Message.conversation_id).where(Message.provider_message_id == "lid-only")) == conv.id
         assert {row.alias_jid for row in db.scalars(select(PersonalChatAlias))} == {FRIEND, FRIEND_LID}
+
+
+
+def test_chat_seen_first_by_private_id_shows_the_number_once_shared(app, personal):
+    client, ident = personal["client"], personal["identity"]
+    sync(client, ident, messages=[item("lid-first", jid=FRIEND_LID)])
+    with app.state.session_factory() as db:
+        assert db.scalar(select(Conversation.title)) == "WhatsApp contact"
+    sync(client, ident, messages=[item("mapped", jid=FRIEND, chat_alt_jid=FRIEND_LID)])
+    with app.state.session_factory() as db:
+        assert db.scalar(select(func.count()).select_from(Conversation)) == 1
+        assert db.scalar(select(Conversation.title)) == "+919800000001"
+    sync(client, ident, messages=[item("named", jid=FRIEND_LID, push_name="Rahul")])
+    sync(client, ident, messages=[item("again", jid=FRIEND, chat_alt_jid=FRIEND_LID)])
+    with app.state.session_factory() as db:
+        assert db.scalar(select(Conversation.title)) == "Rahul"
 
 
 def test_live_messages_keep_takeover_outbox_and_unread_semantics(app, personal):
@@ -190,6 +206,21 @@ def test_first_link_keeps_full_history_unless_owner_chose_retention(app, persona
             RetentionPolicy.workspace_id == personal["workspace"]["id"])) == 45
 
 
+
+def test_phone_linked_before_full_sync_keeps_full_history_on_its_next_connection(app, personal):
+    client, ident = personal["client"], personal["identity"]
+    with app.state.session_factory() as db:
+        # A link made before full sync existed still carries the untouched 30-day default.
+        policy = db.scalar(select(RetentionPolicy).where(RetentionPolicy.workspace_id == personal["workspace"]["id"]))
+        policy.raw_days, policy.version = 30, 1
+        db.commit()
+    assert post_event(client, ident, "connection", state="connected", account_id=OWNER,
+                      account_aliases=[OWNER, OWNER_LID]).status_code == 200
+    with app.state.session_factory() as db:
+        policy = db.scalar(select(RetentionPolicy).where(RetentionPolicy.workspace_id == personal["workspace"]["id"]))
+        assert (policy.raw_days, policy.version) == (3650, 2)
+
+
 def test_backfill_targets_newest_chats_first_and_stops_when_exhausted(app, personal):
     client, ident = personal["client"], personal["identity"]
     sync(client, ident, messages=[item("friend-oldest", minutes_ago=90), item("friend-newer", minutes_ago=2),
@@ -244,3 +275,27 @@ def test_address_book_contacts_name_chats_but_never_create_them(app, personal):
     sync(client, ident, messages=[item("second", jid=OTHER, push_name="Another Push")])
     with app.state.session_factory() as db:
         assert db.scalar(select(Conversation.title)) == "Saved Name"
+
+
+def test_chats_without_stored_messages_sort_by_whatsapp_activity(app, personal):
+    client, ident = personal["client"], personal["identity"]
+    quiet = (now() - timedelta(days=3)).isoformat()
+    sync(client, ident, chats=[{"jid": OTHER, "title": "Cleared chat", "last_activity_at": quiet}],
+         messages=[item("recent", jid=FRIEND, minutes_ago=5)])
+    # A live chat event for an unknown chat creates nothing.
+    sync(client, ident, origin="live", chats=[{"jid": "919800000003@s.whatsapp.net", "unread_count": 0, "contact_only": True}])
+    titles = [row["title"] for row in client.get("/ui/bootstrap", params={
+        "workspace_id": personal["workspace"]["id"]}).json()["conversations"]]
+    assert titles == ["+919800000001", "Cleared chat"]
+    sync(client, ident, messages=[item("older", jid=OTHER, minutes_ago=10 * 24 * 60)])
+    with app.state.session_factory() as db:
+        stored = db.scalar(select(Conversation.last_message_at).where(Conversation.provider_chat_id == OTHER))
+    assert abs((aware(stored) - (now() - timedelta(days=3))).total_seconds()) < 60
+
+
+def test_business_senders_are_named_by_their_verified_name(app, personal):
+    client, ident = personal["client"], personal["identity"]
+    sync(client, ident, origin="live", messages=[item("alert", jid=FRIEND_LID, minutes_ago=0, verified_name="Synthetic Bank")])
+    sync(client, ident, messages=[item("promo", jid=FRIEND_LID, minutes_ago=5, push_name="Synthetic promo")])
+    with app.state.session_factory() as db:
+        assert db.scalar(select(Conversation.title)) == "Synthetic Bank"

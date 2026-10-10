@@ -14125,6 +14125,18 @@
             "type": "boolean",
             "title": "Contact Only",
             "default": false
+          },
+          "last_activity_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Activity At"
           }
         },
         "additionalProperties": false,
@@ -14226,6 +14238,18 @@
               }
             ],
             "title": "Push Name"
+          },
+          "verified_name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 160
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Verified Name"
           },
           "reply_to": {
             "anyOf": [

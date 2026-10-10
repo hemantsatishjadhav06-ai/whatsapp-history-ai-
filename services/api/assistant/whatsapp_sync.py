@@ -62,8 +62,9 @@ class SyncChat(Payload):
     title_source: Literal["contact", "verified", "chat", "push"] | None = None
     unread_count: int | None = Field(default=None, ge=0, le=1_000_000)
     archived: bool | None = None
-    # Address-book entries name existing chats; only real chats create conversations.
+    # Address-book entries and live chat events describe existing chats; only real chats create conversations.
     contact_only: bool = False
+    last_activity_at: Zoned | None = None
 
 
 class SyncMessage(Payload):
@@ -76,6 +77,7 @@ class SyncMessage(Payload):
     kind: Literal["text", "media", "location", "contact", "poll", "event", "call", "other"] = "text"
     text: str = Field(default="", max_length=MAX_TEXT)
     push_name: str | None = Field(default=None, max_length=160)
+    verified_name: str | None = Field(default=None, max_length=160)
     reply_to: str | None = Field(default=None, max_length=180)
     revision: int = Field(default=1, ge=1, le=2_147_483_647)
 
@@ -183,6 +185,10 @@ class ChatResolver:
         self._link(conv, jids)
         if title:
             self.retitle(conv, title, source or "push")
+        number = next((value for value in jids if value.endswith("@s.whatsapp.net")), None)
+        if number and conv.title == number_title(conv.provider_chat_id) != number_title(number):
+            # A chat first seen only by its private WhatsApp ID shows the number once WhatsApp shares it.
+            self.retitle(conv, number_title(number), "number")
         return conv
 
     def _create(self, jids, title, source):
@@ -252,6 +258,13 @@ class ChatResolver:
             sync.title_source = source
 
 
+def _sender_name(item):
+    """The contact's own name on an inbound message; a verified business name outranks a push name."""
+    if item.from_me:
+        return None, None
+    return (item.verified_name, "verified") if item.verified_name else (item.push_name, "push")
+
+
 def _author(mode, item, assistant_ids):
     if not item.from_me:
         return "contact_human"
@@ -282,8 +295,7 @@ def bulk_ingest(db, connector, resolver, messages, origin, stats):
     stored_origin = "replay" if origin == "replay" else "history"
     groups = {}
     for item in messages:
-        conv = resolver.resolve(item.chat_jid, item.chat_alt_jid,
-                                None if item.from_me else item.push_name, "push")
+        conv = resolver.resolve(item.chat_jid, item.chat_alt_jid, *_sender_name(item))
         if conv is None or not resolver.can_store(conv):
             stats["ignored"] += 1
             continue
@@ -357,8 +369,7 @@ def live_ingest(db, connector, resolver, messages, stats):
     assistant_ids = set(db.scalars(select(SendAttempt.provider_message_id).where(
         SendAttempt.workspace_id == connector.workspace_id, SendAttempt.provider_message_id.in_(outbound)))) if outbound else set()
     for item in sorted(messages, key=lambda value: value.timestamp):
-        conv = resolver.resolve(item.chat_jid, item.chat_alt_jid,
-                                None if item.from_me else item.push_name, "push")
+        conv = resolver.resolve(item.chat_jid, item.chat_alt_jid, *_sender_name(item))
         if conv is None or not resolver.can_store(conv) or (item.event == "created" and not item.text.strip()):
             stats["ignored"] += 1
             continue
@@ -435,6 +446,9 @@ def session_sync(body: SyncBatch, request: Request, db=Depends(get_db)):
                 sync.unread_count = chat.unread_count
             if chat.archived is not None:
                 sync.archived = chat.archived
+            if chat.last_activity_at is not None and conv.last_message_at is None:
+                # Until its messages arrive, a chat sorts by its WhatsApp activity, not by import time.
+                conv.last_message_at = chat.last_activity_at
             sync.updated_at = now()
         if body.origin == "live":
             live_ingest(db, row, resolver, body.messages, stats)

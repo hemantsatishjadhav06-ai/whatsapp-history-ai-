@@ -27,7 +27,8 @@ function fixture(options: { enabled?: boolean; clock?: () => number; max?: numbe
     async logout() { calls.push("logout"); if (logoutMode === "throw") throw new Error("remote unlink unavailable");
       if (logoutMode === "hang") await new Promise<void>(() => {}); }, async end() { calls.push("end"); ended += 1; },
   } as unknown as WASocket;
-  const sessions = new Sessions({ enabled: options.enabled ?? true,
+  const logs: { event: string; fields: Record<string, string | number | boolean> }[] = [];
+  const sessions = new Sessions({ enabled: options.enabled ?? true, log: (event, fields) => { logs.push({ event, fields }); },
     ...(options.clock ? { clock: options.clock } : {}), ...(options.max ? { maxSessions: options.max } : {}),
     authority: { async authorize(operation, identity) {
       calls.push(`authority:${operation}`); if (denied === operation) throw denial ?? new Blocked("AUTHORITY_DENIED");
@@ -44,7 +45,7 @@ function fixture(options: { enabled?: boolean; clock?: () => number; max?: numbe
       async saveCreds() {}, async assertLive() {}, async clear() { clears += 1; }, async release() {} }; },
     socketFactory: config => { configs.push(config); return socket; },
   });
-  return { sessions, events, configs, emitter, calls, batches, lost: () => lost(),
+  return { sessions, events, configs, emitter, calls, batches, logs, lost: () => lost(),
     synced: () => batches.flatMap(batch => batch.messages.map(row => ({ ...row, origin: batch.origin }))),
     syncStatus: (value: (batch: SyncBatch) => number) => { syncStatus = value; },
     grant: (value: Grant[]) => { grants = value; },
@@ -139,6 +140,18 @@ test("every one-to-one chat streams to Python, which alone decides what is kept;
   assert.deepEqual(f.batches.find(batch => batch.progress)?.progress, { phase: "recent", percent: 40 });
   assert.equal(f.calls.some(call => call.startsWith("authority:ingest")), false); await f.sessions.close();
 });
+test("live chat events only update chats; history chat lists create them at WhatsApp's activity time", async () => {
+  const f = fixture(); await paired(f);
+  const at = Math.floor(Date.now() / 1000) - 3600, other = "15550000003@s.whatsapp.net", named = "15550000004@s.whatsapp.net";
+  f.emitter.emit("chats.update", [{ id: peer, unreadCount: 1, conversationTimestamp: at }, { id: other, unreadCount: 0, archived: true }]);
+  await wait(20); await f.sessions.settlePendingEvents();
+  f.emitter.emit("messaging-history.set", { chats: [{ id: named, name: "Asha", unreadCount: 2, conversationTimestamp: at }],
+    contacts: [], messages: [], syncType: 3 });
+  await wait(20); await f.sessions.settlePendingEvents();
+  assert.deepEqual(f.batches.flatMap(batch => batch.chats), [{ jid: other, unread_count: 0, archived: true, contact_only: true },
+    { jid: named, title: "Asha", title_source: "chat", unread_count: 2, last_activity_at: new Date(at * 1000).toISOString() }]);
+  await f.sessions.close();
+});
 test("media becomes readable placeholders, ephemeral wrappers unwrap, groups and future dates are skipped", async () => {
   const f = fixture(); await paired(f);
   f.emitter.emit("messages.upsert", { type: "notify", messages: [{ ...message(), key: { id: "group", remoteJid: "123456@g.us" } },
@@ -158,6 +171,20 @@ test("an LID-addressed message joins the phone-number chat, and the owner's own 
     { ...message(), key: { id: "note-to-self", remoteJid: account, fromMe: true } }] });
   await wait(20); await f.sessions.settlePendingEvents();
   assert.deepEqual(f.synced().map(row => [row.id, row.chat_jid, row.chat_alt_jid]), [["via-lid", peer, "777777777777777@lid"]]);
+  await f.sessions.close();
+});
+test("business senders are named by their verified name; unnamed arrivals are counted without content", async () => {
+  const f = fixture(); await paired(f);
+  f.emitter.emit("messages.upsert", { type: "notify", messages: [
+    { ...message(), key: { id: "bank", remoteJid: "888888888888888@lid", fromMe: false }, verifiedBizName: "Synthetic Bank" },
+    { ...message(), key: { id: "friend", remoteJid: peer, fromMe: false }, pushName: "Asha" },
+    { ...message(), key: { id: "nameless", remoteJid: "999999999999999@lid", fromMe: false } }] });
+  await wait(20); await f.sessions.settlePendingEvents();
+  assert.deepEqual(f.synced().map(row => [row.id, row.verified_name, row.push_name]),
+    [["bank", "Synthetic Bank", undefined], ["friend", undefined, "Asha"], ["nameless", undefined, undefined]]);
+  const counted = f.logs.filter(row => row.event === "unnamed_inbound");
+  assert.deepEqual(counted.map(row => [row.fields.origin, row.fields.messages, row.fields.private_id_only]), [["live", 1, 1]]);
+  assert.equal(JSON.stringify(f.logs).includes("999999999999999"), false);
   await f.sessions.close();
 });
 test("edits and deletions update the original message instead of creating new ones", async () => {

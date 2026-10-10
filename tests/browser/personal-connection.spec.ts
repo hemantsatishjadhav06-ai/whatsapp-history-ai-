@@ -9,7 +9,7 @@ function snapshot(owner = 'owner-a', workspace = 'workspace-a', version = 'v1') 
     styles: [], grants: [], routes: [], activity: [], contacts: [], budget: null, retention: null, simulation: false,
     generated_at: '2026-10-07T12:00:00Z', snapshot_version: version };
 }
-async function fixture(page: Page, options: { enabled?: boolean; connected?: boolean; expiresAfter?: number; savedChat?: boolean; automaticExpiresAfter?: number; linkCode?: boolean; importMode?: 'all' | 'selected' } = {}) {
+async function fixture(page: Page, options: { enabled?: boolean; connected?: boolean; expiresAfter?: number; savedChat?: boolean; automaticExpiresAfter?: number; linkCode?: boolean; importMode?: 'all' | 'selected'; syncPhase?: string | null } = {}) {
   let importMode = options.importMode ?? 'selected'; const modeWrites: Record<string, unknown>[] = [];
   let currentSnapshot: Record<string, unknown> = snapshot(); let enabled = options.enabled ?? true;
   let connected = options.connected ?? false; let started = connected; let hold: Promise<void> | null = null;
@@ -36,7 +36,7 @@ async function fixture(page: Page, options: { enabled?: boolean; connected?: boo
       if (held) await held; return route.fulfill({ json: body });
     }
     if (path.endsWith('/personal/sync')) return route.fulfill({ json: { workspace_id: 'workspace-a', import_mode: importMode, connector_id: 'personal-fixture',
-      chats: importMode === 'all' ? 182 : 1, messages: importMode === 'all' ? 24518 : 3, phase: importMode === 'all' ? 'full' : 'complete', progress: importMode === 'all' ? 64 : 100,
+      chats: importMode === 'all' ? 182 : 1, messages: importMode === 'all' ? 24518 : 3, phase: options.syncPhase !== undefined ? options.syncPhase : importMode === 'all' ? 'full' : 'complete', progress: importMode === 'all' ? 64 : 100,
       last_sync_at: new Date().toISOString(), oldest_message_at: '2021-03-04T10:00:00Z', backfill_pending: importMode === 'all' ? 12 : 0, backfill_complete: 0 } });
     if (path.endsWith('/personal/preferences') && route.request().method() === 'PUT') {
       const body = route.request().postDataJSON() as Record<string, unknown>; modeWrites.push(body);
@@ -83,6 +83,13 @@ test('all-chats mode reads every chat without per-chat approval and shows import
   await expect.poll(() => data.modeWrites).toEqual([{ workspace_id: 'workspace-a', import_mode: 'selected' }]);
   await expect(panel(page)).toContainText('Your phone is linked. Choose the chats Milo may read.');
   expect(data.changes).toEqual([]);
+});
+
+test('a phone that never sent its history gets clear steps to bring in past chats', async ({ page }) => {
+  await fixture(page, { connected: true, importMode: 'all', syncPhase: null }); await page.goto('/connections');
+  const sync = panel(page).getByRole('region', { name: 'WhatsApp sync', exact: true });
+  await expect(sync).toContainText('Only new messages so far?');
+  await expect(sync).toContainText('remove “Milo” under WhatsApp → Linked devices, then link again here. Chats already in Milo stay.');
 });
 
 test('an unavailable pilot cannot show a pairing code or start a connection', async ({ page }) => {

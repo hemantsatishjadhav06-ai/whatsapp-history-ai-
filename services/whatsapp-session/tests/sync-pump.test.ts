@@ -59,6 +59,36 @@ test("chat metadata arriving while a batch is in flight merges per contact", asy
   assert.deepEqual(posted[1]?.chats, [{ jid: peer, title: "Push", title_source: "push", unread_count: 4 }]);
 });
 
+test("a live chat update never stops a pending history chat from being created", async () => {
+  let release!: () => void; const gate = new Promise<void>(resolve => { release = resolve; });
+  const posted: SyncBatch[] = []; const other = "15550000003@s.whatsapp.net";
+  const instance = new SyncPump({ identity: () => identity, sleep: async () => {},
+    post: async batch => { if (!posted.length) { posted.push(batch); await gate; } else posted.push(batch); return { status: 200, body: null }; } });
+  instance.push("live", [row("first")]);
+  instance.upsertChats([{ jid: peer, title: "Asha", title_source: "chat", last_activity_at: "2026-10-01T10:00:00.000Z" }]);
+  instance.upsertChats([{ jid: peer, unread_count: 0, contact_only: true }, { jid: other, contact_only: true }]);
+  instance.upsertChats([{ jid: other, title: "Ravi", title_source: "contact", contact_only: true }]);
+  release(); await instance.drain();
+  assert.deepEqual(posted[1]?.chats, [
+    { jid: peer, title: "Asha", title_source: "chat", last_activity_at: "2026-10-01T10:00:00.000Z", unread_count: 0 },
+    { jid: other, title: "Ravi", title_source: "contact", contact_only: true }]);
+});
+
+test("calls and newer message types stay visible; actions on other messages never become messages", () => {
+  const at = Math.floor(Date.now() / 1000);
+  const convert = (content: object) => convertMessage({ key: { id: "m", remoteJid: peer, fromMe: false }, messageTimestamp: at,
+    message: content } as never, jid => ({ jid }));
+  assert.deepEqual(convert({ callLogMesssage: { isVideo: true, callOutcome: 1 } })?.text, "📹 Missed video call");
+  assert.deepEqual(convert({ callLogMesssage: { callOutcome: 0, durationSecs: 151 } })?.text, "📞 Voice call (2:31)");
+  assert.deepEqual(convert({ callLogMesssage: { callOutcome: 0, durationSecs: { toNumber: () => 62 } } })?.text, "📞 Voice call (1:02)");
+  assert.deepEqual(convert({ stickerPackMessage: { name: "Diwali" } })?.text, "Sticker pack Diwali");
+  assert.deepEqual(convert({ placeholderMessage: { type: 0 } })?.text, "🔒 This message is only on your phone");
+  assert.deepEqual(convert({ futureShinyMessage: { body: "x" } }), { id: "m", chat_jid: peer, from_me: false,
+    timestamp: new Date(at * 1000).toISOString(), event: "created", kind: "other", text: "💬 Message — open WhatsApp on your phone to see it" });
+  for (const content of [{ albumMessage: { expectedImageCount: 3 } }, { pinInChatMessage: {} }, { keepInChatMessage: {} },
+    { reactionMessage: { text: "👍" } }, { messageContextInfo: {} }]) assert.equal(convert(content), null);
+});
+
 test("message types become readable text without downloading media", () => {
   assert.deepEqual(describe({ documentMessage: { fileName: "Invoice.pdf", caption: "for March" } }), { kind: "media", text: "📄 Invoice.pdf for March" });
   assert.deepEqual(describe({ locationMessage: { name: "Cafe", address: "Bandra" } }), { kind: "location", text: "📍 Cafe, Bandra" });

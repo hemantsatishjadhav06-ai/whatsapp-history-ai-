@@ -5132,6 +5132,8 @@ export interface components {
              * @default false
              */
             contact_only: boolean;
+            /** Last Activity At */
+            last_activity_at?: string | null;
         };
         /** SyncInput */
         SyncInput: {
@@ -5172,6 +5174,8 @@ export interface components {
             text: string;
             /** Push Name */
             push_name?: string | null;
+            /** Verified Name */
+            verified_name?: string | null;
             /** Reply To */
             reply_to?: string | null;
             /**

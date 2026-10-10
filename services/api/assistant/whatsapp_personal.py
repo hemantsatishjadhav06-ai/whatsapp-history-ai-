@@ -674,7 +674,6 @@ def apply_connection(db, body, data):
         for alias in aliases:
             if db.get(PersonalAccountAlias, alias) is None:
                 db.add(PersonalAccountAlias(alias_id=alias, workspace_id=row.workspace_id, connector_id=row.id))
-        first_link = row.status != "connected" or not JID.fullmatch(row.account_id)
         row.account_id, row.owner_sender_id = data.account_id, data.account_id
         row.status = session.status = "connected"
         row.lease_expires_at = now() + timedelta(seconds=LEASE_SECONDS)
@@ -684,9 +683,10 @@ def apply_connection(db, body, data):
                             "assistant_echo": "supported", "message_edits": "supported", "deletions": "supported"}
         session.last_connected_at = session.last_health_at = now()
         session.error_code = None
-        if first_link:
-            from .whatsapp_sync import keep_full_history
-            keep_full_history(db, row)
+        # Every connection, not only the first link: a phone linked before full sync existed is covered on
+        # its next reconnect. It only replaces the untouched 30-day default, never an owner-chosen policy.
+        from .whatsapp_sync import keep_full_history
+        keep_full_history(db, row)
     else:
         target = "pairing" if data.state == "qr" else data.state
         if row.status == "connected":
