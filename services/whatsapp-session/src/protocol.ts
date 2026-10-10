@@ -26,7 +26,7 @@ export type SyncChat = { jid: string; alt_jid?: string; title?: string;
 export type SyncMessage = { id: string; chat_jid: string; chat_alt_jid?: string; from_me: boolean; timestamp: string;
   event: "created" | "edited" | "deleted";
   kind: "text" | "media" | "location" | "contact" | "poll" | "event" | "call" | "other";
-  text: string; push_name?: string; reply_to?: string; revision?: number };
+  text: string; push_name?: string; verified_name?: string; reply_to?: string; revision?: number };
 export type SyncProgress = { phase: "initial" | "recent" | "full" | "on_demand" | "push_name" | "complete" | "live";
   percent?: number };
 export type SyncBatch = Identity & Readonly<{ origin: SyncOrigin; chats: SyncChat[]; messages: SyncMessage[];

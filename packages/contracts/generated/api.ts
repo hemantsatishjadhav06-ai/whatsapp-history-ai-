@@ -5174,6 +5174,8 @@ export interface components {
             text: string;
             /** Push Name */
             push_name?: string | null;
+            /** Verified Name */
+            verified_name?: string | null;
             /** Reply To */
             reply_to?: string | null;
             /**

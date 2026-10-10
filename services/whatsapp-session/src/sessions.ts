@@ -425,6 +425,11 @@ export class Sessions {
         const row = convertMessage(message, (jid, alt) => this.#address(record, jid, alt), now);
         if (row && !record.owner.has(row.chat_jid) && !(row.chat_alt_jid && record.owner.has(row.chat_alt_jid))) rows.push(row);
       }
+      // Counts only: how many new inbound messages arrived with no name at all, to explain unnamed chats.
+      const unnamed = origin === "live" || origin === "replay" ? rows.filter(row => row.event === "created" && !row.from_me
+        && !row.push_name && !row.verified_name) : [];
+      if (unnamed.length) this.#log("unnamed_inbound", { session: this.#tag(record), origin, messages: unnamed.length,
+        private_id_only: unnamed.filter(row => row.chat_jid.endsWith("@lid")).length });
       record.pump?.push(origin, rows);
       after?.(rows);
     }, () => after?.([]));

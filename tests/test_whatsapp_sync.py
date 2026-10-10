@@ -291,3 +291,11 @@ def test_chats_without_stored_messages_sort_by_whatsapp_activity(app, personal):
     with app.state.session_factory() as db:
         stored = db.scalar(select(Conversation.last_message_at).where(Conversation.provider_chat_id == OTHER))
     assert abs((aware(stored) - (now() - timedelta(days=3))).total_seconds()) < 60
+
+
+def test_business_senders_are_named_by_their_verified_name(app, personal):
+    client, ident = personal["client"], personal["identity"]
+    sync(client, ident, origin="live", messages=[item("alert", jid=FRIEND_LID, minutes_ago=0, verified_name="Synthetic Bank")])
+    sync(client, ident, messages=[item("promo", jid=FRIEND_LID, minutes_ago=5, push_name="Synthetic promo")])
+    with app.state.session_factory() as db:
+        assert db.scalar(select(Conversation.title)) == "Synthetic Bank"

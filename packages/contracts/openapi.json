@@ -14239,6 +14239,18 @@
             ],
             "title": "Push Name"
           },
+          "verified_name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 160
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Verified Name"
+          },
           "reply_to": {
             "anyOf": [
               {

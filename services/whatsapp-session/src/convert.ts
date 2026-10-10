@@ -134,7 +134,8 @@ export function convertMessage(message: WAMessage, address: (jid: string, alt?: 
   if (!Number.isFinite(stamp) || stamp <= 0 || stamp > now / 1000 + 60) return null;
   const base = { chat_jid: chat.jid, ...(chat.alt ? { chat_alt_jid: chat.alt } : {}), from_me: Boolean(key.fromMe),
     timestamp: new Date(stamp * 1000).toISOString(),
-    ...(!key.fromMe && message.pushName ? { push_name: message.pushName.slice(0, 160) } : {}) };
+    ...(!key.fromMe && message.pushName ? { push_name: message.pushName.slice(0, 160) } : {}),
+    ...(!key.fromMe && message.verifiedBizName ? { verified_name: message.verifiedBizName.slice(0, 160) } : {}) };
   const wrapper = message.message;
   const viewOnce = Boolean(wrapper?.viewOnceMessage || wrapper?.viewOnceMessageV2 || wrapper?.viewOnceMessageV2Extension);
   const content = normalizeMessageContent(wrapper);
