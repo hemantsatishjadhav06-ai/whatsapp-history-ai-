@@ -9,7 +9,7 @@ function snapshot(owner = 'owner-a', workspace = 'workspace-a', version = 'v1') 
     styles: [], grants: [], routes: [], activity: [], contacts: [], budget: null, retention: null, simulation: false,
     generated_at: '2026-10-07T12:00:00Z', snapshot_version: version };
 }
-async function fixture(page: Page, options: { enabled?: boolean; connected?: boolean; expiresAfter?: number; savedChat?: boolean; automaticExpiresAfter?: number; linkCode?: boolean; importMode?: 'all' | 'selected'; syncPhase?: string | null } = {}) {
+async function fixture(page: Page, options: { enabled?: boolean; connected?: boolean; expiresAfter?: number; savedChat?: boolean; automaticExpiresAfter?: number; linkCode?: boolean; importMode?: 'all' | 'selected'; syncPhase?: string | null; linkedAgoMs?: number } = {}) {
   let importMode = options.importMode ?? 'selected'; const modeWrites: Record<string, unknown>[] = [];
   let currentSnapshot: Record<string, unknown> = snapshot(); let enabled = options.enabled ?? true;
   let connected = options.connected ?? false; let started = connected; let hold: Promise<void> | null = null;
@@ -37,7 +37,7 @@ async function fixture(page: Page, options: { enabled?: boolean; connected?: boo
     }
     if (path.endsWith('/personal/sync')) return route.fulfill({ json: { workspace_id: 'workspace-a', import_mode: importMode, connector_id: 'personal-fixture',
       chats: importMode === 'all' ? 182 : 1, messages: importMode === 'all' ? 24518 : 3, phase: options.syncPhase !== undefined ? options.syncPhase : importMode === 'all' ? 'full' : 'complete', progress: importMode === 'all' ? 64 : 100,
-      last_sync_at: new Date().toISOString(), oldest_message_at: '2021-03-04T10:00:00Z', backfill_pending: importMode === 'all' ? 12 : 0, backfill_complete: 0 } });
+      last_sync_at: new Date().toISOString(), linked_at: new Date(Date.now() - (options.linkedAgoMs ?? 3_600_000)).toISOString(), oldest_message_at: '2021-03-04T10:00:00Z', backfill_pending: importMode === 'all' ? 12 : 0, backfill_complete: 0 } });
     if (path.endsWith('/personal/preferences') && route.request().method() === 'PUT') {
       const body = route.request().postDataJSON() as Record<string, unknown>; modeWrites.push(body);
       importMode = body.import_mode === 'all' ? 'all' : 'selected'; return route.fulfill({ json: body });
@@ -85,11 +85,21 @@ test('all-chats mode reads every chat without per-chat approval and shows import
   expect(data.changes).toEqual([]);
 });
 
-test('a phone that never sent its history gets clear steps to bring in past chats', async ({ page }) => {
-  await fixture(page, { connected: true, importMode: 'all', syncPhase: null }); await page.goto('/connections');
+test('a link whose history never came gets clear steps, and backfill is not shown as an import', async ({ page }) => {
+  await fixture(page, { connected: true, importMode: 'all', syncPhase: 'on_demand' }); await page.goto('/connections');
   const sync = panel(page).getByRole('region', { name: 'WhatsApp sync', exact: true });
-  await expect(sync).toContainText('Only new messages so far?');
+  await expect(sync).toContainText('WhatsApp has not sent your past chats for this link.');
   await expect(sync).toContainText('remove “Milo” under WhatsApp → Linked devices, then link again here. Chats already in Milo stay.');
+  await expect(sync).toContainText('Your chats are in Milo. New messages arrive live.');
+  await expect(sync).toContainText('12 chats to go');
+  await expect(sync).not.toContainText('Importing your WhatsApp history');
+});
+
+test('a fresh link waits for WhatsApp before suggesting a new link', async ({ page }) => {
+  await fixture(page, { connected: true, importMode: 'all', syncPhase: null, linkedAgoMs: 30_000 }); await page.goto('/connections');
+  const sync = panel(page).getByRole('region', { name: 'WhatsApp sync', exact: true });
+  await expect(sync).toContainText('24,518');
+  await expect(sync).not.toContainText('WhatsApp has not sent your past chats');
 });
 
 test('an unavailable pilot cannot show a pairing code or start a connection', async ({ page }) => {

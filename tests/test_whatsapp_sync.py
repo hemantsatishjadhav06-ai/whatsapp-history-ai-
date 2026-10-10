@@ -299,3 +299,17 @@ def test_business_senders_are_named_by_their_verified_name(app, personal):
     sync(client, ident, messages=[item("promo", jid=FRIEND_LID, minutes_ago=5, push_name="Synthetic promo")])
     with app.state.session_factory() as db:
         assert db.scalar(select(Conversation.title)) == "Synthetic Bank"
+
+
+def test_backfill_pages_never_hide_whether_the_link_sent_its_history(app, personal):
+    client, ident = personal["client"], personal["identity"]
+    status = lambda: client.get(PREFIX + "/sync", params={"workspace_id": personal["workspace"]["id"]}).json()  # noqa: E731
+    assert status()["phase"] is None and status()["linked_at"] is not None
+    # A link that never received WhatsApp's history only reports backfill.
+    sync(client, ident, origin="backfill", messages=[item("page")], progress={"phase": "on_demand", "percent": 100})
+    assert status()["phase"] == "on_demand"
+    # Once the link's own history arrives, later backfill pages keep that phase.
+    sync(client, ident, messages=[item("boot", jid=OTHER)], progress={"phase": "recent", "percent": 30})
+    sync(client, ident, progress={"phase": "complete", "percent": 100})
+    sync(client, ident, origin="backfill", messages=[item("older", minutes_ago=900)], progress={"phase": "on_demand", "percent": 100})
+    assert (status()["phase"], status()["progress"]) == ("complete", 100)
