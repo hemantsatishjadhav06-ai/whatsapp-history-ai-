@@ -290,6 +290,15 @@ test("an expired SQL lease re-announces the connection and an unreachable author
   assert.equal(f.ended(), 0); assert.equal((await f.sessions.chats(connected)).state, "connected");
   await f.sessions.close();
 });
+test("a late or clock-skewed authority answer keeps the socket, and a later refusal still stops it", async () => {
+  const f = fixture(); await paired(f); f.deny("status", new Blocked("AUTHORITY_EXPIRED"));
+  await wait(5100); await f.sessions.settlePendingEvents();
+  assert.equal(f.ended(), 0); assert.equal((await f.sessions.chats(connected)).state, "connected");
+  assert.ok(f.logs.some(row => row.event === "authority_unavailable" && row.fields.reason === "AUTHORITY_EXPIRED"));
+  f.deny("status", new Denied("revoked"));
+  await wait(5100); await f.sessions.settlePendingEvents();
+  assert.equal(f.ended(), 1); await f.sessions.close();
+});
 test("a pairing phone requests one link code on the first QR, exposes it only to the owner view, and expires", async () => {
   let now = Date.now(); const f = fixture({ clock: () => now }); await f.sessions.start(initial, "15550000001");
   f.emitter.emit("connection.update", { qr: "synthetic-qr-one" }); f.emitter.emit("connection.update", { qr: "synthetic-qr-two" }); await wait(20);
