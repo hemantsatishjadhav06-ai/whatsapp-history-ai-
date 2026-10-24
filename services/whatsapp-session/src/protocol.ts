@@ -69,10 +69,11 @@ export function checkAuthority(value: unknown, identity: Identity, now = Date.no
         row[key] !== identity[key as keyof Identity]) || typeof row.authority_expires_at !== "string") {
     throw new Blocked("AUTHORITY_DENIED");
   }
+  // Python's clock sets the five-second deadline and this one checks it: allow a second either way
+  // between the two containers' clocks, or every answer is refused while one runs slightly ahead.
   const until = Date.parse(row.authority_expires_at);
-  if (!Number.isFinite(until) || until <= now || until > now + 5000 || !Array.isArray(row.grants) || row.grants.length > 250) {
-    throw new Blocked("AUTHORITY_EXPIRED");
-  }
+  if (!Number.isFinite(until) || until <= now - 1000 || until > now + 6000) throw new Blocked("AUTHORITY_EXPIRED");
+  if (!Array.isArray(row.grants) || row.grants.length > 250) throw new Blocked("INVALID_AUTHORITY");
   const grants: Grant[] = [];
   for (const item of row.grants) {
     if (!item || typeof item !== "object") throw new Blocked("INVALID_AUTHORITY");

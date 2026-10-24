@@ -5,7 +5,7 @@ import { BufferJSON, initAuthCreds, generateWAMessageContent } from "@whiskeysoc
 import { encryptAuth, decryptAuth, encryptionKey } from "../src/crypto.ts";
 import { checkAuthority, parseIdentity } from "../src/protocol.ts";
 import { authorityClient } from "../src/authority.ts";
-import type { Identity, SendEnvelope } from "../src/protocol.ts";
+import type { Blocked, Identity, SendEnvelope } from "../src/protocol.ts";
 const identity: Identity = { schema_version: 1, workspace_id: "owner_workspace", connector_id: "connector", connector_fence: 1, account_id: null };
 const binding = { workspace_id: identity.workspace_id, connector_id: identity.connector_id, key_type: "session", key_id: "signal_key" };
 test("actual SDK text encoding never resolves server URL previews when explicitly disabled", async () => {
@@ -49,9 +49,18 @@ test("private identity parsing rejects groups, extra fields, and unsafe fences",
 test("SQL authority must match every identity and a bounded live deadline", () => {
   const now = Date.now(); const row = { ...identity, allowed: true, reason_code: "ALLOWED", grants: [], authority_expires_at: new Date(now + 4000).toISOString() };
   assert.equal(checkAuthority(row, identity, now).allowed, true);
+  // Python's clock sets the deadline: a reply that lands just after it, or from a clock a little ahead, still counts.
+  for (const offset of [-999, 5999]) {
+    assert.equal(checkAuthority({ ...row, authority_expires_at: new Date(now + offset).toISOString() }, identity, now).allowed, true);
+  }
+  for (const offset of [-1000, 6001]) {
+    assert.throws(() => checkAuthority({ ...row, authority_expires_at: new Date(now + offset).toISOString() }, identity, now),
+      (error: Blocked) => error.reason_code === "AUTHORITY_EXPIRED");
+  }
+  assert.throws(() => checkAuthority({ ...row, grants: Array(251).fill({}) }, identity, now),
+    (error: Blocked) => error.reason_code === "INVALID_AUTHORITY");
   for (const extra of [{ ...row, account_id: "123456@s.whatsapp.net" }, { ...row, connector_fence: 2 },
-    { ...row, workspace_id: "other" }, { ...row, allowed: false }, { ...row, authority_expires_at: new Date(now - 1).toISOString() },
-    { ...row, authority_expires_at: new Date(now + 5001).toISOString() }, { ...row, grants: Array(251).fill({}) }]) {
+    { ...row, workspace_id: "other" }, { ...row, allowed: false }]) {
     assert.throws(() => checkAuthority(extra, identity, now));
   }
 });

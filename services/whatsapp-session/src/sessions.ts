@@ -220,8 +220,10 @@ export class Sessions {
         if (error instanceof Denied && error.denial === "lease_expired" && record.state === "connected") {
           // A gap (deploy, network) expired the SQL lease: re-announce; Python applies its gap review.
           await this.#announce(record).catch(() => {});
-        } else if (error instanceof Blocked && error.reason_code === "AUTHORITY_UNAVAILABLE") {
-          this.#log("authority_unavailable", { session: this.#tag(record) });
+        } else if (error instanceof Blocked && ["AUTHORITY_UNAVAILABLE", "AUTHORITY_EXPIRED"].includes(error.reason_code)) {
+          // Unreachable, or an answer that arrived late or from a clock that is off: ask again on the next
+          // beat. Only an answer that refuses this session, or names another one, ends the socket.
+          this.#log("authority_unavailable", { session: this.#tag(record), reason: error.reason_code });
         } else {
           this.#log("authority_revoked", { session: this.#tag(record),
             reason: error instanceof Denied ? error.denial : error instanceof Blocked ? error.reason_code : "unexpected" });
