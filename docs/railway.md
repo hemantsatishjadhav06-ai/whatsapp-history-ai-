@@ -195,6 +195,33 @@ is moved to 3650 days so the mirror is not wiped; an owner-chosen policy is kept
 - Only chats with pending drafts, schedules, actions or automation are put into reconnect
   review after a connection gap; idle chats stay readable.
 
+## OpenDots agent workspace (optional)
+
+[OpenDots](https://github.com/CopilotKit/OpenDots) is CopilotKit's MIT-licensed template for
+always-on agents ("Dots") with pages, scheduled work, MCP connections and approval cards. It
+runs as a separate public service built from `infra/opendots/Dockerfile`
+(`infra/railway-opendots.json`), which builds one pinned upstream commit
+(`OPENDOTS_COMMIT`); bump that argument to upgrade. Mount a volume at `/data`.
+
+| Variable | Value |
+| --- | --- |
+| `OWNER_TOKEN` | random, at least 32 bytes; every API request needs it as a bearer token |
+| `APP_ORIGIN` | the service's public HTTPS origin |
+| `OWNER_ID` | a stable identity such as `milo-owner`; never change it after connecting apps |
+| `DATABASE_PATH` | `/data/opendots.sqlite` |
+| `RAILWAY_RUN_UID` | `0` (Railway volumes are mounted as root) |
+| `OPENAI_BASE_URL` | `https://openrouter.ai/api/v1` |
+| `OPENAI_API_KEY` | `${{API.MODEL_API_KEY}}` |
+| `OPENAI_MODEL` | `${{API.MODEL_NAME}}` |
+| `CPK_INTELLIGENCE_API_KEY`, `CPK_TELEMETRY_ID` | written by `npx copilotkit@latest login` then `project select`; chat stays in setup state without them |
+| `DO_NOT_TRACK`, `COPILOTKIT_TELEMETRY_DISABLED` | `1`, `true` |
+
+Data boundaries: conversation messages, tool calls and tool results are stored in the
+configured CopilotKit Intelligence project (CopilotKit's cloud unless Intelligence is
+self-hosted), and public-web research sends queries and URLs to Parallel
+(`WEB_SEARCH_PROVIDER=disabled` turns that off). Do not give a Dot tools that return private
+WhatsApp content until that storage location is acceptable for the workspace owner.
+
 ## Authentication and release
 
 The official Railway CLI supports `RAILWAY_TOKEN` for a project/environment token

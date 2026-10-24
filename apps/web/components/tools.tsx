@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import type { Conversation, DataRecord, MiloActions, MiloState, ToolsProps } from '../lib/types';
 import { authorizedToolRequest, currentToolResult, toolAuthorizationVersion, type PrivateToolResult } from '../lib/tool-privacy';
 import { currentHistoryImportNotice, dismissHistoryImportNotice } from '../lib/history-confirmation';
@@ -70,12 +70,17 @@ function ActionText({ row, conversation }: { row: DataRecord; conversation?: Con
 
 export function ToolsView({ section, state, actions }: ToolsProps) {
   const pathname = usePathname();
-  const router = useRouter();
   const timezone = (state as MiloState & { timezone?: string }).timezone || 'Asia/Kolkata';
   const format = (value: string, zone = timezone) => time(value, zone);
   const authorizationVersion = toolAuthorizationVersion(state);
   const latestAuthorization = useRef(authorizationVersion);
   latestAuthorization.current = authorizationVersion;
+  // A form for a stored item, or for the stored retention policy and its version, stays bound to the
+  // snapshot that authorized it. A new item's form shows nothing stored, so it belongs to the owner and
+  // workspace: a background refresh (a new WhatsApp message) must not wipe what the owner is typing,
+  // while an owner or workspace switch still closes it.
+  const ownerScope = JSON.stringify([state.mode, state.user.id, state.workspaceId]);
+  const modalVersion = (next: ToolModal) => next.row || next.kind === 'retention' ? authorizationVersion : ownerScope;
   const [modal, setModal] = useState<AuthorizedToolModal | null>(null);
   const [tab, setTab] = useState('all');
   const [search, setSearch] = useState('');
@@ -90,17 +95,20 @@ export function ToolsView({ section, state, actions }: ToolsProps) {
   }, [section, pathname, state.mode, state.user.id, state.workspaceId]);
   const conversations = state.data.conversations;
   const conversation = (id: string) => conversations.find(row => row.id === id || row.conversation_id === id);
-  const closeModal = () => { setModal(null); router.replace(`/${section}`); };
+  // Opening and closing a dialog update the URL in place. A router navigation remounts this page when it
+  // lands: it would replace an open dialog, and anything typed into it, with a blank one (seconds later on
+  // a slow network), and a close still in flight would shut a dialog opened after it.
+  const closeModal = () => { setModal(null); window.history.replaceState(null, '', `/${section}`); };
   const openModal = (next: ToolModal) => {
-    setModal({ ...next, authorizationVersion });
+    setModal({ ...next, authorizationVersion: modalVersion(next) });
     const identifier = next.row ? encodeURIComponent(next.row.id) : 'new';
     const route = next.kind === 'receipt' ? `/activity/${identifier}` : next.kind === 'schedule' ? `/actions/${identifier}` : next.kind === 'memory' ? `/memory/${identifier}` : next.kind === 'voice' ? `/memory/people/${identifier}` : next.kind === 'rule' ? `/rules/${identifier}` : next.kind === 'route' ? '/rules/routes/new' : next.kind === 'import' ? `/connections/import${text(next.row,'conversation_id') ? `/${identifier}` : ''}` : next.kind === 'connection' ? `/connections/${identifier}` : `/settings/${({retention:'privacy',budget:'usage',notifications:'focus',security:'security',remove:'delete'} as Record<string,string>)[next.kind]}`;
-    if (pathname !== route) actions.navigate(route);
+    if (pathname !== route) window.history.pushState(null, '', route);
   };
   useEffect(() => {
     if (state.loading) return;
     let active = true;
-    setModal(previous => previous?.authorizationVersion === authorizationVersion ? previous : null);
+    setModal(previous => previous && previous.authorizationVersion === modalVersion(previous) ? previous : null);
     const path = pathname.split('/').filter(Boolean);
     if (path.length < 2) { setModal(null); return; }
     let target: ToolModal | null = null;
@@ -122,7 +130,7 @@ export function ToolsView({ section, state, actions }: ToolsProps) {
     } else if (section === 'activity') { const row = state.data.actions.find(row => row.id === identifier); if (row) target = {kind:'receipt',row}; }
     else if (section === 'settings') { const kind = ({privacy:'retention',usage:'budget',focus:'notifications',security:'security',delete:'remove'} as Record<string,ToolModal['kind']>)[identifier]; if (kind) target = {kind,row:kind === 'budget' ? state.data.budget || undefined : undefined}; }
     const isCurrent = () => active && latestAuthorization.current === authorizationVersion;
-    const show = (next: ToolModal) => { if (isCurrent()) setModal(previous => previous?.authorizationVersion === authorizationVersion && previous?.kind === next.kind && previous?.row?.id === next.row?.id ? previous : {...next,authorizationVersion}); };
+    const show = (next: ToolModal) => { if (isCurrent()) setModal(previous => previous && previous.authorizationVersion === modalVersion(previous) && previous.kind === next.kind && previous.row?.id === next.row?.id ? previous : {...next,authorizationVersion:modalVersion(next)}); };
     const unavailable = () => { if (isCurrent()) { setModal(null); setError('This detail is unavailable in your current scope. Return to the list for the latest permitted items.'); } };
     const resolvedKinds: Record<string,string> = {receipt:'action',memory:'memory',schedule:'job',connection:'connection',voice:'conversation'};
     const resolverKind = target?.row && resolvedKinds[target.kind];
@@ -147,6 +155,7 @@ export function ToolsView({ section, state, actions }: ToolsProps) {
     } else unavailable();
     return () => { active = false; };
     // An unchanged authorized poll preserves edits; changed scope clears old private content.
+    // A new item's form is scoped to the owner and workspace (modalVersion), so a changed poll keeps it.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname, section, state.loading, state.mode, authorizationVersion]);
   const mutate = async (id: string, operation: () => Promise<unknown>, message: string) => {
@@ -220,7 +229,7 @@ export function ToolsView({ section, state, actions }: ToolsProps) {
       <Panel title="Session & account" className={styles.widePanel}><div className={styles.settingRow}><div><strong>Sign out of this device</strong><p>Clears this app session. Server Auto and your primary phone stay separate.</p></div><button className="button secondary" disabled={!!pending} onClick={() => mutate('logout', () => actions.logout(), 'Signed out.')}>Sign out</button></div><div className={styles.settingRow}><div><strong>Delete workspace content</strong><p>Pause automation, disconnect app accounts, and remove application conversation content.</p></div><button className={styles.dangerButton} onClick={() => openModal({ kind: 'remove' })}>{state.mode === 'demo' ? 'Delete demo data' : 'Delete data'}</button></div></Panel></div>;
   }
 
-  return <div className={styles.tools}><header className={styles.pageHeader}><span className={styles.eyebrow}>{readable(section)} <span className={styles.eyebrowDot}/><span>{state.mode === 'demo' ? 'Synthetic workspace' : 'Your workspace'}</span></span><h1>{titles[section][0]}</h1><p>{titles[section][1]}</p></header>{!state.online && <div className={styles.warning} role="status">Last-known data · your app is offline. Server automation may still be active. Pause needs server acknowledgement.</div>}{notice && <div className={styles.success} role="status"><Glyph name="check"/>{notice}<button aria-label="Dismiss confirmation" onClick={() => { dismissHistoryImportNotice(state); setNotice(''); }}><Glyph name="close" size={16}/></button></div>}{error && <div className={styles.warning} role="alert">{error}<button className={styles.textButton} onClick={() => void actions.refresh()}>Refresh current state</button></div>}{content}{modal?.authorizationVersion === authorizationVersion && <ToolDialog key={`${modal.kind}:${modal.row?.id || 'new'}`} modal={modal} state={state} actions={actions} close={closeModal} saved={message => { closeModal(); setNotice(message); }}/>}</div>;
+  return <div className={styles.tools}><header className={styles.pageHeader}><span className={styles.eyebrow}>{readable(section)} <span className={styles.eyebrowDot}/><span>{state.mode === 'demo' ? 'Synthetic workspace' : 'Your workspace'}</span></span><h1>{titles[section][0]}</h1><p>{titles[section][1]}</p></header>{!state.online && <div className={styles.warning} role="status">Last-known data · your app is offline. Server automation may still be active. Pause needs server acknowledgement.</div>}{notice && <div className={styles.success} role="status"><Glyph name="check"/>{notice}<button aria-label="Dismiss confirmation" onClick={() => { dismissHistoryImportNotice(state); setNotice(''); }}><Glyph name="close" size={16}/></button></div>}{error && <div className={styles.warning} role="alert">{error}<button className={styles.textButton} onClick={() => void actions.refresh()}>Refresh current state</button></div>}{content}{modal && modal.authorizationVersion === modalVersion(modal) && <ToolDialog key={`${modal.kind}:${modal.row?.id || 'new'}`} modal={modal} state={state} actions={actions} close={closeModal} saved={message => { closeModal(); setNotice(message); }}/>}</div>;
 }
 
 function ToolDialog({ modal, state, actions, close, saved }: ModalProps) {

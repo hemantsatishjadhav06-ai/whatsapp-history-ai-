@@ -49,6 +49,7 @@ def main():
         "retention": (Path("infra/railway-retention.json"), "services/api/Dockerfile.railway"),
         "whatsapp-session": (Path("infra/railway-whatsapp-session.json"), "services/whatsapp-session/Dockerfile"),
         "actions": (Path("infra/railway-actions.json"), "services/api/Dockerfile.railway"),
+        "opendots": (Path("infra/railway-opendots.json"), "infra/opendots/Dockerfile"),
     }
     settings = json.loads(Path("infra/railway-service-settings.json").read_text())
     for name, (manifest_path, dockerfile) in targets.items():
@@ -82,11 +83,14 @@ def main():
         require(str(Path(services[name]["dockerfilePath"])) == dockerfile,
                 f"Render {name}: wrong Render Dockerfile")
 
-    for dockerfile in sorted(set(expected_render.values()) | {item[1] for item in targets.values()}):
-        check_dockerfile(Path(dockerfile), mount_free=dockerfile.endswith(".railway") or dockerfile == "services/whatsapp-session/Dockerfile",
-                         runtime_user="node" if dockerfile == "services/whatsapp-session/Dockerfile" else "10001:10001")
-    print(json.dumps({"provider_dockerfile_selection": "passed", "pinned_non_root_images": 5,
-                      "railway_mount_free_images": 3, "railway_manifests": len(targets),
+    node_images = {"services/whatsapp-session/Dockerfile", "infra/opendots/Dockerfile"}
+    dockerfiles = sorted(set(expected_render.values()) | {item[1] for item in targets.values()})
+    mount_free = [dockerfile for dockerfile in dockerfiles if dockerfile.endswith(".railway") or dockerfile in node_images]
+    for dockerfile in dockerfiles:
+        check_dockerfile(Path(dockerfile), mount_free=dockerfile in mount_free,
+                         runtime_user="node" if dockerfile in node_images else "10001:10001")
+    print(json.dumps({"provider_dockerfile_selection": "passed", "pinned_non_root_images": len(dockerfiles),
+                      "railway_mount_free_images": len(mount_free), "railway_manifests": len(targets),
                       "railway_service_settings": len(settings), "render_docker_services": len(expected_render),
                       "railway_root_legacy_config_absent": True}))
 

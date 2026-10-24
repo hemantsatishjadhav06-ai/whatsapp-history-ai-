@@ -18,6 +18,9 @@ The locked Python/npm graphs were unchanged.
 - `tsx` is **4.23.15**, bringing the patched `esbuild` **0.28.2**. Native SDK, React and React Native major versions were preserved.
 - The root override selects **uuid 11.1.1**. A clean frozen `npm ci` reproduced the lock, and the actual xcode CommonJS `v4` caller generated its expected 24-character uppercase identifier. Native checks and all-platform exports passed. The original xcode dependency range still differs from this deliberate, verified override.
 - The API image uses official, digest-pinned **Python 3.12.14**; the web image retains official, digest-pinned **Node 24.19.0**. Both apply signed Debian updates over verified HTTPS. Index-download failure stops the build; the trusted public CA bundle is readable by APT's download user. Temporary dependencies are installed and cleaned in one build step to avoid repeated VFS copies.
+- **24 October 2026:** `next` is **16.4.3**, fixing three critical advisories in 16.3.8: [GHSA-2464-fhr4-w9xw](https://github.com/advisories/GHSA-2464-fhr4-w9xw) (Image Optimization), [GHSA-673q-mjm6-r5xr](https://github.com/advisories/GHSA-673q-mjm6-r5xr) (`use cache`) and [GHSA-p3m5-59mp-jv5r](https://github.com/advisories/GHSA-p3m5-59mp-jv5r) (Server Actions).
+- **24 October 2026:** `certifi` is **2026.10.23**. Earlier bundles trust the `emSign ECC Root CA - G3` root, and eight eMudhra intermediates under it have compromised keys ([GHSA-6q48-6c7w-9gw2](https://github.com/advisories/GHSA-6q48-6c7w-9gw2)).
+- **24 October 2026:** `opentelemetry-api` is **1.45.1**. It reaches the API through FastAPI 0.142.2; in 1.45.0, a long inbound `tracestate` header took quadratic time to parse ([GHSA-xcq7-p3pf-p88h](https://github.com/advisories/GHSA-xcq7-p3pf-p88h)). Only these two Python packages changed in the lock.
 - API runtime global pip/ensurepip, installation caches and the uv installation binary are absent. Its frozen `.venv`, Python, Alembic and actual worker commands remain functional. Web runtime global npm/npx/yarn/corepack are removed; Node and the standalone application remain functional.
 
 ## Package-manager results
@@ -38,6 +41,7 @@ The 29 npm graph nodes represent four underlying advisories propagated through E
 | [node-forge GHSA-86w9-cpqp-85rv](https://github.com/advisories/GHSA-86w9-cpqp-85rv) | High | Latest published 1.4.0 remains affected. |
 | [sprintf-js GHSA-hp3w-g68c-fv3c](https://github.com/advisories/GHSA-hp3w-g68c-fv3c) | Moderate | Latest published 1.1.3 remains affected. |
 | [decode-uri-component GHSA-vcc3-ghjq-m6fr](https://github.com/advisories/GHSA-vcc3-ghjq-m6fr) | Moderate | Patched 0.5.0 is ESM; the current query-string 7 dependency requires a CommonJS function. An unchecked override would break that caller. This dependency includes a native routing runtime path. |
+| [zod GHSA-mrhx-c7xc-m3w5](https://github.com/advisories/GHSA-mrhx-c7xc-m3w5) (added 24 October 2026) | High | Only Expo CLI 55.0.36 brings it, and it requires `zod ^3.25.76`. 3.25.76 is the latest 3.x release; the fix exists only in 4.6.6, so an override would cross a major version under the CLI. The CLI uses zod only in its local development server (`expo start`), to validate dev-tools plugin and MCP extension schemas. No deployed service includes it. |
 
 Compatible upstream patches and updated native SDK dependencies are required before claiming that these findings are resolved. Successful native exports do not establish absence of these advisories.
 
