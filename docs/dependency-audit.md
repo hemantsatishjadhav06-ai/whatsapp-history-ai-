@@ -38,6 +38,7 @@ The 29 npm graph nodes represent four underlying advisories propagated through E
 | [node-forge GHSA-86w9-cpqp-85rv](https://github.com/advisories/GHSA-86w9-cpqp-85rv) | High | Latest published 1.4.0 remains affected. |
 | [sprintf-js GHSA-hp3w-g68c-fv3c](https://github.com/advisories/GHSA-hp3w-g68c-fv3c) | Moderate | Latest published 1.1.3 remains affected. |
 | [decode-uri-component GHSA-vcc3-ghjq-m6fr](https://github.com/advisories/GHSA-vcc3-ghjq-m6fr) | Moderate | Patched 0.5.0 is ESM; the current query-string 7 dependency requires a CommonJS function. An unchecked override would break that caller. This dependency includes a native routing runtime path. |
+| [zod GHSA-mrhx-c7xc-m3w5](https://github.com/advisories/GHSA-mrhx-c7xc-m3w5) (added 24 October 2026) | High | Only Expo CLI 55.0.36 brings it, and it requires `zod ^3.25.76`. 3.25.76 is the latest 3.x release; the fix exists only in 4.6.6, so an override would cross a major version under the CLI. The CLI uses zod only in its local development server (`expo start`), to validate dev-tools plugin and MCP extension schemas. No deployed service includes it. |
 
 Compatible upstream patches and updated native SDK dependencies are required before claiming that these findings are resolved. Successful native exports do not establish absence of these advisories.
 

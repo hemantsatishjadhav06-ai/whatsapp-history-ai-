@@ -132,6 +132,7 @@ jobs:
           reviewed = {
               'GHSA-vfj7-8cjw-p6xm', 'GHSA-86w9-cpqp-85rv',
               'GHSA-hp3w-g68c-fv3c', 'GHSA-vcc3-ghjq-m6fr',
+              'GHSA-mrhx-c7xc-m3w5',
           }
           observed = {item['url'].rsplit('/', 1)[-1]
                       for node in result.get('vulnerabilities', {}).values()
